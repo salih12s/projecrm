@@ -11,6 +11,7 @@ import {
 } from '@mui/material';
 import { Islem, IslemCreateDto, IslemUpdateDto } from '../types';
 import { islemService } from '../services/api';
+import { useSnackbar } from '../context/SnackbarContext';
 
 interface IslemDialogProps {
   open: boolean;
@@ -20,6 +21,7 @@ interface IslemDialogProps {
 }
 
 const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave }) => {
+  const { showSnackbar } = useSnackbar();
   const [formData, setFormData] = useState<IslemUpdateDto>({
     ad_soyad: '',
     ilce: '',
@@ -94,10 +96,19 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave 
   };
 
   const handleSubmit = async () => {
+    // Form validasyonu
+    if (!formData.ad_soyad || !formData.ilce || !formData.mahalle || 
+        !formData.cadde || !formData.sokak || !formData.kapi_no || 
+        !formData.cep_tel || !formData.urun || !formData.marka || !formData.sikayet) {
+      showSnackbar('Lütfen tüm zorunlu alanları doldurun!', 'warning');
+      return;
+    }
+
     try {
       if (islem) {
         // Güncelleme
         await islemService.update(islem.id, formData);
+        showSnackbar('İşlem başarıyla güncellendi!', 'success');
       } else {
         // Yeni ekleme - sadece gerekli alanları gönder
         const createData: IslemCreateDto = {
@@ -117,11 +128,12 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave 
           sikayet: formData.sikayet,
         };
         await islemService.create(createData);
+        showSnackbar('Yeni işlem başarıyla eklendi!', 'success');
       }
       onSave();
-    } catch (error) {
+    } catch (error: any) {
       console.error('İşlem kaydedilirken hata:', error);
-      alert('Bir hata oluştu!');
+      showSnackbar(error.response?.data?.message || 'İşlem kaydedilirken hata oluştu!', 'error');
     }
   };
 

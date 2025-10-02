@@ -12,6 +12,7 @@ import {
 } from '@mui/material';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import { useSnackbar } from '../context/SnackbarContext';
 
 const Login: React.FC = () => {
   const [tabValue, setTabValue] = useState(0);
@@ -21,6 +22,7 @@ const Login: React.FC = () => {
   const [success, setSuccess] = useState('');
   const { login, register } = useAuth();
   const navigate = useNavigate();
+  const { showSnackbar } = useSnackbar();
 
   const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue);
@@ -44,17 +46,21 @@ const Login: React.FC = () => {
       if (tabValue === 0) {
         // Giriş
         await login(username, password);
+        showSnackbar('Başarıyla giriş yaptınız!', 'success');
         navigate('/');
       } else {
         // Kayıt
         await register(username, password);
         setSuccess('Kayıt başarılı! Şimdi giriş yapabilirsiniz.');
+        showSnackbar('Kayıt başarılı! Giriş yapabilirsiniz.', 'success');
         setUsername('');
         setPassword('');
         setTimeout(() => setTabValue(0), 2000);
       }
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Bir hata oluştu');
+      const errorMsg = err.response?.data?.message || 'Bir hata oluştu';
+      setError(errorMsg);
+      showSnackbar(errorMsg, 'error');
     }
   };
 

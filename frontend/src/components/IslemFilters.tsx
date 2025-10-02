@@ -9,7 +9,7 @@ import {
   Typography,
 } from '@mui/material';
 import { FilterList, Clear } from '@mui/icons-material';
-import { Islem, FilterParams } from '../types';
+import { Islem } from '../types';
 
 interface IslemFiltersProps {
   islemler: Islem[];
@@ -38,9 +38,11 @@ const IslemFilters: React.FC<IslemFiltersProps> = ({ islemler, onFilterChange })
   const [selectedField, setSelectedField] = useState('ad_soyad');
   const [searchValue, setSearchValue] = useState('');
   const [isDurumuFilter, setIsDurumuFilter] = useState<string>('');
+  const [filteredCount, setFilteredCount] = useState(0);
 
   useEffect(() => {
     applyFilters();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchValue, isDurumuFilter, islemler]);
 
   const applyFilters = () => {
@@ -62,6 +64,7 @@ const IslemFilters: React.FC<IslemFiltersProps> = ({ islemler, onFilterChange })
       });
     }
 
+    setFilteredCount(filtered.length);
     onFilterChange(filtered);
   };
 
@@ -134,7 +137,7 @@ const IslemFilters: React.FC<IslemFiltersProps> = ({ islemler, onFilterChange })
 
       <Box sx={{ mt: 2 }}>
         <Typography variant="body2" color="text.secondary">
-          Toplam {islemler.length} kayıttan {onFilterChange.length || islemler.length} kayıt gösteriliyor
+          Toplam {islemler.length} kayıttan {filteredCount} kayıt gösteriliyor
         </Typography>
       </Box>
     </Paper>
