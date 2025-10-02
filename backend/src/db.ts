@@ -12,7 +12,7 @@ const pool = new Pool({
 });
 
 // Test bağlantısı
-pool.connect((err, client, release) => {
+pool.connect((err, _client, release) => {
   if (err) {
     return console.error('Veritabanı bağlantı hatası:', err.stack);
   }

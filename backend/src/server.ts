@@ -40,7 +40,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/islemler', islemlerRoutes);
 
 // Ana route
-app.get('/', (req, res) => {
+app.get('/', (_req, res) => {
   res.json({ message: 'CRM API çalışıyor' });
 });
 
