@@ -5,12 +5,13 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import { SnackbarProvider } from './context/SnackbarContext';
 import Login from './components/Login';
 import Dashboard from './components/Dashboard';
+import Settings from './components/Settings';
 
 const theme = createTheme({
   palette: {
     mode: 'light',
     primary: {
-      main: '#1976d2',
+      main: '#0D3282',
     },
     secondary: {
       main: '#dc004e',
@@ -29,7 +30,12 @@ const App: React.FC = () => {
       <CssBaseline />
       <SnackbarProvider>
         <AuthProvider>
-          <BrowserRouter>
+          <BrowserRouter
+            future={{
+              v7_startTransition: true,
+              v7_relativeSplatPath: true,
+            }}
+          >
             <Routes>
               <Route path="/login" element={<Login />} />
               <Route
@@ -37,6 +43,14 @@ const App: React.FC = () => {
                 element={
                   <PrivateRoute>
                     <Dashboard />
+                  </PrivateRoute>
+                }
+              />
+              <Route
+                path="/settings"
+                element={
+                  <PrivateRoute>
+                    <Settings />
                   </PrivateRoute>
                 }
               />

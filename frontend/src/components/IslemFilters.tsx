@@ -32,6 +32,7 @@ const filterFields = [
   { value: 'marka', label: 'Marka' },
   { value: 'sikayet', label: 'Şikayet' },
   { value: 'teknisyen_ismi', label: 'Teknisyen İsmi' },
+  { value: 'yapilan_islem', label: 'Yapılan İşlem' },
 ];
 
 const IslemFilters: React.FC<IslemFiltersProps> = ({ islemler, onFilterChange }) => {
@@ -75,17 +76,18 @@ const IslemFilters: React.FC<IslemFiltersProps> = ({ islemler, onFilterChange })
   };
 
   return (
-    <Paper elevation={2} sx={{ p: 3, mb: 3 }}>
-      <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-        <FilterList sx={{ mr: 1 }} />
-        <Typography variant="h6">Filtreler</Typography>
+    <Paper elevation={2} sx={{ p: 1.5, mb: 2 }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+        <FilterList sx={{ mr: 0.5, fontSize: '1.2rem' }} />
+        <Typography variant="subtitle1" sx={{ fontWeight: 600, fontSize: '0.95rem' }}>Filtreler</Typography>
       </Box>
       
-      <Grid container spacing={2}>
+      <Grid container spacing={1}>
         <Grid item xs={12} sm={6} md={3}>
           <TextField
             select
             fullWidth
+            size="small"
             label="İş Durumu"
             value={isDurumuFilter}
             onChange={(e) => setIsDurumuFilter(e.target.value)}
@@ -100,6 +102,7 @@ const IslemFilters: React.FC<IslemFiltersProps> = ({ islemler, onFilterChange })
           <TextField
             select
             fullWidth
+            size="small"
             label="Arama Alanı"
             value={selectedField}
             onChange={(e) => setSelectedField(e.target.value)}
@@ -115,6 +118,7 @@ const IslemFilters: React.FC<IslemFiltersProps> = ({ islemler, onFilterChange })
         <Grid item xs={12} sm={6} md={4}>
           <TextField
             fullWidth
+            size="small"
             label="Ara..."
             value={searchValue}
             onChange={(e) => setSearchValue(e.target.value)}
@@ -125,18 +129,19 @@ const IslemFilters: React.FC<IslemFiltersProps> = ({ islemler, onFilterChange })
         <Grid item xs={12} sm={6} md={2}>
           <Button
             fullWidth
+            size="small"
             variant="outlined"
-            startIcon={<Clear />}
+            startIcon={<Clear sx={{ fontSize: '1rem' }} />}
             onClick={handleClearFilters}
-            sx={{ height: '56px' }}
+            sx={{ height: '40px' }}
           >
             Temizle
           </Button>
         </Grid>
       </Grid>
 
-      <Box sx={{ mt: 2 }}>
-        <Typography variant="body2" color="text.secondary">
+      <Box sx={{ mt: 1 }}>
+        <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.75rem' }}>
           Toplam {islemler.length} kayıttan {filteredCount} kayıt gösteriliyor
         </Typography>
       </Box>

@@ -72,3 +72,15 @@ export interface AuthPayload {
   id: number;
   username: string;
 }
+
+export interface Teknisyen {
+  id: number;
+  isim: string;
+  created_at: Date;
+}
+
+export interface Marka {
+  id: number;
+  isim: string;
+  created_at: Date;
+}

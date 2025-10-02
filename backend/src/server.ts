@@ -7,6 +7,8 @@ import dotenv from 'dotenv';
 import createTables from './createTables';
 import authRoutes from './routes/auth';
 import islemlerRoutes from './routes/islemler';
+import teknisyenlerRoutes from './routes/teknisyenler';
+import markalarRoutes from './routes/markalar';
 
 dotenv.config();
 
@@ -38,6 +40,8 @@ app.set('io', io);
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/islemler', islemlerRoutes);
+app.use('/api/teknisyenler', teknisyenlerRoutes);
+app.use('/api/markalar', markalarRoutes);
 
 // Ana route
 app.get('/', (_req, res) => {

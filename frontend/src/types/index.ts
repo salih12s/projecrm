@@ -84,3 +84,15 @@ export interface FilterParams {
   teknisyen_ismi?: string;
   is_durumu?: 'acik' | 'tamamlandi' | '';
 }
+
+export interface Teknisyen {
+  id: number;
+  isim: string;
+  created_at: string;
+}
+
+export interface Marka {
+  id: number;
+  isim: string;
+  created_at: string;
+}

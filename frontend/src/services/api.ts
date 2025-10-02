@@ -87,3 +87,5 @@ export const islemService = {
     return response.data;
   },
 };
+
+export { api };

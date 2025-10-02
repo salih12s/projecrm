@@ -103,6 +103,7 @@ const Login: React.FC = () => {
               fullWidth
               label="Kullanıcı Adı"
               autoFocus
+              autoComplete="username"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
             />
@@ -112,6 +113,7 @@ const Login: React.FC = () => {
               fullWidth
               label="Şifre"
               type="password"
+              autoComplete={tabValue === 0 ? 'current-password' : 'new-password'}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
             />

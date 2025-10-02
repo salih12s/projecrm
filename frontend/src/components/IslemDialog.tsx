@@ -8,9 +8,11 @@ import {
   TextField,
   Grid,
   MenuItem,
+  Autocomplete,
 } from '@mui/material';
-import { Islem, IslemCreateDto, IslemUpdateDto } from '../types';
+import { Islem, IslemCreateDto, IslemUpdateDto, Teknisyen, Marka } from '../types';
 import { islemService } from '../services/api';
+import { api } from '../services/api';
 import { useSnackbar } from '../context/SnackbarContext';
 
 interface IslemDialogProps {
@@ -22,6 +24,8 @@ interface IslemDialogProps {
 
 const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave }) => {
   const { showSnackbar } = useSnackbar();
+  const [teknisyenler, setTeknisyenler] = useState<Teknisyen[]>([]);
+  const [markalar, setMarkalar] = useState<Marka[]>([]);
   const [formData, setFormData] = useState<IslemUpdateDto>({
     ad_soyad: '',
     ilce: '',
@@ -42,6 +46,25 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave 
     tutar: 0,
     is_durumu: 'acik',
   });
+
+  // Teknisyen ve marka listelerini yükle
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        const [teknisyenResponse, markaResponse] = await Promise.all([
+          api.get<Teknisyen[]>('/teknisyenler'),
+          api.get<Marka[]>('/markalar'),
+        ]);
+        setTeknisyenler(teknisyenResponse.data);
+        setMarkalar(markaResponse.data);
+      } catch (error) {
+        console.error('Veri yükleme hatası:', error);
+      }
+    };
+    if (open) {
+      loadData();
+    }
+  }, [open]);
 
   useEffect(() => {
     if (islem) {
@@ -249,12 +272,25 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave 
             />
           </Grid>
           <Grid item xs={12} sm={6}>
-            <TextField
-              fullWidth
-              required
-              label="Marka"
-              value={formData.marka}
-              onChange={handleChange('marka')}
+            <Autocomplete
+              freeSolo
+              options={markalar.map(m => m.isim)}
+              value={formData.marka || ''}
+              onChange={(_, newValue) => {
+                setFormData({ ...formData, marka: newValue || '' });
+              }}
+              inputValue={formData.marka || ''}
+              onInputChange={(_, newInputValue) => {
+                setFormData({ ...formData, marka: newInputValue || '' });
+              }}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  fullWidth
+                  required
+                  label="Marka"
+                />
+              )}
             />
           </Grid>
           <Grid item xs={12}>
@@ -272,11 +308,24 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave 
           {!isNewIslem && (
             <>
               <Grid item xs={12} sm={6}>
-                <TextField
-                  fullWidth
-                  label="Teknisyen İsmi"
-                  value={formData.teknisyen_ismi}
-                  onChange={handleChange('teknisyen_ismi')}
+                <Autocomplete
+                  freeSolo
+                  options={teknisyenler.map(t => t.isim)}
+                  value={formData.teknisyen_ismi || ''}
+                  onChange={(_, newValue) => {
+                    setFormData({ ...formData, teknisyen_ismi: newValue || '' });
+                  }}
+                  inputValue={formData.teknisyen_ismi || ''}
+                  onInputChange={(_, newInputValue) => {
+                    setFormData({ ...formData, teknisyen_ismi: newInputValue || '' });
+                  }}
+                  renderInput={(params) => (
+                    <TextField
+                      {...params}
+                      fullWidth
+                      label="Teknisyen İsmi"
+                    />
+                  )}
                 />
               </Grid>
               <Grid item xs={12} sm={6}>

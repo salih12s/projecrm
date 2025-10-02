@@ -40,6 +40,24 @@ const createTables = async (): Promise<void> => {
       )
     `);
 
+    // Teknisyenler tablosu
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS teknisyenler (
+        id SERIAL PRIMARY KEY,
+        isim VARCHAR(100) UNIQUE NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    // Markalar tablosu
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS markalar (
+        id SERIAL PRIMARY KEY,
+        isim VARCHAR(100) UNIQUE NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
     console.log('Tablolar başarıyla oluşturuldu');
   } catch (error) {
     console.error('Tablo oluşturma hatası:', error);

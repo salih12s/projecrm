@@ -11,17 +11,28 @@ import {
   MenuItem,
   Avatar,
   Divider,
+  Tabs,
+  Tab,
 } from '@mui/material';
-import { Logout as LogoutIcon, Add as AddIcon, Download as DownloadIcon, AccountCircle } from '@mui/icons-material';
+import { 
+  Logout as LogoutIcon, 
+  Add as AddIcon, 
+  Download as DownloadIcon, 
+  AccountCircle, 
+  Settings as SettingsIcon,
+  Home,
+  Build,
+} from '@mui/icons-material';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { islemService } from '../services/api';
 import { Islem } from '../types';
 import { io } from 'socket.io-client';
-import IslemTable from './IslemTable';
-import IslemFilters from './IslemFilters';
-import IslemDialog from './IslemDialog';
-import { exportToExcel } from '../utils/print';
+import IslemTable from './IslemTable.tsx';
+import IslemFilters from './IslemFilters.tsx';
+import IslemDialog from './IslemDialog.tsx';
+import Settings from './Settings';
+import { exportToExcel } from '../utils/print.ts';
 import Loading from './Loading';
 import ErrorMessage from './ErrorMessage';
 import StatsCards from './StatsCards';
@@ -38,33 +49,54 @@ const Dashboard: React.FC = () => {
   const [selectedIslem, setSelectedIslem] = useState<Islem | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const [activeTab, setActiveTab] = useState(0);
 
   useEffect(() => {
     // Socket.IO bağlantısı
-    const newSocket = io('http://localhost:5000');
+    const newSocket = io('http://localhost:5000', {
+      reconnection: true,
+      reconnectionDelay: 1000,
+      reconnectionAttempts: 5,
+    });
+
+    newSocket.on('connect', () => {
+      console.log('Socket.IO bağlantısı kuruldu');
+    });
+
+    newSocket.on('connect_error', (error) => {
+      console.error('Socket.IO bağlantı hatası:', error);
+    });
 
     newSocket.on('yeni-islem', (islem: Islem) => {
-      setIslemler((prev) => [islem, ...prev]);
-      showSnackbar('Yeni işlem eklendi!', 'info');
+      if (islem && islem.id) {
+        setIslemler((prev) => [islem, ...prev]);
+        showSnackbar('Yeni işlem eklendi!', 'info');
+      }
     });
 
     newSocket.on('islem-guncellendi', (updatedIslem: Islem) => {
-      setIslemler((prev) =>
-        prev.map((islem) => (islem.id === updatedIslem.id ? updatedIslem : islem))
-      );
-      showSnackbar('İşlem güncellendi!', 'info');
+      if (updatedIslem && updatedIslem.id) {
+        setIslemler((prev) =>
+          prev.map((islem) => (islem.id === updatedIslem.id ? updatedIslem : islem))
+        );
+        showSnackbar('İşlem güncellendi!', 'info');
+      }
     });
 
     newSocket.on('islem-silindi', (id: number) => {
-      setIslemler((prev) => prev.filter((islem) => islem.id !== id));
-      showSnackbar('İşlem silindi!', 'info');
+      if (id) {
+        setIslemler((prev) => prev.filter((islem) => islem.id !== id));
+        showSnackbar('İşlem silindi!', 'info');
+      }
     });
 
     newSocket.on('islem-durum-degisti', (updatedIslem: Islem) => {
-      setIslemler((prev) =>
-        prev.map((islem) => (islem.id === updatedIslem.id ? updatedIslem : islem))
-      );
-      showSnackbar('İş durumu güncellendi!', 'success');
+      if (updatedIslem && updatedIslem.id) {
+        setIslemler((prev) =>
+          prev.map((islem) => (islem.id === updatedIslem.id ? updatedIslem : islem))
+        );
+        showSnackbar('İş durumu güncellendi!', 'success');
+      }
     });
 
     return () => {
@@ -156,33 +188,23 @@ const Dashboard: React.FC = () => {
 
   return (
     <Box sx={{ flexGrow: 1 }}>
-      <AppBar position="static">
-        <Toolbar>
-          <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
-            CRM Sistemi
+      <AppBar position="static" sx={{ bgcolor: '#2C3E82' }}>
+        <Toolbar sx={{ minHeight: '48px !important', px: 2 }}>
+          <Build sx={{ mr: 1, fontSize: '1.5rem' }} />
+          <Typography variant="h6" component="div" sx={{ fontWeight: 600, fontSize: '1.1rem' }}>
+            Teknik Servis - Ana Sayfa
           </Typography>
-          <Button
-            color="inherit"
-            startIcon={<DownloadIcon />}
-            onClick={handleExport}
-            sx={{ mr: 1 }}
-          >
-            Excel İndir
-          </Button>
-          <Button
-            color="inherit"
-            startIcon={<AddIcon />}
-            onClick={() => handleOpenDialog()}
-          >
-            Yeni İşlem
-          </Button>
+          <Box sx={{ flexGrow: 1 }} />
+          <Typography variant="body2" sx={{ mr: 2 }}>
+            {new Date().toLocaleDateString('tr-TR', { day: '2-digit', month: '2-digit', year: 'numeric' })}
+          </Typography>
           <IconButton
             color="inherit"
             onClick={handleMenuOpen}
-            sx={{ ml: 2 }}
+            sx={{ p: 0.5 }}
           >
-            <Avatar sx={{ width: 32, height: 32, bgcolor: 'secondary.main' }}>
-              {user?.username.charAt(0).toUpperCase()}
+            <Avatar sx={{ width: 32, height: 32, bgcolor: 'rgba(255,255,255,0.2)' }}>
+              <AccountCircle />
             </Avatar>
           </IconButton>
           <Menu
@@ -205,19 +227,80 @@ const Dashboard: React.FC = () => {
         </Toolbar>
       </AppBar>
 
+      {/* Navigation Tabs */}
+      <Box sx={{ bgcolor: 'background.paper', borderBottom: 1, borderColor: 'divider' }}>
+        <Tabs 
+          value={activeTab} 
+          onChange={(_, newValue) => setActiveTab(newValue)}
+          sx={{
+            minHeight: '42px',
+            '& .MuiTab-root': {
+              minHeight: '42px',
+              py: 1,
+              px: 3,
+              fontSize: '0.85rem',
+              textTransform: 'none',
+            }
+          }}
+        >
+          <Tab 
+            icon={<Home sx={{ fontSize: '1.1rem' }} />} 
+            iconPosition="start" 
+            label="Ana Sayfa" 
+          />
+          <Tab 
+            icon={<SettingsIcon sx={{ fontSize: '1.1rem' }} />} 
+            iconPosition="start" 
+            label="Tanımlamalar" 
+          />
+        </Tabs>
+      </Box>
+
       <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
-        {error ? (
-          <ErrorMessage message={error} onRetry={loadIslemler} />
-        ) : loading ? (
-          <Loading message="İşlemler yükleniyor..." />
-        ) : (
-          <>
-            <StatsCards islemler={islemler} />
-            
-            <IslemFilters
-              islemler={islemler}
-              onFilterChange={setFilteredIslemler}
-            />
+        {activeTab === 0 ? (
+          // Ana Sayfa Tab
+          error ? (
+            <ErrorMessage message={error} onRetry={loadIslemler} />
+          ) : loading ? (
+            <Loading message="İşlemler yükleniyor..." />
+          ) : (
+            <>
+              <StatsCards islemler={islemler} />
+              
+              <IslemFilters
+                islemler={islemler}
+                onFilterChange={setFilteredIslemler}
+              />
+
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+                <Typography variant="h5" sx={{ fontWeight: 600 }}>
+                  İşlemler
+                </Typography>
+                <Box sx={{ display: 'flex', gap: 2 }}>
+                  <Button
+                    variant="outlined"
+                    startIcon={<DownloadIcon />}
+                    onClick={handleExport}
+                    size="large"
+                  >
+                    Excel İndir
+                  </Button>
+                  <Button
+                    variant="contained"
+                    startIcon={<AddIcon />}
+                    onClick={() => handleOpenDialog()}
+                    size="large"
+                    sx={{ 
+                      boxShadow: 2,
+                      '&:hover': {
+                        boxShadow: 4,
+                      }
+                    }}
+                  >
+                  Yeni İşlem Ekle
+                </Button>
+              </Box>
+            </Box>
 
             <IslemTable
               islemler={filteredIslemler}
@@ -227,6 +310,9 @@ const Dashboard: React.FC = () => {
               onToggleDurum={handleToggleDurum}
             />
           </>
+        )) : (
+          // Tanımlamalar Tab
+          <Settings />
         )}
 
         <IslemDialog

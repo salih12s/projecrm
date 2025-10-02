@@ -6,330 +6,191 @@ export const printIslem = (islem: Islem) => {
     <html>
       <head>
         <meta charset="UTF-8">
-        <title>Servis Fişi - ${islem.marka}</title>
+        <title>Servis Formu</title>
         <style>
-          @page {
-            size: A4;
-            margin: 20mm;
-          }
+          @page { size: A4; margin: 15mm; }
+          * { margin: 0; padding: 0; box-sizing: border-box; }
+          body { font-family: Arial, sans-serif; font-size: 11px; color: #000; padding: 10px; }
           
-          body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            padding: 20px;
-            color: #333;
-            line-height: 1.6;
-          }
+          .header { border: 2px solid #000; padding: 10px; margin-bottom: 15px; }
+          .header-top { display: flex; justify-content: space-between; border-bottom: 1px solid #000; padding-bottom: 10px; margin-bottom: 10px; }
+          .company-info { font-size: 10px; line-height: 1.4; }
+          .company-name { font-weight: bold; font-size: 12px; margin-bottom: 3px; }
+          .form-title { text-align: center; font-weight: bold; font-size: 14px; flex: 1; }
+          .form-no { text-align: right; font-size: 10px; }
           
-          .header {
-            text-align: center;
-            border-bottom: 3px solid #1976d2;
-            padding-bottom: 20px;
-            margin-bottom: 30px;
-          }
+          .customer-device { display: flex; gap: 10px; margin-top: 10px; }
+          .customer-section { flex: 1; border: 1px solid #000; padding: 8px; }
+          .device-section { width: 200px; border: 1px solid #000; padding: 8px; }
+          .section-title { font-weight: bold; margin-bottom: 8px; border-bottom: 1px solid #000; padding-bottom: 3px; font-size: 11px; }
+          .info-row { display: flex; margin: 4px 0; font-size: 10px; }
+          .info-label { font-weight: bold; min-width: 80px; }
+          .info-value { flex: 1; border-bottom: 1px dotted #999; }
           
-          .header h1 {
-            color: #1976d2;
-            margin: 0;
-            font-size: 28px;
-          }
+          .service-table { width: 100%; border-collapse: collapse; margin: 15px 0; border: 1px solid #000; }
+          .service-table th, .service-table td { border: 1px solid #000; padding: 5px; text-align: left; font-size: 10px; }
+          .service-table th { background-color: #f0f0f0; font-weight: bold; }
           
-          .header .marka {
-            font-size: 24px;
-            color: #666;
-            margin-top: 10px;
-          }
+          .solution-section { border: 1px solid #000; padding: 8px; margin: 10px 0; }
+          .solution-table { width: 100%; border-collapse: collapse; }
+          .solution-table td { padding: 4px; font-size: 10px; border-bottom: 1px solid #ddd; }
           
-          .section {
-            margin-bottom: 25px;
-            page-break-inside: avoid;
-          }
-          
-          .section-title {
-            background-color: #1976d2;
-            color: white;
-            padding: 8px 15px;
-            margin-bottom: 15px;
-            font-size: 16px;
-            font-weight: bold;
-            border-radius: 4px;
-          }
-          
-          .info-row {
-            display: flex;
-            margin: 8px 0;
-            border-bottom: 1px solid #eee;
-            padding: 8px 0;
-          }
-          
-          .info-label {
-            font-weight: bold;
-            width: 180px;
-            color: #555;
-          }
-          
-          .info-value {
-            flex: 1;
-            color: #333;
-          }
-          
-          .footer {
-            margin-top: 50px;
-            text-align: center;
-            font-size: 12px;
-            color: #999;
-            border-top: 2px solid #eee;
-            padding-top: 20px;
-          }
-          
-          .status {
-            display: inline-block;
-            padding: 5px 15px;
-            border-radius: 20px;
-            font-weight: bold;
-            font-size: 14px;
-          }
-          
-          .status-acik {
-            background-color: #fff3cd;
-            color: #856404;
-          }
-          
-          .status-tamamlandi {
-            background-color: #d4edda;
-            color: #155724;
-          }
-          
-          @media print {
-            button {
-              display: none;
-            }
-            
-            body {
-              padding: 0;
-            }
-          }
-          
-          .print-button {
-            background-color: #1976d2;
-            color: white;
-            border: none;
-            padding: 12px 30px;
-            font-size: 16px;
-            border-radius: 4px;
-            cursor: pointer;
-            margin: 20px auto;
-            display: block;
-          }
-          
-          .print-button:hover {
-            background-color: #1565c0;
-          }
+          .notes { border: 1px solid #000; padding: 8px; margin: 10px 0; min-height: 60px; }
+          .signatures { display: flex; justify-content: space-between; margin-top: 30px; }
+          .signature-box { text-align: center; width: 40%; }
+          .signature-line { border-top: 1px solid #000; margin-top: 50px; padding-top: 5px; font-size: 10px; }
+          .footer { margin-top: 20px; font-size: 8px; line-height: 1.3; border-top: 1px solid #000; padding-top: 5px; }
         </style>
       </head>
       <body>
         <div class="header">
-          <h1>SERVİS FİŞİ</h1>
-          <div class="marka">${islem.marka}</div>
-        </div>
-
-        <div class="section">
-          <div class="section-title">Tarih ve Durum Bilgileri</div>
-          <div class="info-row">
-            <span class="info-label">Kayıt Tarihi:</span>
-            <span class="info-value">${new Date(islem.full_tarih).toLocaleString('tr-TR', {
-              year: 'numeric',
-              month: 'long',
-              day: 'numeric',
-              hour: '2-digit',
-              minute: '2-digit'
-            })}</span>
+          <div class="header-top">
+            <div class="company-info">
+              <div class="company-name">FMS TEKNİK SERVİS HİZMETLERİ</div>
+              <div>GÜZELTEPE MAH KABAAĞAÇ SOKAK</div>
+              <div>NO:11/A</div>
+              <div>VERGİ DAİRESİ/NO: İVRİZ</div>
+            </div>
+            <div class="form-title">- SERVİS FORMU -</div>
+            <div class="form-no">
+              <div>Servis No: ${islem.id || '-'}</div>
+              <div>Kayıt Tarihi: ${islem.full_tarih ? new Date(islem.full_tarih).toLocaleDateString('tr-TR') + ' ' + new Date(islem.full_tarih).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }) : '-'}</div>
+            </div>
           </div>
-          <div class="info-row">
-            <span class="info-label">İş Durumu:</span>
-            <span class="info-value">
-              <span class="status status-${islem.is_durumu}">
-                ${islem.is_durumu === 'acik' ? 'AÇIK İŞ' : 'TAMAMLANDI'}
-              </span>
-            </span>
-          </div>
-        </div>
-
-        <div class="section">
-          <div class="section-title">Müşteri Bilgileri</div>
-          <div class="info-row">
-            <span class="info-label">Ad Soyad:</span>
-            <span class="info-value">${islem.ad_soyad}</span>
-          </div>
-          <div class="info-row">
-            <span class="info-label">Cep Telefonu:</span>
-            <span class="info-value">${islem.cep_tel}</span>
-          </div>
-          ${islem.sabit_tel ? `
-          <div class="info-row">
-            <span class="info-label">Sabit Telefon:</span>
-            <span class="info-value">${islem.sabit_tel}</span>
-          </div>
-          ` : ''}
-        </div>
-
-        <div class="section">
-          <div class="section-title">Adres Bilgileri</div>
-          <div class="info-row">
-            <span class="info-label">İlçe:</span>
-            <span class="info-value">${islem.ilce}</span>
-          </div>
-          <div class="info-row">
-            <span class="info-label">Mahalle:</span>
-            <span class="info-value">${islem.mahalle}</span>
-          </div>
-          <div class="info-row">
-            <span class="info-label">Cadde:</span>
-            <span class="info-value">${islem.cadde}</span>
-          </div>
-          <div class="info-row">
-            <span class="info-label">Sokak:</span>
-            <span class="info-value">${islem.sokak}</span>
-          </div>
-          <div class="info-row">
-            <span class="info-label">Kapı No:</span>
-            <span class="info-value">${islem.kapi_no}</span>
-          </div>
-          ${islem.apartman_site ? `
-          <div class="info-row">
-            <span class="info-label">Apartman/Site:</span>
-            <span class="info-value">${islem.apartman_site}</span>
-          </div>
-          ` : ''}
-          ${islem.blok_no ? `
-          <div class="info-row">
-            <span class="info-label">Blok No:</span>
-            <span class="info-value">${islem.blok_no}</span>
-          </div>
-          ` : ''}
-          ${islem.daire_no ? `
-          <div class="info-row">
-            <span class="info-label">Daire No:</span>
-            <span class="info-value">${islem.daire_no}</span>
-          </div>
-          ` : ''}
-        </div>
-
-        <div class="section">
-          <div class="section-title">Ürün ve Şikayet Bilgileri</div>
-          <div class="info-row">
-            <span class="info-label">Ürün:</span>
-            <span class="info-value">${islem.urun}</span>
-          </div>
-          <div class="info-row">
-            <span class="info-label">Marka:</span>
-            <span class="info-value"><strong>${islem.marka}</strong></span>
-          </div>
-          <div class="info-row">
-            <span class="info-label">Şikayet:</span>
-            <span class="info-value">${islem.sikayet}</span>
+          
+          <div class="customer-device">
+            <div class="customer-section">
+              <div class="section-title">- MÜŞTERİ BİLGİLERİ -</div>
+              <div class="info-row">
+                <span class="info-label">Taşıdı:</span>
+                <span class="info-value">${islem.ad_soyad || ''}</span>
+              </div>
+              <div class="info-row">
+                <span class="info-label">Adres:</span>
+                <span class="info-value">${[islem.ilce, islem.mahalle, islem.cadde, islem.sokak, 'No:' + islem.kapi_no, islem.apartman_site, islem.blok_no ? 'Blok:' + islem.blok_no : '', islem.daire_no ? 'D:' + islem.daire_no : ''].filter(v => v && v !== 'No:' && v !== 'Blok:' && v !== 'D:').join(' ') || ''}</span>
+              </div>
+              <div class="info-row">
+                <span class="info-label">Vergi Daire/No:</span>
+                <span class="info-value"></span>
+              </div>
+              <div class="info-row">
+                <span class="info-label">Operatör:</span>
+                <span class="info-value">${islem.teknisyen_ismi || ''}</span>
+              </div>
+            </div>
+            
+            <div class="device-section">
+              <div class="section-title">- CİHAZ BİLGİSİ -</div>
+              <div class="info-row">
+                <span class="info-label">Cihaz Türü:</span>
+                <span class="info-value">${islem.urun || ''}</span>
+              </div>
+              <div class="info-row">
+                <span class="info-label">Cihaz Tipi:</span>
+                <span class="info-value">${islem.marka || ''}</span>
+              </div>
+              <div class="info-row">
+                <span class="info-label">Cihaz Modeli:</span>
+                <span class="info-value"></span>
+              </div>
+              <div class="info-row">
+                <span class="info-label">Seri No:</span>
+                <span class="info-value"></span>
+              </div>
+            </div>
           </div>
         </div>
 
-        ${islem.teknisyen_ismi || islem.yapilan_islem || islem.tutar ? `
-        <div class="section">
-          <div class="section-title">Servis Bilgileri</div>
-          ${islem.teknisyen_ismi ? `
-          <div class="info-row">
-            <span class="info-label">Teknisyen:</span>
-            <span class="info-value">${islem.teknisyen_ismi}</span>
-          </div>
-          ` : ''}
-          ${islem.yapilan_islem ? `
-          <div class="info-row">
-            <span class="info-label">Yapılan İşlem:</span>
-            <span class="info-value">${islem.yapilan_islem}</span>
-          </div>
-          ` : ''}
-          ${islem.tutar ? `
-          <div class="info-row">
-            <span class="info-label">Tutar:</span>
-            <span class="info-value"><strong>${islem.tutar} TL</strong></span>
-          </div>
-          ` : ''}
+        <div class="section-title" style="border: 1px solid #000; padding: 5px; margin-bottom: 0;">- SERVİS DURUMU: ${islem.is_durumu === 'tamamlandi' ? 'Arıza Giderildi' : 'Açık'} -</div>
+
+        <table class="service-table">
+          <thead>
+            <tr>
+              <th style="width: 15%;">TARİH</th>
+              <th style="width: 20%;">İŞLEM ADI</th>
+              <th style="width: 65%;">AÇIKLAMA</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>${islem.full_tarih ? new Date(islem.full_tarih).toLocaleDateString('tr-TR') + ' - ' + new Date(islem.full_tarih).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }) : ''}</td>
+              <td>Arıza Giderildi</td>
+              <td>Açıklama: ${islem.sikayet || ''}</td>
+            </tr>
+            <tr>
+              <td>${islem.full_tarih ? new Date(islem.full_tarih).toLocaleDateString('tr-TR') + ' - ' + new Date(islem.full_tarih).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }) : ''}</td>
+              <td>Serva Yönlendirildi</td>
+              <td></td>
+            </tr>
+            <tr>
+              <td>${islem.full_tarih ? new Date(islem.full_tarih).toLocaleDateString('tr-TR') + ' - ' + new Date(islem.full_tarih).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }) : ''}</td>
+              <td>Servis İşlemi Gerçekleşti</td>
+              <td>Açıklama: ${islem.yapilan_islem || ''}</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="solution-section">
+          <div class="section-title">- ÇÖZÜM HARKETLERİ -</div>
+          <table class="solution-table">
+            <tr>
+              <td style="width: 30%;"><strong>TARİHLİ, EDER</strong></td>
+              <td style="width: 45%;"><strong>ÇÖZÜM ŞEKLİ:</strong></td>
+              <td style="width: 25%; text-align: right;"><strong>TUTAR</strong></td>
+            </tr>
+            <tr>
+              <td>${islem.full_tarih ? new Date(islem.full_tarih).toLocaleDateString('tr-TR') : ''}</td>
+              <td>Fırma Teknik Taşıdı-Arazla(11157478)</td>
+              <td style="text-align: right;">${islem.tutar ? Number(islem.tutar).toFixed(2) + ' TL' : '0.00 TL'}</td>
+            </tr>
+          </table>
         </div>
-        ` : ''}
+
+        <div class="notes">
+          <div style="font-weight: bold; margin-bottom: 5px;">- NOTLAR -</div>
+          <div style="font-size: 9px; line-height: 1.3;">
+            1- YAPILAN İŞLEMLER İLE İLGİLİ SON VE USULUNCE HABERDAR OLDUĞUMU<br>
+            2- CİHAZIN İLK KULLANIMDA VE GARANTİYE TABİ İSE GARANTİ SÜRESİNİ BEYANI ETTİĞİMİ<br>
+            3- YAPILAN İKİNCİ EL ÜRÜNLERE YAPILAN<br>
+            4- TESLİM ALINAN APARATLARIN İŞ GEREĞİ DEFORME OLDUĞU
+          </div>
+        </div>
+
+        <div class="signatures">
+          <div class="signature-box">
+            <div>Müşteri İmzası:</div>
+            <div class="signature-line">Birim Teknisyeni</div>
+          </div>
+          <div class="signature-box">
+            <div>Yetkili İmzası:</div>
+            <div class="signature-line">Firma Teknik Taşıdı</div>
+          </div>
+        </div>
 
         <div class="footer">
-          <p>Bu belge ${new Date().toLocaleString('tr-TR')} tarihinde oluşturulmuştur.</p>
-          <p>Fiş No: ${islem.id}</p>
+          Bu Servis Formu ${islem.full_tarih ? new Date(islem.full_tarih).toLocaleDateString('tr-TR') + ' - ' + new Date(islem.full_tarih).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }) : ''} Tarihinde Oluşturulmuştur.
         </div>
-
-        <button class="print-button" onclick="window.print()">
-          🖨️ YAZDIR
-        </button>
       </body>
     </html>
   `;
 
-  const printWindow = window.open('', '', 'width=800,height=900,left=200,top=50');
+  const printWindow = window.open('', '_blank');
   if (printWindow) {
     printWindow.document.write(printContent);
     printWindow.document.close();
     printWindow.focus();
+    setTimeout(() => { printWindow.print(); }, 500);
   }
 };
 
 export const exportToExcel = (islemler: Islem[]) => {
-  const headers = [
-    'Tarih',
-    'Ad Soyad',
-    'İlçe',
-    'Mahalle',
-    'Cadde',
-    'Sokak',
-    'Kapı No',
-    'Apartman/Site',
-    'Blok No',
-    'Daire No',
-    'Cep Tel',
-    'Sabit Tel',
-    'Ürün',
-    'Marka',
-    'Şikayet',
-    'Teknisyen',
-    'Yapılan İşlem',
-    'Tutar',
-    'Durum'
-  ];
-
-  const rows = islemler.map(islem => [
-    new Date(islem.full_tarih).toLocaleDateString('tr-TR'),
-    islem.ad_soyad,
-    islem.ilce,
-    islem.mahalle,
-    islem.cadde,
-    islem.sokak,
-    islem.kapi_no,
-    islem.apartman_site || '',
-    islem.blok_no || '',
-    islem.daire_no || '',
-    islem.cep_tel,
-    islem.sabit_tel || '',
-    islem.urun,
-    islem.marka,
-    islem.sikayet,
-    islem.teknisyen_ismi || '',
-    islem.yapilan_islem || '',
-    islem.tutar || '',
-    islem.is_durumu === 'acik' ? 'Açık' : 'Tamamlandı'
-  ]);
-
-  let csvContent = '\uFEFF'; // BOM for UTF-8
-  csvContent += headers.join('\t') + '\n';
-  rows.forEach(row => {
-    csvContent += row.map(cell => `"${cell}"`).join('\t') + '\n';
-  });
-
+  const headers = ['ID', 'Tarih', 'Müşteri', 'İlçe', 'Mahalle', 'Cadde', 'Sokak', 'Kapı No', 'Apartman/Site', 'Blok No', 'Daire No', 'Sabit Tel', 'Cep Tel', 'Ürün', 'Marka', 'Yapılan İşlem', 'Teknisyen', 'Tutar', 'Şikayet', 'Durum'];
+  const rows = islemler.map(i => [i.id, i.full_tarih ? new Date(i.full_tarih).toLocaleString('tr-TR') : '', i.ad_soyad || '', i.ilce || '', i.mahalle || '', i.cadde || '', i.sokak || '', i.kapi_no || '', i.apartman_site || '', i.blok_no || '', i.daire_no || '', i.sabit_tel || '', i.cep_tel || '', i.urun || '', i.marka || '', i.yapilan_islem || '', i.teknisyen_ismi || '', i.tutar ? Number(i.tutar).toFixed(2) : '0.00', i.sikayet || '', i.is_durumu === 'acik' ? 'Açık' : 'Tamamlandı']);
+  const csvContent = '\uFEFF' + [headers.join(','), ...rows.map(r => r.map(c => typeof c === 'string' && (c.includes(',') || c.includes('"') || c.includes('\n')) ? `"${c.replace(/"/g, '""')}"` : c).join(','))].join('\n');
   const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
   const link = document.createElement('a');
-  const url = URL.createObjectURL(blob);
-  link.setAttribute('href', url);
-  link.setAttribute('download', `islemler_${new Date().toISOString().slice(0, 10)}.csv`);
+  link.setAttribute('href', URL.createObjectURL(blob));
+  link.setAttribute('download', `islemler_${new Date().toLocaleDateString('tr-TR')}.csv`);
   link.style.visibility = 'hidden';
   document.body.appendChild(link);
   link.click();
