@@ -1,7 +1,7 @@
 import express, { Request, Response } from 'express';
 import pool from '../db';
 import authMiddleware from '../middleware/auth';
-import { IslemCreateDto, IslemUpdateDto } from '../types';
+import { IslemCreateDto } from '../types';
 
 const router = express.Router();
 
@@ -186,26 +186,22 @@ router.post('/', authMiddleware, async (req: Request, res: Response): Promise<vo
 router.put('/:id', authMiddleware, async (req: Request, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
-    const {
-      teknisyen_ismi,
-      yapilan_islem,
-      tutar,
-      ad_soyad,
-      ilce,
-      mahalle,
-      cadde,
-      sokak,
-      kapi_no,
-      apartman_site,
-      blok_no,
-      daire_no,
-      sabit_tel,
-      cep_tel,
-      urun,
-      marka,
-      sikayet,
-      is_durumu
-    }: IslemUpdateDto = req.body;
+    const updates: any = req.body;
+
+    // Önce mevcut işlemi al
+    const existing = await pool.query(
+      'SELECT * FROM islemler WHERE id = $1',
+      [id]
+    );
+
+    if (existing.rows.length === 0) {
+      res.status(404).json({ message: 'İşlem bulunamadı' });
+      return;
+    }
+
+    // Sadece gönderilen alanları güncelle
+    const currentData = existing.rows[0];
+    const updatedData = { ...currentData, ...updates };
 
     const result = await pool.query(
       `UPDATE islemler SET
@@ -231,16 +227,14 @@ router.put('/:id', authMiddleware, async (req: Request, res: Response): Promise<
       WHERE id = $19
       RETURNING *`,
       [
-        teknisyen_ismi, yapilan_islem, tutar, ad_soyad, ilce, mahalle,
-        cadde, sokak, kapi_no, apartman_site, blok_no, daire_no,
-        sabit_tel, cep_tel, urun, marka, sikayet, is_durumu, id
+        updatedData.teknisyen_ismi, updatedData.yapilan_islem, updatedData.tutar, 
+        updatedData.ad_soyad, updatedData.ilce, updatedData.mahalle,
+        updatedData.cadde, updatedData.sokak, updatedData.kapi_no, 
+        updatedData.apartman_site, updatedData.blok_no, updatedData.daire_no,
+        updatedData.sabit_tel, updatedData.cep_tel, updatedData.urun, 
+        updatedData.marka, updatedData.sikayet, updatedData.is_durumu, id
       ]
     );
-
-    if (result.rows.length === 0) {
-      res.status(404).json({ message: 'İşlem bulunamadı' });
-      return;
-    }
 
     // Socket.IO ile tüm kullanıcılara bildir
     const io = req.app.get('io');

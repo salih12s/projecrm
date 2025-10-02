@@ -1,0 +1,35 @@
+{
+  "name": "projecrm",
+  "version": "1.0.0",
+  "description": "Modern bir CRM (Müşteri İlişkileri Yönetimi) sistemi. React, Node.js, PostgreSQL ve TypeScript kullanılarak geliştirilmiştir.",
+  "main": "index.js",
+  "scripts": {
+    "dev": "concurrently -n \"BACKEND,FRONTEND\" -c \"bgBlue.bold,bgMagenta.bold\" \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "dev:backend": "cd backend && npm run dev",
+    "dev:frontend": "cd frontend && npm run dev",
+    "install:all": "npm install && cd backend && npm install && cd ../frontend && npm install",
+    "build": "cd backend && npm run build && cd ../frontend && npm run build",
+    "clean": "cd backend && rmdir /s /q node_modules dist 2>nul & cd ../frontend && rmdir /s /q node_modules dist 2>nul & rmdir /s /q node_modules 2>nul",
+    "test:api": "powershell -ExecutionPolicy Bypass -File ./test-api.ps1"
+  },
+  "keywords": [
+    "crm",
+    "typescript",
+    "react",
+    "nodejs",
+    "postgresql",
+    "material-ui",
+    "socket.io",
+    "real-time"
+  ],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/salih12s/projecrm/issues"
+  },
+  "homepage": "https://github.com/salih12s/projecrm#readme",
+  "devDependencies": {
+    "concurrently": "^9.2.1"
+  }
+}

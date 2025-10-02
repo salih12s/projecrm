@@ -46,12 +46,15 @@ git clone https://github.com/salih12s/projecrm.git
 cd projecrm
 ```
 
-### 2. Backend Kurulumu
+### 2. Tüm Bağımlılıkları Yükleyin
 
 ```bash
-cd backend
-npm install
+npm run install:all
 ```
+
+Bu komut root, backend ve frontend için tüm npm paketlerini yükler.
+
+### 3. Backend Yapılandırması
 
 Backend `.env` dosyasını yapılandırın (zaten mevcut):
 ```env
@@ -64,38 +67,35 @@ DB_PASSWORD=12345
 JWT_SECRET=your_jwt_secret_key_here_change_in_production
 ```
 
-### 3. Frontend Kurulumu
-
-```bash
-cd ../frontend
-npm install
-```
-
 ### 4. Veritabanı
 
 PostgreSQL'in çalıştığından emin olun. Tablolar otomatik olarak oluşturulacaktır.
 
 ## 🚀 Çalıştırma
 
-### Backend'i Başlatın
+### Tek Komutla Başlatma (Önerilen)
 
 ```bash
-cd backend
 npm run dev
 ```
 
-Backend http://localhost:5000 adresinde çalışacaktır.
+Bu komut hem backend'i hem frontend'i aynı anda başlatır:
+- Backend: http://localhost:5000
+- Frontend: http://localhost:5173
 
-### Frontend'i Başlatın
+### Manuel Başlatma
 
-Yeni bir terminal açın:
+Backend'i ayrı başlatmak için:
 
 ```bash
-cd frontend
-npm run dev
+npm run dev:backend
 ```
 
-Frontend http://localhost:5173 adresinde çalışacaktır.
+Frontend'i ayrı başlatmak için:
+
+```bash
+npm run dev:frontend
+```
 
 ## 📱 Kullanım
 
