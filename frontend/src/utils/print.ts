@@ -2,6 +2,16 @@ import { Islem } from '../types';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
+// Telefon numarasını formatla
+const formatPhoneNumber = (phone: string | undefined): string => {
+  if (!phone) return '';
+  const cleaned = phone.replace(/\D/g, '');
+  if (cleaned.length === 11) {
+    return `${cleaned.slice(0, 4)} ${cleaned.slice(4, 7)} ${cleaned.slice(7, 9)} ${cleaned.slice(9)}`;
+  }
+  return phone;
+};
+
 export const printIslem = (islem: Islem) => {
   const printContent = `
     <!DOCTYPE html>
@@ -70,6 +80,10 @@ export const printIslem = (islem: Islem) => {
               <div class="info-row">
                 <span class="info-label">Adres:</span>
                 <span class="info-value">${[islem.ilce, islem.mahalle, islem.cadde, islem.sokak, 'No:' + islem.kapi_no, islem.apartman_site, islem.blok_no ? 'Blok:' + islem.blok_no : '', islem.daire_no ? 'D:' + islem.daire_no : ''].filter(v => v && v !== 'No:' && v !== 'Blok:' && v !== 'D:').join(' ') || ''}</span>
+              </div>
+              <div class="info-row">
+                <span class="info-label">Telefon:</span>
+                <span class="info-value">${formatPhoneNumber(islem.cep_tel)}${islem.sabit_tel ? ' / Sabit: ' + formatPhoneNumber(islem.sabit_tel) : ''}${islem.yedek_tel ? ' / Yedek: ' + formatPhoneNumber(islem.yedek_tel) : ''}</span>
               </div>
               <div class="info-row">
                 <span class="info-label">Vergi Daire/No:</span>

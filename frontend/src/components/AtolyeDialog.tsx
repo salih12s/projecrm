@@ -234,10 +234,10 @@ const AtolyeDialog: React.FC<AtolyeDialogProps> = ({ open, onClose, atolyeId }) 
             />
           </Grid>
 
-          {/* Kod */}
+          {/* Model */}
           <Grid item xs={12} md={6}>
             <TextField
-              label="Kod"
+              label="Model"
               fullWidth
               value={formData.kod}
               onChange={(e) => handleChange('kod', e.target.value)}

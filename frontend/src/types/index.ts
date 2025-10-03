@@ -22,6 +22,7 @@ export interface Islem {
   daire_no?: string;
   sabit_tel?: string;
   cep_tel: string;
+  yedek_tel?: string;
   urun: string;
   marka: string;
   sikayet: string;
@@ -42,6 +43,7 @@ export interface IslemCreateDto {
   daire_no?: string;
   sabit_tel?: string;
   cep_tel: string;
+  yedek_tel?: string;
   urun: string;
   marka: string;
   sikayet: string;
@@ -65,6 +67,7 @@ export interface IslemUpdateDto {
   daire_no?: string;
   sabit_tel?: string;
   cep_tel: string;
+  yedek_tel?: string;
   urun: string;
   marka: string;
   sikayet: string;

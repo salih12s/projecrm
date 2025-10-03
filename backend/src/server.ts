@@ -11,6 +11,7 @@ import teknisyenlerRoutes from './routes/teknisyenler';
 import markalarRoutes from './routes/markalar';
 import bayilerRoutes from './routes/bayiler';
 import atolyeRoutes from './routes/atolye';
+import adminRoutes from './routes/admin';
 
 dotenv.config();
 
@@ -46,6 +47,7 @@ app.use('/api/teknisyenler', teknisyenlerRoutes);
 app.use('/api/markalar', markalarRoutes);
 app.use('/api/bayiler', bayilerRoutes);
 app.use('/api/atolye', atolyeRoutes);
+app.use('/api/admin', adminRoutes);
 
 // Ana route
 app.get('/', (_req, res) => {

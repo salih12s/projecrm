@@ -13,6 +13,11 @@ import {
   Divider,
   Tabs,
   Tab,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogContentText,
+  DialogActions,
 } from '@mui/material';
 import { 
   Logout as LogoutIcon, 
@@ -35,6 +40,7 @@ import IslemDialog from './IslemDialog.tsx';
 import Settings from './Settings';
 import MusteriGecmisi from './MusteriGecmisi.tsx';
 import AtolyeTakip from './AtolyeTakip.tsx';
+import AdminPanel from './AdminPanel.tsx';
 import { exportListToPDF } from '../utils/print.ts';
 import Loading from './Loading';
 import ErrorMessage from './ErrorMessage';
@@ -54,8 +60,10 @@ const Dashboard: React.FC = () => {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   // Bayi için tab değeri her zaman 0 (tek tab var)
   const [activeTab, setActiveTab] = useState(0);
+  const [confirmDialog, setConfirmDialog] = useState<{ open: boolean; islem: Islem | null }>({ open: false, islem: null });
   
   const isBayi = user?.role === 'bayi';
+  const isAdmin = user?.role === 'admin';
 
   useEffect(() => {
     // Socket.IO bağlantısı
@@ -164,14 +172,36 @@ const Dashboard: React.FC = () => {
   };
 
   const handleToggleDurum = async (islem: Islem) => {
+    // Eğer açıktan tamamlandıya geçiyorsa onay iste
+    if (islem.is_durumu === 'acik') {
+      setConfirmDialog({ open: true, islem });
+    } else {
+      // Tamamlandıdan açığa geçiş (geri alma) direkt yapılabilir
+      try {
+        await islemService.updateDurum(islem.id, 'acik');
+        showSnackbar('İş durumu açık olarak güncellendi!', 'success');
+      } catch (error) {
+        console.error('Durum güncellenirken hata:', error);
+        showSnackbar('Durum güncellenirken hata oluştu!', 'error');
+      }
+    }
+  };
+
+  const handleConfirmTamamla = async () => {
+    if (!confirmDialog.islem) return;
+    
     try {
-      const newDurum = islem.is_durumu === 'acik' ? 'tamamlandi' : 'acik';
-      await islemService.updateDurum(islem.id, newDurum);
-      showSnackbar(`İş durumu ${newDurum === 'acik' ? 'açık' : 'tamamlandı'} olarak güncellendi!`, 'success');
+      await islemService.updateDurum(confirmDialog.islem.id, 'tamamlandi');
+      showSnackbar('İş durumu tamamlandı olarak güncellendi!', 'success');
+      setConfirmDialog({ open: false, islem: null });
     } catch (error) {
       console.error('Durum güncellenirken hata:', error);
       showSnackbar('Durum güncellenirken hata oluştu!', 'error');
     }
+  };
+
+  const handleCancelTamamla = () => {
+    setConfirmDialog({ open: false, islem: null });
   };
 
   const handleExport = () => {
@@ -290,6 +320,13 @@ const Dashboard: React.FC = () => {
               iconPosition="start" 
               label="Tanımlamalar" 
             />
+            {isAdmin && (
+              <Tab 
+                icon={<AccountCircle sx={{ fontSize: '1.1rem' }} />} 
+                iconPosition="start" 
+                label="Kullanıcı Yönetimi" 
+              />
+            )}
           </Tabs>
         )}
       </Box>
@@ -360,6 +397,7 @@ const Dashboard: React.FC = () => {
               onEdit={handleOpenDialog}
               onDelete={handleDeleteIslem}
               onToggleDurum={handleToggleDurum}
+              isAdminMode={isAdmin}
             />
           </>
         )) : activeTab === 1 ? (
@@ -368,8 +406,14 @@ const Dashboard: React.FC = () => {
         ) : activeTab === 2 ? (
           // Atölye Takip Tab
           <AtolyeTakip />
-        ) : (
+        ) : activeTab === 3 ? (
           // Tanımlamalar Tab
+          <Settings />
+        ) : activeTab === 4 && isAdmin ? (
+          // Kullanıcı Yönetimi (Sadece Admin)
+          <AdminPanel />
+        ) : (
+          // Fallback
           <Settings />
         )}
           </>
@@ -381,6 +425,33 @@ const Dashboard: React.FC = () => {
           onClose={handleCloseDialog}
           onSave={handleSaveIslem}
         />
+
+        {/* Tamamlama Onay Dialog */}
+        <Dialog
+          open={confirmDialog.open}
+          onClose={handleCancelTamamla}
+          maxWidth="sm"
+          fullWidth
+        >
+          <DialogTitle sx={{ bgcolor: 'warning.light', color: 'warning.contrastText' }}>
+            İşlemi Tamamla
+          </DialogTitle>
+          <DialogContent sx={{ mt: 2 }}>
+            <DialogContentText>
+              Bu işlemi <strong>tamamlandı</strong> olarak işaretlemek istediğinizden emin misiniz?
+              <br /><br />
+              <strong>Uyarı:</strong> İşlem tamamlandı olarak işaretlendikten sonra düzenlenemeyecektir.
+            </DialogContentText>
+          </DialogContent>
+          <DialogActions sx={{ px: 3, pb: 2 }}>
+            <Button onClick={handleCancelTamamla} variant="outlined">
+              İptal
+            </Button>
+            <Button onClick={handleConfirmTamamla} variant="contained" color="success" autoFocus>
+              Tamamla
+            </Button>
+          </DialogActions>
+        </Dialog>
       </Container>
     </Box>
   );

@@ -64,6 +64,15 @@ export const authService = {
     return response.data;
   },
 
+  adminLogin: async (username: string, password: string) => {
+    const response = await api.post('/admin/login', { username, password });
+    if (response.data.token) {
+      localStorage.setItem('token', response.data.token);
+      localStorage.setItem('user', JSON.stringify(response.data.user));
+    }
+    return response.data;
+  },
+
   logout: () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
@@ -98,6 +107,44 @@ export const islemService = {
 
   updateDurum: async (id: number, is_durumu: 'acik' | 'tamamlandi'): Promise<Islem> => {
     const response = await api.patch(`/islemler/${id}/durum`, { is_durumu });
+    return response.data;
+  },
+};
+
+// Admin servisleri
+export const adminService = {
+  createUser: async (username: string, password: string) => {
+    const response = await api.post('/admin/create-user', { username, password });
+    return response.data;
+  },
+
+  getUsers: async () => {
+    const response = await api.get('/admin/users');
+    return response.data;
+  },
+
+  toggleUserStatus: async (id: number) => {
+    const response = await api.patch(`/admin/users/${id}/toggle`);
+    return response.data;
+  },
+
+  deleteUser: async (id: number) => {
+    const response = await api.delete(`/admin/users/${id}`);
+    return response.data;
+  },
+
+  getUserRecords: async (username: string) => {
+    const response = await api.get(`/admin/user-records/${username}`);
+    return response.data;
+  },
+
+  getUserAtolyeRecords: async (username: string) => {
+    const response = await api.get(`/admin/user-atolye-records/${username}`);
+    return response.data;
+  },
+
+  getAllRecords: async (): Promise<Islem[]> => {
+    const response = await api.get('/admin/all-records');
     return response.data;
   },
 };

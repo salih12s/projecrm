@@ -6,6 +6,7 @@ interface AuthContextType {
   user: User | null;
   login: (username: string, password: string) => Promise<void>;
   bayiLogin: (username: string, password: string) => Promise<void>;
+  adminLogin: (username: string, password: string) => Promise<void>;
   register: (username: string, password: string) => Promise<void>;
   logout: () => void;
   isAuthenticated: boolean;
@@ -33,6 +34,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setUser(data.user);
   };
 
+  const adminLogin = async (username: string, password: string) => {
+    const data = await authService.adminLogin(username, password);
+    setUser(data.user);
+  };
+
   const register = async (username: string, password: string) => {
     await authService.register(username, password);
   };
@@ -48,6 +54,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         user,
         login,
         bayiLogin,
+        adminLogin,
         register,
         logout,
         isAuthenticated: !!user,

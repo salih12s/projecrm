@@ -272,10 +272,15 @@ const MusteriGecmisi: React.FC = () => {
         if (islem.blok_no) detayAdres += 'Blok: ' + islem.blok_no + ' ';
         if (islem.daire_no) detayAdres += 'Daire: ' + islem.daire_no;
         
+        // Telefon bilgisi - yedek telefon varsa ekle
+        let telefonBilgisi = formatPhoneNumber(islem.cep_tel);
+        if (islem.sabit_tel) telefonBilgisi += ' / Sabit: ' + formatPhoneNumber(islem.sabit_tel);
+        if (islem.yedek_tel) telefonBilgisi += ' / Yedek: ' + formatPhoneNumber(islem.yedek_tel);
+        
         // Tablo verileri - Türkçe karakterler normalize edilmiş
         const tableData = [
           ['Musteri', normalizeTurkish(islem.ad_soyad)],
-          ['Telefon', formatPhoneNumber(islem.cep_tel) + (islem.sabit_tel ? ' / ' + formatPhoneNumber(islem.sabit_tel) : '')],
+          ['Telefon', telefonBilgisi],
           ['Adres', normalizeTurkish(`${islem.ilce}, ${islem.mahalle}, ${islem.cadde} ${islem.sokak} No:${islem.kapi_no}`)],
         ];
         

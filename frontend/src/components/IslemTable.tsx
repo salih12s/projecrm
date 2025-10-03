@@ -42,6 +42,7 @@ interface IslemTableProps {
   onEdit: (islem: Islem) => void;
   onDelete: (id: number) => void;
   onToggleDurum: (islem: Islem) => void;
+  isAdminMode?: boolean; // Admin için tamamlanan işlemleri de düzenleme izni
 }
 
 interface ColumnConfig {
@@ -56,6 +57,7 @@ const IslemTable: React.FC<IslemTableProps> = ({
   onEdit,
   onDelete,
   onToggleDurum,
+  isAdminMode = false,
 }) => {
   const [filteredIslemler, setFilteredIslemler] = useState<Islem[]>(islemler);
   
@@ -501,37 +503,51 @@ const IslemTable: React.FC<IslemTableProps> = ({
               })}
               <TableCell sx={{ py: 0.5, px: 1 }}>
                 <Box sx={{ display: 'flex', gap: 0.3 }}>
-                  <Tooltip title={islem.is_durumu === 'acik' ? 'Tamamla' : 'Tamamlandı'}>
-                    <IconButton 
-                      size="small" 
-                      onClick={() => onToggleDurum(islem)}
-                      sx={{ 
-                        bgcolor: islem.is_durumu === 'acik' ? 'warning.light' : 'success.light',
-                        width: 28,
-                        height: 28,
-                        '&:hover': {
-                          bgcolor: islem.is_durumu === 'acik' ? 'warning.main' : 'success.main',
-                        }
-                      }}
-                    >
-                      <Check sx={{ color: 'white', fontSize: '1rem' }} />
-                    </IconButton>
+                  <Tooltip title={islem.is_durumu === 'acik' ? 'Tamamla' : (isAdminMode ? 'Tamamlandı' : 'Tamamlandı - Durum değiştirilemez')}>
+                    <span>
+                      <IconButton 
+                        size="small" 
+                        onClick={() => onToggleDurum(islem)}
+                        disabled={!isAdminMode && islem.is_durumu === 'tamamlandi'}
+                        sx={{ 
+                          bgcolor: islem.is_durumu === 'acik' ? 'warning.light' : (isAdminMode ? 'success.light' : 'grey.300'),
+                          width: 28,
+                          height: 28,
+                          '&:hover': {
+                            bgcolor: islem.is_durumu === 'acik' ? 'warning.main' : (isAdminMode ? 'success.main' : 'grey.300'),
+                          },
+                          '&.Mui-disabled': {
+                            bgcolor: 'grey.300',
+                            opacity: 0.6,
+                          }
+                        }}
+                      >
+                        <Check sx={{ color: islem.is_durumu === 'acik' ? 'white' : (isAdminMode ? 'white' : 'grey.500'), fontSize: '1rem' }} />
+                      </IconButton>
+                    </span>
                   </Tooltip>
-                  <Tooltip title="Düzenle">
-                    <IconButton 
-                      size="small" 
-                      onClick={() => onEdit(islem)}
-                      sx={{ 
-                        bgcolor: 'primary.light',
-                        width: 28,
-                        height: 28,
-                        '&:hover': {
-                          bgcolor: 'primary.main',
-                        }
-                      }}
-                    >
-                      <Edit sx={{ color: 'white', fontSize: '1rem' }} />
-                    </IconButton>
+                  <Tooltip title={islem.is_durumu === 'acik' ? 'Düzenle' : (isAdminMode ? 'Düzenle (Admin)' : 'Tamamlanan işlem düzenlenemez')}>
+                    <span>
+                      <IconButton 
+                        size="small" 
+                        onClick={() => onEdit(islem)}
+                        disabled={!isAdminMode && islem.is_durumu === 'tamamlandi'}
+                        sx={{ 
+                          bgcolor: (islem.is_durumu === 'acik' || isAdminMode) ? 'primary.light' : 'grey.300',
+                          width: 28,
+                          height: 28,
+                          '&:hover': {
+                            bgcolor: (islem.is_durumu === 'acik' || isAdminMode) ? 'primary.main' : 'grey.300',
+                          },
+                          '&.Mui-disabled': {
+                            bgcolor: 'grey.300',
+                            opacity: 0.6,
+                          }
+                        }}
+                      >
+                        <Edit sx={{ color: (islem.is_durumu === 'acik' || isAdminMode) ? 'white' : 'grey.500', fontSize: '1rem' }} />
+                      </IconButton>
+                    </span>
                   </Tooltip>
                   <Tooltip title="Yazdır">
                     <IconButton 

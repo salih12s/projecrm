@@ -47,6 +47,7 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave 
   const [existingRecord, setExistingRecord] = useState<Islem | null>(null);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [showPhoneQuery, setShowPhoneQuery] = useState(false);
+  const [showTamamlaConfirm, setShowTamamlaConfirm] = useState(false);
   const [phoneNumber, setPhoneNumber] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [formData, setFormData] = useState<IslemUpdateDto>({
@@ -61,6 +62,7 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave 
     daire_no: '',
     sabit_tel: '',
     cep_tel: '',
+    yedek_tel: '',
     urun: '',
     marka: '',
     sikayet: '',
@@ -106,6 +108,7 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave 
         daire_no: islem.daire_no || '',
         sabit_tel: islem.sabit_tel || '',
         cep_tel: islem.cep_tel,
+        yedek_tel: islem.yedek_tel || '',
         urun: islem.urun,
         marka: islem.marka,
         sikayet: islem.sikayet,
@@ -131,6 +134,7 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave 
         daire_no: '',
         sabit_tel: '',
         cep_tel: '',
+        yedek_tel: '',
         urun: '',
         marka: '',
         sikayet: '',
@@ -150,7 +154,7 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave 
     let value = e.target.value;
     
     // Telefon alanları için formatla
-    if (field === 'cep_tel' || field === 'sabit_tel') {
+    if (field === 'cep_tel' || field === 'sabit_tel' || field === 'yedek_tel') {
       const cleaned = cleanPhoneNumber(value);
       // Sadece 11 hane kadar kabul et
       if (cleaned.length <= 11) {
@@ -213,6 +217,7 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave 
         daire_no: existingRecord.daire_no || '',
         sabit_tel: existingRecord.sabit_tel || '',
         cep_tel: existingRecord.cep_tel,
+        yedek_tel: existingRecord.yedek_tel || '',
         urun: existingRecord.urun || '',
         marka: existingRecord.marka || '',
         sikayet: existingRecord.sikayet || '',
@@ -234,6 +239,15 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave 
     setExistingRecord(null);
   };
 
+  const handleConfirmTamamla = async () => {
+    setShowTamamlaConfirm(false);
+    await saveIslem();
+  };
+
+  const handleCancelTamamla = () => {
+    setShowTamamlaConfirm(false);
+  };
+
   const handleSubmit = async () => {
     // Form validasyonu
     if (!formData.ad_soyad || !formData.ilce || !formData.mahalle || 
@@ -243,6 +257,17 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave 
       return;
     }
 
+    // Eğer mevcut işlem düzenleniyorsa ve durum tamamlandıya çevriliyorsa onay iste
+    if (islem && islem.is_durumu === 'acik' && formData.is_durumu === 'tamamlandi') {
+      setShowTamamlaConfirm(true);
+      return;
+    }
+
+    // Onay alındıysa veya gerekli değilse kaydet
+    await saveIslem();
+  };
+
+  const saveIslem = async () => {
     try {
       if (islem) {
         // Güncelleme
@@ -262,6 +287,7 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave 
           daire_no: formData.daire_no,
           sabit_tel: formData.sabit_tel,
           cep_tel: formData.cep_tel,
+          yedek_tel: formData.yedek_tel,
           urun: formData.urun,
           marka: formData.marka,
           sikayet: formData.sikayet,
@@ -445,6 +471,15 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave 
           <Grid item xs={12} sm={6}>
             <TextField
               fullWidth
+              label="Yedek Telefon"
+              value={formatPhoneNumber(formData.yedek_tel)}
+              onChange={handleChange('yedek_tel')}
+              placeholder="0544 448 88 88"
+            />
+          </Grid>
+          <Grid item xs={12} sm={6}>
+            <TextField
+              fullWidth
               required
               label="Ürün"
               value={formData.urun}
@@ -556,6 +591,40 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave 
           </Button>
         )}
       </DialogActions>
+
+      {/* Tamamlama Onay Dialog */}
+      <Dialog
+        open={showTamamlaConfirm}
+        onClose={handleCancelTamamla}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle sx={{ bgcolor: 'warning.light', color: 'warning.contrastText' }}>
+          İşlemi Tamamla
+        </DialogTitle>
+        <DialogContent sx={{ mt: 2 }}>
+          <Alert severity="warning" sx={{ mb: 2 }}>
+            <AlertTitle>Dikkat!</AlertTitle>
+            Bu işlemi <strong>tamamlandı</strong> olarak işaretlemek üzeresiniz.
+          </Alert>
+          <Box sx={{ mt: 2 }}>
+            <strong>Önemli:</strong>
+            <ul style={{ marginTop: '8px', paddingLeft: '20px' }}>
+              <li>İşlem tamamlandı olarak işaretlendikten sonra düzenlenemeyecektir.</li>
+              <li>Sadece durum değişikliği yapabilirsiniz (tamamlandı ↔ açık).</li>
+              <li>Devam etmek istediğinizden emin misiniz?</li>
+            </ul>
+          </Box>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button onClick={handleCancelTamamla} variant="outlined">
+            İptal
+          </Button>
+          <Button onClick={handleConfirmTamamla} variant="contained" color="success" autoFocus>
+            Evet, Tamamla
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Dialog>
   );
 };

@@ -152,6 +152,7 @@ router.post('/', authMiddleware, async (req: Request, res: Response): Promise<vo
       daire_no,
       sabit_tel,
       cep_tel,
+      yedek_tel,
       urun,
       marka,
       sikayet,
@@ -163,13 +164,13 @@ router.post('/', authMiddleware, async (req: Request, res: Response): Promise<vo
     const result = await pool.query(
       `INSERT INTO islemler (
         ad_soyad, ilce, mahalle, cadde, sokak, kapi_no,
-        apartman_site, blok_no, daire_no, sabit_tel, cep_tel,
+        apartman_site, blok_no, daire_no, sabit_tel, cep_tel, yedek_tel,
         urun, marka, sikayet, teknisyen_ismi, yapilan_islem, tutar, created_by
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
       RETURNING *`,
       [
         ad_soyad, ilce, mahalle, cadde, sokak, kapi_no,
-        apartman_site, blok_no, daire_no, sabit_tel, cep_tel,
+        apartman_site, blok_no, daire_no, sabit_tel, cep_tel, yedek_tel,
         urun, marka, sikayet, teknisyen_ismi, yapilan_islem, tutar, req.user?.username
       ]
     );
@@ -222,19 +223,20 @@ router.put('/:id', authMiddleware, async (req: Request, res: Response): Promise<
         daire_no = $12,
         sabit_tel = $13,
         cep_tel = $14,
-        urun = $15,
-        marka = $16,
-        sikayet = $17,
-        is_durumu = $18,
+        yedek_tel = $15,
+        urun = $16,
+        marka = $17,
+        sikayet = $18,
+        is_durumu = $19,
         updated_at = CURRENT_TIMESTAMP
-      WHERE id = $19
+      WHERE id = $20
       RETURNING *`,
       [
         updatedData.teknisyen_ismi, updatedData.yapilan_islem, updatedData.tutar, 
         updatedData.ad_soyad, updatedData.ilce, updatedData.mahalle,
         updatedData.cadde, updatedData.sokak, updatedData.kapi_no, 
         updatedData.apartman_site, updatedData.blok_no, updatedData.daire_no,
-        updatedData.sabit_tel, updatedData.cep_tel, updatedData.urun, 
+        updatedData.sabit_tel, updatedData.cep_tel, updatedData.yedek_tel, updatedData.urun, 
         updatedData.marka, updatedData.sikayet, updatedData.is_durumu, id
       ]
     );

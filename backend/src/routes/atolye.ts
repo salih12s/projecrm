@@ -42,6 +42,7 @@ router.get('/:id', auth, async (req: Request, res: Response) => {
 router.post('/', auth, async (req: Request, res: Response) => {
   try {
     const createDto: AtolyeCreateDto = req.body;
+    const username = (req as any).user?.username;
 
     // Validate required fields
     if (!createDto.bayi_adi || !createDto.musteri_ad_soyad || !createDto.tel_no || 
@@ -53,8 +54,8 @@ router.post('/', auth, async (req: Request, res: Response) => {
 
     const result = await pool.query<Atolye>(
       `INSERT INTO atolye (
-        bayi_adi, musteri_ad_soyad, tel_no, marka, kod, seri_no, sikayet, ozel_not
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) 
+        bayi_adi, musteri_ad_soyad, tel_no, marka, kod, seri_no, sikayet, ozel_not, created_by
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) 
       RETURNING *`,
       [
         createDto.bayi_adi,
@@ -64,7 +65,8 @@ router.post('/', auth, async (req: Request, res: Response) => {
         createDto.kod || null,
         createDto.seri_no || null,
         createDto.sikayet,
-        createDto.ozel_not || null
+        createDto.ozel_not || null,
+        username || null
       ]
     );
 

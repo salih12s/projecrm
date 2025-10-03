@@ -12,28 +12,28 @@ import {
   Grid,
   Alert,
 } from '@mui/material';
-import { AdminPanelSettings, Store } from '@mui/icons-material';
+import { AdminPanelSettings, Store, Person } from '@mui/icons-material';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { useSnackbar } from '../context/SnackbarContext';
 import { authService } from '../services/api';
 
 const Login: React.FC = () => {
-  const [loginType, setLoginType] = useState<'select' | 'admin' | 'bayi' | 'admin-password'>('select');
+  const [loginType, setLoginType] = useState<'select' | 'admin' | 'bayi' | 'user' | 'admin-password'>('select');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [systemPassword, setSystemPassword] = useState('');
   const [error, setError] = useState('');
-  const { login, bayiLogin } = useAuth();
+  const { login, bayiLogin, adminLogin } = useAuth();
   const navigate = useNavigate();
   const { showSnackbar } = useSnackbar();
 
-  const handleLoginTypeSelect = (type: 'admin' | 'bayi') => {
+  const handleLoginTypeSelect = (type: 'admin' | 'bayi' | 'user') => {
     if (type === 'admin') {
       // Admin için önce sistem şifresi sor
       setLoginType('admin-password');
     } else {
-      // Bayi için direkt login ekranı
+      // Bayi ve normal kullanıcı için direkt login ekranı
       setLoginType(type);
     }
     setError('');
@@ -94,12 +94,16 @@ const Login: React.FC = () => {
 
     try {
       if (loginType === 'admin') {
-        await login(username, password);
-        showSnackbar('Başarıyla giriş yaptınız!', 'success');
+        await adminLogin(username, password);
+        showSnackbar('Admin girişi başarılı!', 'success');
         navigate('/');
       } else if (loginType === 'bayi') {
         await bayiLogin(username, password);
         showSnackbar('Bayi girişi başarılı!', 'success');
+        navigate('/');
+      } else if (loginType === 'user') {
+        await login(username, password);
+        showSnackbar('Giriş başarılı!', 'success');
         navigate('/');
       }
     } catch (err: any) {
@@ -126,7 +130,22 @@ const Login: React.FC = () => {
 
           {loginType === 'select' && (
             <Grid container spacing={3}>
-              <Grid item xs={12} sm={6}>
+              <Grid item xs={12} sm={4}>
+                <Card>
+                  <CardActionArea onClick={() => handleLoginTypeSelect('user')}>
+                    <CardContent sx={{ textAlign: 'center', py: 4 }}>
+                      <Person sx={{ fontSize: 80, color: '#0D3282', mb: 2 }} />
+                      <Typography variant="h5" component="div">
+                        Kullanıcı Girişi
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                        Normal kullanıcı olarak giriş yap
+                      </Typography>
+                    </CardContent>
+                  </CardActionArea>
+                </Card>
+              </Grid>
+              <Grid item xs={12} sm={4}>
                 <Card>
                   <CardActionArea onClick={() => handleLoginTypeSelect('admin')}>
                     <CardContent sx={{ textAlign: 'center', py: 4 }}>
@@ -141,7 +160,7 @@ const Login: React.FC = () => {
                   </CardActionArea>
                 </Card>
               </Grid>
-              <Grid item xs={12} sm={6}>
+              <Grid item xs={12} sm={4}>
                 <Card>
                   <CardActionArea onClick={() => handleLoginTypeSelect('bayi')}>
                     <CardContent sx={{ textAlign: 'center', py: 4 }}>
@@ -207,10 +226,10 @@ const Login: React.FC = () => {
             </>
           )}
 
-          {(loginType === 'admin' || loginType === 'bayi') && (
+          {(loginType === 'admin' || loginType === 'bayi' || loginType === 'user') && (
             <>
               <Typography variant="h6" align="center" sx={{ mb: 3 }}>
-                {loginType === 'admin' ? 'Admin Girişi' : 'Bayi Girişi'}
+                {loginType === 'admin' ? 'Admin Girişi' : loginType === 'bayi' ? 'Bayi Girişi' : 'Kullanıcı Girişi'}
               </Typography>
 
               {error && (
