@@ -22,6 +22,7 @@ import {
   Settings as SettingsIcon,
   Home,
   Build,
+  History,
 } from '@mui/icons-material';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
@@ -32,6 +33,7 @@ import IslemTable from './IslemTable.tsx';
 import IslemFilters from './IslemFilters.tsx';
 import IslemDialog from './IslemDialog.tsx';
 import Settings from './Settings';
+import MusteriGecmisi from './MusteriGecmisi.tsx';
 import { exportToExcel } from '../utils/print.ts';
 import Loading from './Loading';
 import ErrorMessage from './ErrorMessage';
@@ -249,6 +251,11 @@ const Dashboard: React.FC = () => {
             label="Ana Sayfa" 
           />
           <Tab 
+            icon={<History sx={{ fontSize: '1.1rem' }} />} 
+            iconPosition="start" 
+            label="Müşteri Geçmişi" 
+          />
+          <Tab 
             icon={<SettingsIcon sx={{ fontSize: '1.1rem' }} />} 
             iconPosition="start" 
             label="Tanımlamalar" 
@@ -310,7 +317,10 @@ const Dashboard: React.FC = () => {
               onToggleDurum={handleToggleDurum}
             />
           </>
-        )) : (
+        )) : activeTab === 1 ? (
+          // Müşteri Geçmişi Tab
+          <MusteriGecmisi />
+        ) : (
           // Tanımlamalar Tab
           <Settings />
         )}

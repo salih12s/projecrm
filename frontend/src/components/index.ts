@@ -6,3 +6,5 @@ export { default as IslemDialog } from './IslemDialog';
 export { default as Loading } from './Loading';
 export { default as ErrorMessage } from './ErrorMessage';
 export { default as StatsCards } from './StatsCards';
+export { default as MusteriGecmisi } from './MusteriGecmisi.tsx';
+export { default as Settings } from './Settings';
