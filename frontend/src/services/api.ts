@@ -36,6 +36,11 @@ api.interceptors.response.use(
 
 // Auth servisleri
 export const authService = {
+  verifySystemPassword: async (password: string) => {
+    const response = await api.post('/auth/verify-system-password', { password });
+    return response.data;
+  },
+
   register: async (username: string, password: string) => {
     const response = await api.post('/auth/register', { username, password });
     return response.data;

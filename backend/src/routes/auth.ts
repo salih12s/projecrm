@@ -130,4 +130,27 @@ router.post('/bayi-login', async (req: Request, res: Response): Promise<void> =>
   }
 });
 
+// Sistem Şifresi Kontrolü (Admin girişi için)
+router.post('/verify-system-password', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { password } = req.body;
+    
+    // Sistem şifresini .env'den al veya sabit hash kullan
+    const SYSTEM_PASSWORD_HASH = process.env.SYSTEM_PASSWORD_HASH || '$2a$10$XQKZvK5P7pZQwVxJYvN8/.rKZvQK5pGxGvB0YvN8vL5K7pZQwVxJY'; // TakipSistemi!123
+    
+    // Şifreyi kontrol et
+    const isValid = await bcrypt.compare(password, SYSTEM_PASSWORD_HASH);
+    
+    if (!isValid) {
+      res.status(401).json({ message: 'Geçersiz sistem şifresi' });
+      return;
+    }
+    
+    res.json({ message: 'Sistem şifresi doğrulandı', valid: true });
+  } catch (error) {
+    console.error('Sistem şifresi kontrol hatası:', error);
+    res.status(500).json({ message: 'Sunucu hatası' });
+  }
+});
+
 export default router;
