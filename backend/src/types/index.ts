@@ -87,3 +87,53 @@ export interface Marka {
   isim: string;
   created_at: Date;
 }
+
+export interface Bayi {
+  id: number;
+  isim: string;
+  created_at: Date;
+}
+
+export interface Atolye {
+  id: number;
+  teslim_durumu: 'beklemede' | 'siparis_verildi' | 'yapildi' | 'fabrika_gitti' | 'odeme_bekliyor' | 'teslim_edildi';
+  bayi_adi: string;
+  musteri_ad_soyad: string;
+  tel_no: string;
+  marka: string;
+  kod?: string;
+  seri_no?: string;
+  sikayet: string;
+  ozel_not?: string;
+  yapilan_islem?: string;
+  ucret?: number;
+  yapilma_tarihi?: Date;
+  created_at: Date;
+  updated_at: Date;
+}
+
+export interface AtolyeCreateDto {
+  bayi_adi: string;
+  musteri_ad_soyad: string;
+  tel_no: string;
+  marka: string;
+  kod?: string;
+  seri_no?: string;
+  sikayet: string;
+  ozel_not?: string;
+}
+
+export interface AtolyeUpdateDto {
+  teslim_durumu?: 'beklemede' | 'siparis_verildi' | 'yapildi' | 'fabrika_gitti' | 'odeme_bekliyor' | 'teslim_edildi';
+  bayi_adi?: string;
+  musteri_ad_soyad?: string;
+  tel_no?: string;
+  marka?: string;
+  kod?: string;
+  seri_no?: string;
+  sikayet?: string;
+  ozel_not?: string;
+  yapilan_islem?: string;
+  ucret?: number;
+  yapilma_tarihi?: Date;
+}

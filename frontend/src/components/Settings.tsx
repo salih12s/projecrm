@@ -18,7 +18,7 @@ import {
   Alert,
 } from '@mui/material';
 import { Edit, Delete, Add } from '@mui/icons-material';
-import { Teknisyen, Marka } from '../types';
+import { Teknisyen, Marka, Bayi } from '../types';
 import { api } from '../services/api';
 import { useSnackbar } from '../context/SnackbarContext';
 
@@ -26,6 +26,7 @@ const Settings: React.FC = () => {
   const [tabValue, setTabValue] = useState(0);
   const [teknisyenler, setTeknisyenler] = useState<Teknisyen[]>([]);
   const [markalar, setMarkalar] = useState<Marka[]>([]);
+  const [bayiler, setBayiler] = useState<Bayi[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [currentId, setCurrentId] = useState<number | null>(null);
@@ -42,9 +43,12 @@ const Settings: React.FC = () => {
       if (tabValue === 0) {
         const response = await api.get('/teknisyenler');
         setTeknisyenler(response.data);
-      } else {
+      } else if (tabValue === 1) {
         const response = await api.get('/markalar');
         setMarkalar(response.data);
+      } else {
+        const response = await api.get('/bayiler');
+        setBayiler(response.data);
       }
     } catch (err) {
       showSnackbar('Veri yüklenirken hata oluştu', 'error');
@@ -74,7 +78,7 @@ const Settings: React.FC = () => {
     }
 
     try {
-      const endpoint = tabValue === 0 ? '/teknisyenler' : '/markalar';
+      const endpoint = tabValue === 0 ? '/teknisyenler' : tabValue === 1 ? '/markalar' : '/bayiler';
       
       if (editMode && currentId) {
         await api.put(`${endpoint}/${currentId}`, { isim: inputValue.trim() });
@@ -97,7 +101,7 @@ const Settings: React.FC = () => {
     if (!window.confirm('Silmek istediğinize emin misiniz?')) return;
 
     try {
-      const endpoint = tabValue === 0 ? '/teknisyenler' : '/markalar';
+      const endpoint = tabValue === 0 ? '/teknisyenler' : tabValue === 1 ? '/markalar' : '/bayiler';
       await api.delete(`${endpoint}/${id}`);
       showSnackbar('Başarıyla silindi', 'success');
       fetchData();
@@ -117,6 +121,7 @@ const Settings: React.FC = () => {
         >
           <Tab label="Teknisyenler" />
           <Tab label="Markalar" />
+          <Tab label="Bayiler" />
         </Tabs>
 
         <Box sx={{ mb: 2 }}>
@@ -126,7 +131,7 @@ const Settings: React.FC = () => {
             onClick={handleAdd}
             sx={{ backgroundColor: '#0D3282', '&:hover': { backgroundColor: '#082052' } }}
           >
-            {tabValue === 0 ? 'Yeni Teknisyen Ekle' : 'Yeni Marka Ekle'}
+            {tabValue === 0 ? 'Yeni Teknisyen Ekle' : tabValue === 1 ? 'Yeni Marka Ekle' : 'Yeni Bayi Ekle'}
           </Button>
         </Box>
 
@@ -149,7 +154,7 @@ const Settings: React.FC = () => {
                 </ListItem>
               ))
             )
-          ) : (
+          ) : tabValue === 1 ? (
             markalar.length === 0 ? (
               <Alert severity="info">Henüz marka eklenmedi</Alert>
             ) : (
@@ -167,20 +172,38 @@ const Settings: React.FC = () => {
                 </ListItem>
               ))
             )
+          ) : (
+            bayiler.length === 0 ? (
+              <Alert severity="info">Henüz bayi eklenmedi</Alert>
+            ) : (
+              bayiler.map((bayi) => (
+                <ListItem key={bayi.id} sx={{ border: '1px solid #e0e0e0', mb: 1, borderRadius: 1 }}>
+                  <ListItemText primary={bayi.isim} />
+                  <ListItemSecondaryAction>
+                    <IconButton edge="end" onClick={() => handleEdit(bayi.id, bayi.isim)} sx={{ mr: 1 }}>
+                      <Edit />
+                    </IconButton>
+                    <IconButton edge="end" onClick={() => handleDelete(bayi.id)} color="error">
+                      <Delete />
+                    </IconButton>
+                  </ListItemSecondaryAction>
+                </ListItem>
+              ))
+            )
           )}
         </List>
       </Paper>
 
       <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} maxWidth="sm" fullWidth>
         <DialogTitle>
-          {editMode ? 'Düzenle' : 'Yeni Ekle'} - {tabValue === 0 ? 'Teknisyen' : 'Marka'}
+          {editMode ? 'Düzenle' : 'Yeni Ekle'} - {tabValue === 0 ? 'Teknisyen' : tabValue === 1 ? 'Marka' : 'Bayi'}
         </DialogTitle>
         <DialogContent>
           {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
           <TextField
             autoFocus
             margin="dense"
-            label={tabValue === 0 ? 'Teknisyen İsmi' : 'Marka İsmi'}
+            label={tabValue === 0 ? 'Teknisyen İsmi' : tabValue === 1 ? 'Marka İsmi' : 'Bayi İsmi'}
             fullWidth
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}

@@ -58,6 +58,36 @@ const createTables = async (): Promise<void> => {
       )
     `);
 
+    // Bayiler tablosu
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS bayiler (
+        id SERIAL PRIMARY KEY,
+        isim VARCHAR(100) UNIQUE NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    // Atölye takip tablosu
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS atolye (
+        id SERIAL PRIMARY KEY,
+        teslim_durumu VARCHAR(50) DEFAULT 'beklemede',
+        bayi_adi VARCHAR(255) NOT NULL,
+        musteri_ad_soyad VARCHAR(255) NOT NULL,
+        tel_no VARCHAR(20) NOT NULL,
+        marka VARCHAR(100) NOT NULL,
+        kod VARCHAR(100),
+        seri_no VARCHAR(100),
+        sikayet TEXT NOT NULL,
+        ozel_not TEXT,
+        yapilan_islem TEXT,
+        ucret DECIMAL(10, 2),
+        yapilma_tarihi TIMESTAMP,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
     console.log('Tablolar başarıyla oluşturuldu');
   } catch (error) {
     console.error('Tablo oluşturma hatası:', error);

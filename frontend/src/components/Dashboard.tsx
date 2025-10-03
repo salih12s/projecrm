@@ -34,6 +34,7 @@ import IslemFilters from './IslemFilters.tsx';
 import IslemDialog from './IslemDialog.tsx';
 import Settings from './Settings';
 import MusteriGecmisi from './MusteriGecmisi.tsx';
+import AtolyeTakip from './AtolyeTakip.tsx';
 import { exportToExcel } from '../utils/print.ts';
 import Loading from './Loading';
 import ErrorMessage from './ErrorMessage';
@@ -256,6 +257,11 @@ const Dashboard: React.FC = () => {
             label="Müşteri Geçmişi" 
           />
           <Tab 
+            icon={<Build sx={{ fontSize: '1.1rem' }} />} 
+            iconPosition="start" 
+            label="Atölye Takip" 
+          />
+          <Tab 
             icon={<SettingsIcon sx={{ fontSize: '1.1rem' }} />} 
             iconPosition="start" 
             label="Tanımlamalar" 
@@ -320,6 +326,9 @@ const Dashboard: React.FC = () => {
         )) : activeTab === 1 ? (
           // Müşteri Geçmişi Tab
           <MusteriGecmisi />
+        ) : activeTab === 2 ? (
+          // Atölye Takip Tab
+          <AtolyeTakip />
         ) : (
           // Tanımlamalar Tab
           <Settings />
