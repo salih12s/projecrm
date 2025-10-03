@@ -43,6 +43,9 @@ export interface IslemCreateDto {
   urun: string;
   marka: string;
   sikayet: string;
+  teknisyen_ismi?: string;
+  yapilan_islem?: string;
+  tutar?: number;
 }
 
 export interface IslemUpdateDto {

@@ -25,6 +25,16 @@ import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea
 import { Islem } from '../types';
 import { printIslem } from '../utils/print.ts';
 
+// Telefon numarasını formatla: 0544 448 88 88
+const formatPhoneNumber = (phone: string | undefined): string => {
+  if (!phone) return '';
+  const cleaned = phone.replace(/\D/g, '');
+  if (cleaned.length === 11) {
+    return `${cleaned.slice(0, 4)} ${cleaned.slice(4, 7)} ${cleaned.slice(7, 9)} ${cleaned.slice(9)}`;
+  }
+  return phone;
+};
+
 interface IslemTableProps {
   islemler: Islem[];
   loading: boolean;
@@ -53,10 +63,21 @@ const IslemTable: React.FC<IslemTableProps> = ({
   // Sütun sırasını localStorage'dan yükle
   const [columnOrder, setColumnOrder] = useState<string[]>(() => {
     const saved = localStorage.getItem('islemTableColumnOrder');
-    return saved ? JSON.parse(saved) : [
+    const defaultOrder = [
       'tarih', 'ad_soyad', 'ilce', 'mahalle', 'cadde', 'sokak', 'kapi_no',
-      'cep_tel', 'urun', 'marka', 'yapilan_islem', 'teknisyen', 'tutar', 'durum'
+      'cep_tel', 'urun', 'marka', 'sikayet', 'yapilan_islem', 'teknisyen', 'tutar', 'durum'
     ];
+    
+    if (saved) {
+      const parsedOrder = JSON.parse(saved);
+      // Eğer kaydedilen sütun sayısı varsayılan sütun sayısından farklıysa, varsayılanı kullan
+      if (parsedOrder.length !== defaultOrder.length) {
+        localStorage.removeItem('islemTableColumnOrder');
+        return defaultOrder;
+      }
+      return parsedOrder;
+    }
+    return defaultOrder;
   });
 
   // Sütun konfigürasyonu
@@ -107,7 +128,7 @@ const IslemTable: React.FC<IslemTableProps> = ({
     cep_tel: {
       id: 'cep_tel',
       label: 'Cep Tel',
-      render: (islem) => <TableCell sx={{ fontSize: '0.8rem', py: 0.5, px: 1 }}>{islem.cep_tel}</TableCell>,
+      render: (islem) => <TableCell sx={{ fontSize: '0.8rem', py: 0.5, px: 1 }}>{formatPhoneNumber(islem.cep_tel)}</TableCell>,
     },
     urun: {
       id: 'urun',
@@ -118,6 +139,17 @@ const IslemTable: React.FC<IslemTableProps> = ({
       id: 'marka',
       label: 'Marka',
       render: (islem) => <TableCell sx={{ fontWeight: 500, fontSize: '0.8rem', py: 0.5, px: 1 }}>{islem.marka}</TableCell>,
+    },
+    sikayet: {
+      id: 'sikayet',
+      label: 'Şikayet',
+      render: (islem) => (
+        <TableCell sx={{ maxWidth: 150, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: '0.8rem', py: 0.5, px: 1 }}>
+          <Tooltip title={islem.sikayet || '-'}>
+            <span>{islem.sikayet || '-'}</span>
+          </Tooltip>
+        </TableCell>
+      ),
     },
     yapilan_islem: {
       id: 'yapilan_islem',
