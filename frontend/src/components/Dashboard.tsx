@@ -35,7 +35,7 @@ import IslemDialog from './IslemDialog.tsx';
 import Settings from './Settings';
 import MusteriGecmisi from './MusteriGecmisi.tsx';
 import AtolyeTakip from './AtolyeTakip.tsx';
-import { exportToExcel } from '../utils/print.ts';
+import { exportListToPDF } from '../utils/print.ts';
 import Loading from './Loading';
 import ErrorMessage from './ErrorMessage';
 import StatsCards from './StatsCards';
@@ -175,8 +175,8 @@ const Dashboard: React.FC = () => {
   };
 
   const handleExport = () => {
-    exportToExcel(filteredIslemler);
-    showSnackbar(`${filteredIslemler.length} kayıt Excel'e aktarıldı!`, 'success');
+    exportListToPDF(filteredIslemler);
+    showSnackbar(`${filteredIslemler.length} kayıt PDF'e aktarıldı!`, 'success');
   };
 
   const handleMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
@@ -326,8 +326,16 @@ const Dashboard: React.FC = () => {
                     startIcon={<DownloadIcon />}
                     onClick={handleExport}
                     size="large"
+                    sx={{
+                      color: '#d32f2f',
+                      borderColor: '#d32f2f',
+                      '&:hover': {
+                        borderColor: '#9a0007',
+                        bgcolor: 'rgba(211, 47, 47, 0.04)',
+                      }
+                    }}
                   >
-                    Excel İndir
+                    PDF İndir
                   </Button>
                   <Button
                     variant="contained"

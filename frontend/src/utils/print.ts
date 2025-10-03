@@ -1,4 +1,6 @@
 import { Islem } from '../types';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 export const printIslem = (islem: Islem) => {
   const printContent = `
@@ -184,15 +186,188 @@ export const printIslem = (islem: Islem) => {
 };
 
 export const exportToExcel = (islemler: Islem[]) => {
-  const headers = ['ID', 'Tarih', 'Müşteri', 'İlçe', 'Mahalle', 'Cadde', 'Sokak', 'Kapı No', 'Apartman/Site', 'Blok No', 'Daire No', 'Sabit Tel', 'Cep Tel', 'Ürün', 'Marka', 'Yapılan İşlem', 'Teknisyen', 'Tutar', 'Şikayet', 'Durum'];
-  const rows = islemler.map(i => [i.id, i.full_tarih ? new Date(i.full_tarih).toLocaleString('tr-TR') : '', i.ad_soyad || '', i.ilce || '', i.mahalle || '', i.cadde || '', i.sokak || '', i.kapi_no || '', i.apartman_site || '', i.blok_no || '', i.daire_no || '', i.sabit_tel || '', i.cep_tel || '', i.urun || '', i.marka || '', i.yapilan_islem || '', i.teknisyen_ismi || '', i.tutar ? Number(i.tutar).toFixed(2) : '0.00', i.sikayet || '', i.is_durumu === 'acik' ? 'Açık' : 'Tamamlandı']);
-  const csvContent = '\uFEFF' + [headers.join(','), ...rows.map(r => r.map(c => typeof c === 'string' && (c.includes(',') || c.includes('"') || c.includes('\n')) ? `"${c.replace(/"/g, '""')}"` : c).join(','))].join('\n');
+  // Başlıklar
+  const headers = [
+    'Tarih',
+    'Müşteri',
+    'İlçe',
+    'Mahalle',
+    'Cadde',
+    'Sokak',
+    'Kapı No',
+    'Cep Tel',
+    'Ürün',
+    'Marka',
+    'Yapılan İşlem',
+    'Teknisyen',
+    'Tutar',
+    'Şikayet',
+    'Durum'
+  ];
+
+  // Satırlar
+  const rows = islemler.map(i => {
+    // Metinleri temizle
+    const sikayetTemiz = (i.sikayet || '').replace(/[\t\n\r]/g, ' ').trim();
+    const yapilan_islemTemiz = (i.yapilan_islem || '').replace(/[\t\n\r]/g, ' ').trim();
+    
+    return [
+      i.full_tarih ? new Date(i.full_tarih).toLocaleDateString('tr-TR') : '',
+      i.ad_soyad || '',
+      i.ilce || '',
+      i.mahalle || '',
+      i.cadde || '',
+      i.sokak || '',
+      i.kapi_no || '',
+      i.cep_tel || '',
+      i.urun || '',
+      i.marka || '',
+      yapilan_islemTemiz,
+      i.teknisyen_ismi || '',
+      i.tutar || '',
+      sikayetTemiz,
+      i.is_durumu === 'acik' ? 'Açık' : 'Tamamlandı'
+    ];
+  });
+
+  // CSV formatı - Virgül ile ayrılmış, tırnak içinde
+  const csvContent = '\uFEFF' + [
+    headers.map(h => `"${h}"`).join(','),
+    ...rows.map(r => r.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','))
+  ].join('\r\n');
+
+  // Dosyayı indir
   const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
   const link = document.createElement('a');
+  const tarih = new Date().toLocaleDateString('tr-TR').replace(/\./g, '-');
+  const fileName = `islemler_${tarih}.csv`;
   link.setAttribute('href', URL.createObjectURL(blob));
-  link.setAttribute('download', `islemler_${new Date().toLocaleDateString('tr-TR')}.csv`);
+  link.setAttribute('download', fileName);
   link.style.visibility = 'hidden';
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
+};
+
+// Liste için PDF Export
+export const exportListToPDF = (islemler: Islem[]) => {
+  const doc = new jsPDF('l', 'mm', 'a4'); // Landscape (yatay) A4
+  
+  // Türkçe karakter desteği için font ayarı
+  doc.setFont('helvetica');
+  
+  // Başlık
+  doc.setFontSize(16);
+  doc.setFont('helvetica', 'bold');
+  const baslik = 'ISLEMLER LISTESI';
+  doc.text(baslik, doc.internal.pageSize.getWidth() / 2, 15, { align: 'center' });
+  
+  // Tarih ve kayıt sayısı
+  doc.setFontSize(10);
+  doc.setFont('helvetica', 'normal');
+  const tarihStr = new Date().toLocaleDateString('tr-TR') + ' ' + new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  doc.text('Tarih: ' + tarihStr, 14, 25);
+  doc.text('Toplam Kayit: ' + islemler.length, 14, 30);
+  
+  // Tablo verileri hazırla - Türkçe karakterleri düzelt
+  const turkishCharFix = (str: string) => {
+    if (!str) return '-';
+    return str
+      .replace(/İ/g, 'I')
+      .replace(/ı/g, 'i')
+      .replace(/Ğ/g, 'G')
+      .replace(/ğ/g, 'g')
+      .replace(/Ü/g, 'U')
+      .replace(/ü/g, 'u')
+      .replace(/Ş/g, 'S')
+      .replace(/ş/g, 's')
+      .replace(/Ö/g, 'O')
+      .replace(/ö/g, 'o')
+      .replace(/Ç/g, 'C')
+      .replace(/ç/g, 'c');
+  };
+  
+  const tableData = islemler.map((islem, index) => [
+    index + 1, // Sıra
+    islem.full_tarih ? new Date(islem.full_tarih).toLocaleDateString('tr-TR') : '-',
+    turkishCharFix(islem.ad_soyad || ''),
+    turkishCharFix(islem.ilce || ''),
+    turkishCharFix(islem.mahalle || ''),
+    islem.cep_tel || '-',
+    turkishCharFix(islem.urun || ''),
+    turkishCharFix(islem.marka || ''),
+    turkishCharFix((islem.sikayet || '').substring(0, 35) + ((islem.sikayet || '').length > 35 ? '...' : '')),
+    turkishCharFix(islem.teknisyen_ismi || ''),
+    islem.tutar ? islem.tutar + ' TL' : '-',
+    islem.is_durumu === 'acik' ? 'Acik' : 'Tamamlandi'
+  ]);
+  
+  // AutoTable ile tablo oluştur
+  autoTable(doc, {
+    startY: 35,
+    head: [[
+      'Sira',
+      'Tarih',
+      'Musteri',
+      'Ilce', 
+      'Mahalle',
+      'Telefon',
+      'Urun',
+      'Marka',
+      'Sikayet',
+      'Teknisyen',
+      'Tutar',
+      'Durum'
+    ]],
+    body: tableData,
+    styles: {
+      fontSize: 7,
+      cellPadding: 1.5,
+      halign: 'left',
+      valign: 'middle',
+      overflow: 'linebreak',
+    },
+    headStyles: {
+      fillColor: [13, 50, 130],
+      textColor: [255, 255, 255],
+      fontStyle: 'bold',
+      fontSize: 7,
+      halign: 'center',
+    },
+    alternateRowStyles: {
+      fillColor: [245, 245, 245],
+    },
+    columnStyles: {
+      0: { cellWidth: 10, halign: 'center' }, // Sıra
+      1: { cellWidth: 20 }, // Tarih
+      2: { cellWidth: 28 }, // Müşteri
+      3: { cellWidth: 22 }, // İlçe
+      4: { cellWidth: 25 }, // Mahalle
+      5: { cellWidth: 24 }, // Telefon
+      6: { cellWidth: 18 }, // Ürün
+      7: { cellWidth: 18 }, // Marka
+      8: { cellWidth: 35 }, // Şikayet
+      9: { cellWidth: 22 }, // Teknisyen
+      10: { cellWidth: 18, halign: 'right' }, // Tutar
+      11: { cellWidth: 20, halign: 'center' }, // Durum
+    },
+    margin: { top: 35, left: 10, right: 10 },
+    didDrawPage: function (data) {
+      // Sayfa numarası
+      const pageCount = (doc as any).internal.getNumberOfPages();
+      const pageSize = doc.internal.pageSize;
+      const pageHeight = pageSize.height ? pageSize.height : pageSize.getHeight();
+      doc.setFontSize(8);
+      doc.text(
+        'Sayfa ' + data.pageNumber + ' / ' + pageCount,
+        pageSize.width / 2,
+        pageHeight - 10,
+        { align: 'center' }
+      );
+    },
+  });
+  
+  // PDF'i indir
+  const tarih = new Date().toLocaleDateString('tr-TR').replace(/\./g, '_');
+  doc.save(`islemler_${tarih}.pdf`);
 };

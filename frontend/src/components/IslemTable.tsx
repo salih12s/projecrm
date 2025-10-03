@@ -12,6 +12,7 @@ import {
   CircularProgress,
   Box,
   Tooltip,
+  TextField,
 } from '@mui/material';
 import {
   Edit,
@@ -56,6 +57,166 @@ const IslemTable: React.FC<IslemTableProps> = ({
   onDelete,
   onToggleDurum,
 }) => {
+  const [filteredIslemler, setFilteredIslemler] = useState<Islem[]>(islemler);
+  
+  // Filter states
+  const [filters, setFilters] = useState({
+    sira: '',
+    tarih: '',
+    ad_soyad: '',
+    ilce: '',
+    mahalle: '',
+    cadde: '',
+    sokak: '',
+    kapi_no: '',
+    cep_tel: '',
+    urun: '',
+    marka: '',
+    sikayet: '',
+    yapilan_islem: '',
+    teknisyen: '',
+    tutar: '',
+    durum: '',
+  });
+
+  // Apply filters whenever islemler or filters change
+  useEffect(() => {
+    applyFilters();
+  }, [islemler, filters]);
+
+  const applyFilters = () => {
+    let filtered = [...islemler];
+
+    // Sıra filtresi varsa, önce orijinal listedeki pozisyonları işaretle
+    const originalIndices = new Map<number, number>();
+    if (filters.sira) {
+      islemler.forEach((item, index) => {
+        originalIndices.set(item.id, index + 1);
+      });
+    }
+
+    // Filter by tarih
+    if (filters.tarih) {
+      filtered = filtered.filter((item) =>
+        item.full_tarih ? new Date(item.full_tarih).toLocaleDateString('tr-TR').includes(filters.tarih) : false
+      );
+    }
+
+    // Filter by ad_soyad
+    if (filters.ad_soyad) {
+      filtered = filtered.filter((item) =>
+        (item.ad_soyad || '').toLowerCase().includes(filters.ad_soyad.toLowerCase())
+      );
+    }
+
+    // Filter by ilce
+    if (filters.ilce) {
+      filtered = filtered.filter((item) =>
+        (item.ilce || '').toLowerCase().includes(filters.ilce.toLowerCase())
+      );
+    }
+
+    // Filter by mahalle
+    if (filters.mahalle) {
+      filtered = filtered.filter((item) =>
+        (item.mahalle || '').toLowerCase().includes(filters.mahalle.toLowerCase())
+      );
+    }
+
+    // Filter by cadde
+    if (filters.cadde) {
+      filtered = filtered.filter((item) =>
+        (item.cadde || '').toLowerCase().includes(filters.cadde.toLowerCase())
+      );
+    }
+
+    // Filter by sokak
+    if (filters.sokak) {
+      filtered = filtered.filter((item) =>
+        (item.sokak || '').toLowerCase().includes(filters.sokak.toLowerCase())
+      );
+    }
+
+    // Filter by kapi_no
+    if (filters.kapi_no) {
+      filtered = filtered.filter((item) =>
+        (item.kapi_no || '').toLowerCase().includes(filters.kapi_no.toLowerCase())
+      );
+    }
+
+    // Filter by cep_tel
+    if (filters.cep_tel) {
+      filtered = filtered.filter((item) =>
+        (item.cep_tel || '').includes(filters.cep_tel.replace(/\D/g, ''))
+      );
+    }
+
+    // Filter by urun
+    if (filters.urun) {
+      filtered = filtered.filter((item) =>
+        (item.urun || '').toLowerCase().includes(filters.urun.toLowerCase())
+      );
+    }
+
+    // Filter by marka
+    if (filters.marka) {
+      filtered = filtered.filter((item) =>
+        (item.marka || '').toLowerCase().includes(filters.marka.toLowerCase())
+      );
+    }
+
+    // Filter by sikayet
+    if (filters.sikayet) {
+      filtered = filtered.filter((item) =>
+        (item.sikayet || '').toLowerCase().includes(filters.sikayet.toLowerCase())
+      );
+    }
+
+    // Filter by yapilan_islem
+    if (filters.yapilan_islem) {
+      filtered = filtered.filter((item) =>
+        (item.yapilan_islem || '').toLowerCase().includes(filters.yapilan_islem.toLowerCase())
+      );
+    }
+
+    // Filter by teknisyen - teknisyen_ismi kullan
+    if (filters.teknisyen) {
+      filtered = filtered.filter((item) =>
+        (item.teknisyen_ismi || '').toLowerCase().includes(filters.teknisyen.toLowerCase())
+      );
+    }
+
+    // Filter by tutar
+    if (filters.tutar) {
+      filtered = filtered.filter((item) =>
+        (item.tutar?.toString() || '').includes(filters.tutar)
+      );
+    }
+
+    // Filter by durum - is_durumu kullan
+    if (filters.durum) {
+      const durumText = filters.durum.toLowerCase();
+      filtered = filtered.filter((item) => {
+        const label = item.is_durumu === 'tamamlandi' ? 'tamamlandı' : 'açık';
+        return label.includes(durumText);
+      });
+    }
+
+    // Filter by sira - ORİJİNAL listedeki sıraya göre filtrele
+    if (filters.sira) {
+      filtered = filtered.filter((item) => {
+        const originalSira = originalIndices.get(item.id);
+        return originalSira?.toString() === filters.sira;
+      });
+    }
+
+    setFilteredIslemler(filtered);
+  };
+
+  const handleFilterChange = (field: string, value: string) => {
+    setFilters((prev) => ({ ...prev, [field]: value }));
+  };
+
   const handlePrint = (islem: Islem) => {
     printIslem(islem);
   };
@@ -228,7 +389,7 @@ const IslemTable: React.FC<IslemTableProps> = ({
 
   return (
     <TableContainer component={Paper} elevation={3}>
-      <Table size="small" sx={{ '& .MuiTableCell-root': { py: 0.5, px: 1 } }}>
+      <Table size="small" sx={{ '& .MuiTableCell-root': { py: 0.3, px: 0.5, fontSize: '0.75rem' } }}>
         <TableHead>
           <DragDropContext onDragEnd={handleDragEnd}>
             <Droppable droppableId="columns" direction="horizontal">
@@ -238,6 +399,10 @@ const IslemTable: React.FC<IslemTableProps> = ({
                   ref={provided.innerRef}
                   {...provided.droppableProps}
                 >
+                  {/* Sıra No başlığı (draggable değil) */}
+                  <TableCell sx={{ color: 'white', fontWeight: 600, fontSize: '0.75rem', py: 0.3, px: 0.5 }}>
+                    Sıra
+                  </TableCell>
                   {columnOrder.map((columnId, index) => {
                     const column = columnConfigs[columnId];
                     return (
@@ -250,12 +415,12 @@ const IslemTable: React.FC<IslemTableProps> = ({
                             sx={{
                               color: 'white',
                               fontWeight: 600,
-                              fontSize: '0.8rem',
+                              fontSize: '0.75rem',
                               cursor: 'move',
                               userSelect: 'none',
                               bgcolor: snapshot.isDragging ? 'primary.dark' : 'primary.main',
-                              py: 0.5,
-                              px: 1,
+                              py: 0.3,
+                              px: 0.5,
                               '&:hover': {
                                 bgcolor: 'primary.dark',
                               },
@@ -271,14 +436,52 @@ const IslemTable: React.FC<IslemTableProps> = ({
                     );
                   })}
                   {provided.placeholder}
-                  <TableCell sx={{ color: 'white', fontWeight: 600, fontSize: '0.8rem', py: 0.5, px: 1 }}>İşlemler</TableCell>
+                  <TableCell sx={{ color: 'white', fontWeight: 600, fontSize: '0.75rem', py: 0.3, px: 0.5 }}>İşlemler</TableCell>
                 </TableRow>
               )}
             </Droppable>
           </DragDropContext>
+          {/* Filter Row */}
+          <TableRow sx={{ bgcolor: '#f5f5f5' }}>
+            <TableCell sx={{ py: 0.5, px: 0.5 }}>
+              <TextField
+                size="small"
+                placeholder="Sıra..."
+                value={filters.sira}
+                onChange={(e) => handleFilterChange('sira', e.target.value)}
+                sx={{
+                  '& .MuiInputBase-input': { fontSize: '0.75rem', py: 0.5, px: 0.5 },
+                  width: '60px'
+                }}
+              />
+            </TableCell>
+            {columnOrder.map((columnId) => (
+              <TableCell key={columnId} sx={{ py: 0.5, px: 0.5 }}>
+                <TextField
+                  size="small"
+                  placeholder={`${columnConfigs[columnId].label}...`}
+                  value={filters[columnId as keyof typeof filters] || ''}
+                  onChange={(e) => handleFilterChange(columnId, e.target.value)}
+                  sx={{
+                    '& .MuiInputBase-input': { fontSize: '0.75rem', py: 0.5, px: 0.5 },
+                    minWidth: columnId === 'tarih' ? '90px' : 
+                             columnId === 'cep_tel' ? '100px' : 
+                             columnId === 'tutar' ? '70px' :
+                             columnId === 'durum' ? '90px' : '100px'
+                  }}
+                />
+              </TableCell>
+            ))}
+            <TableCell sx={{ py: 0.5, px: 0.5 }}></TableCell>
+          </TableRow>
         </TableHead>
         <TableBody>
-          {islemler.map((islem) => (
+          {filteredIslemler.map((islem) => {
+            // Orijinal listedeki sırayı bul
+            const originalIndex = islemler.findIndex(item => item.id === islem.id);
+            const originalSira = originalIndex + 1;
+            
+            return (
             <TableRow 
               key={islem.id} 
               hover
@@ -288,6 +491,10 @@ const IslemTable: React.FC<IslemTableProps> = ({
                 }
               }}
             >
+              {/* Sıra No - ORİJİNAL SIRA */}
+              <TableCell sx={{ fontWeight: 500, fontSize: '0.75rem', py: 0.3, px: 0.5 }}>
+                {originalSira}
+              </TableCell>
               {columnOrder.map((columnId) => {
                 const column = columnConfigs[columnId];
                 return <React.Fragment key={columnId}>{column.render(islem)}</React.Fragment>;
@@ -361,7 +568,8 @@ const IslemTable: React.FC<IslemTableProps> = ({
                 </Box>
               </TableCell>
             </TableRow>
-          ))}
+            );
+          })}
         </TableBody>
       </Table>
     </TableContainer>

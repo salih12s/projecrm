@@ -25,7 +25,166 @@ const MusteriGecmisi: React.FC = () => {
   const { showSnackbar } = useSnackbar();
   const [searchName, setSearchName] = useState('');
   const [searchResults, setSearchResults] = useState<Islem[]>([]);
+  const [filteredResults, setFilteredResults] = useState<Islem[]>([]);
   const [loading, setLoading] = useState(false);
+
+  // Filter states
+  const [filters, setFilters] = useState({
+    sira: '',
+    tarih: '',
+    ad_soyad: '',
+    ilce: '',
+    mahalle: '',
+    cadde: '',
+    sokak: '',
+    kapi_no: '',
+    cep_tel: '',
+    urun: '',
+    marka: '',
+    sikayet: '',
+    yapilan_islem: '',
+    teknisyen: '',
+    tutar: '',
+    durum: '',
+  });
+
+  // Apply filters whenever searchResults or filters change
+  React.useEffect(() => {
+    applyFilters();
+  }, [searchResults, filters]);
+
+  const applyFilters = () => {
+    let filtered = [...searchResults];
+
+    // Sıra filtresi varsa, önce orijinal listedeki pozisyonları işaretle
+    const originalIndices = new Map<number, number>();
+    if (filters.sira) {
+      searchResults.forEach((item, index) => {
+        originalIndices.set(item.id, index + 1);
+      });
+    }
+
+    // Filter by tarih
+    if (filters.tarih) {
+      filtered = filtered.filter((item) =>
+        item.full_tarih ? new Date(item.full_tarih).toLocaleDateString('tr-TR').includes(filters.tarih) : false
+      );
+    }
+
+    // Filter by ad_soyad
+    if (filters.ad_soyad) {
+      filtered = filtered.filter((item) =>
+        (item.ad_soyad || '').toLowerCase().includes(filters.ad_soyad.toLowerCase())
+      );
+    }
+
+    // Filter by ilce
+    if (filters.ilce) {
+      filtered = filtered.filter((item) =>
+        (item.ilce || '').toLowerCase().includes(filters.ilce.toLowerCase())
+      );
+    }
+
+    // Filter by mahalle
+    if (filters.mahalle) {
+      filtered = filtered.filter((item) =>
+        (item.mahalle || '').toLowerCase().includes(filters.mahalle.toLowerCase())
+      );
+    }
+
+    // Filter by cadde
+    if (filters.cadde) {
+      filtered = filtered.filter((item) =>
+        (item.cadde || '').toLowerCase().includes(filters.cadde.toLowerCase())
+      );
+    }
+
+    // Filter by sokak
+    if (filters.sokak) {
+      filtered = filtered.filter((item) =>
+        (item.sokak || '').toLowerCase().includes(filters.sokak.toLowerCase())
+      );
+    }
+
+    // Filter by kapi_no
+    if (filters.kapi_no) {
+      filtered = filtered.filter((item) =>
+        (item.kapi_no || '').toLowerCase().includes(filters.kapi_no.toLowerCase())
+      );
+    }
+
+    // Filter by cep_tel
+    if (filters.cep_tel) {
+      filtered = filtered.filter((item) =>
+        (item.cep_tel || '').includes(filters.cep_tel.replace(/\D/g, ''))
+      );
+    }
+
+    // Filter by urun
+    if (filters.urun) {
+      filtered = filtered.filter((item) =>
+        (item.urun || '').toLowerCase().includes(filters.urun.toLowerCase())
+      );
+    }
+
+    // Filter by marka
+    if (filters.marka) {
+      filtered = filtered.filter((item) =>
+        (item.marka || '').toLowerCase().includes(filters.marka.toLowerCase())
+      );
+    }
+
+    // Filter by sikayet
+    if (filters.sikayet) {
+      filtered = filtered.filter((item) =>
+        (item.sikayet || '').toLowerCase().includes(filters.sikayet.toLowerCase())
+      );
+    }
+
+    // Filter by yapilan_islem
+    if (filters.yapilan_islem) {
+      filtered = filtered.filter((item) =>
+        (item.yapilan_islem || '').toLowerCase().includes(filters.yapilan_islem.toLowerCase())
+      );
+    }
+
+    // Filter by teknisyen - teknisyen_ismi kullan
+    if (filters.teknisyen) {
+      filtered = filtered.filter((item) =>
+        (item.teknisyen_ismi || '').toLowerCase().includes(filters.teknisyen.toLowerCase())
+      );
+    }
+
+    // Filter by tutar
+    if (filters.tutar) {
+      filtered = filtered.filter((item) =>
+        (item.tutar?.toString() || '').includes(filters.tutar)
+      );
+    }
+
+    // Filter by durum - is_durumu kullan
+    if (filters.durum) {
+      const durumText = filters.durum.toLowerCase();
+      filtered = filtered.filter((item) => {
+        const label = item.is_durumu === 'tamamlandi' ? 'tamamlandı' : 'açık';
+        return label.includes(durumText);
+      });
+    }
+
+    // Filter by sira - ORİJİNAL listedeki sıraya göre filtrele
+    if (filters.sira) {
+      filtered = filtered.filter((item) => {
+        const originalSira = originalIndices.get(item.id);
+        return originalSira?.toString() === filters.sira;
+      });
+    }
+
+    setFilteredResults(filtered);
+  };
+
+  const handleFilterChange = (field: string, value: string) => {
+    setFilters((prev) => ({ ...prev, [field]: value }));
+  };
 
   const handleSearch = async () => {
     if (!searchName.trim()) {
@@ -251,54 +410,203 @@ const MusteriGecmisi: React.FC = () => {
         <Paper>
           <Box sx={{ p: 2, borderBottom: '1px solid #e0e0e0' }}>
             <Typography variant="h6">
-              Bulunan Kayıtlar ({searchResults.length})
+              Bulunan Kayıtlar ({filteredResults.length} / {searchResults.length})
             </Typography>
           </Box>
           <TableContainer sx={{ maxHeight: 600 }}>
             <Table stickyHeader size="small">
               <TableHead>
                 <TableRow>
-                  <TableCell sx={{ fontWeight: 600, bgcolor: '#f5f5f5' }}>Tarih</TableCell>
-                  <TableCell sx={{ fontWeight: 600, bgcolor: '#f5f5f5' }}>Müşteri</TableCell>
-                  <TableCell sx={{ fontWeight: 600, bgcolor: '#f5f5f5' }}>Adres</TableCell>
-                  <TableCell sx={{ fontWeight: 600, bgcolor: '#f5f5f5' }}>Telefon</TableCell>
-                  <TableCell sx={{ fontWeight: 600, bgcolor: '#f5f5f5' }}>Ürün</TableCell>
-                  <TableCell sx={{ fontWeight: 600, bgcolor: '#f5f5f5' }}>Marka</TableCell>
-                  <TableCell sx={{ fontWeight: 600, bgcolor: '#f5f5f5' }}>Şikayet</TableCell>
-                  <TableCell sx={{ fontWeight: 600, bgcolor: '#f5f5f5' }}>Teknisyen</TableCell>
-                  <TableCell sx={{ fontWeight: 600, bgcolor: '#f5f5f5' }}>Yapılan İşlem</TableCell>
-                  <TableCell sx={{ fontWeight: 600, bgcolor: '#f5f5f5' }}>Tutar</TableCell>
-                  <TableCell sx={{ fontWeight: 600, bgcolor: '#f5f5f5' }}>Durum</TableCell>
+                  <TableCell sx={{ fontWeight: 600, bgcolor: '#0D3282', color: 'white', fontSize: '0.75rem', py: 0.3, px: 0.5 }}>Sıra</TableCell>
+                  <TableCell sx={{ fontWeight: 600, bgcolor: '#0D3282', color: 'white', fontSize: '0.75rem', py: 0.3, px: 0.5 }}>Tarih</TableCell>
+                  <TableCell sx={{ fontWeight: 600, bgcolor: '#0D3282', color: 'white', fontSize: '0.75rem', py: 0.3, px: 0.5 }}>Müşteri</TableCell>
+                  <TableCell sx={{ fontWeight: 600, bgcolor: '#0D3282', color: 'white', fontSize: '0.75rem', py: 0.3, px: 0.5 }}>İlçe</TableCell>
+                  <TableCell sx={{ fontWeight: 600, bgcolor: '#0D3282', color: 'white', fontSize: '0.75rem', py: 0.3, px: 0.5 }}>Mahalle</TableCell>
+                  <TableCell sx={{ fontWeight: 600, bgcolor: '#0D3282', color: 'white', fontSize: '0.75rem', py: 0.3, px: 0.5 }}>Cadde</TableCell>
+                  <TableCell sx={{ fontWeight: 600, bgcolor: '#0D3282', color: 'white', fontSize: '0.75rem', py: 0.3, px: 0.5 }}>Sokak</TableCell>
+                  <TableCell sx={{ fontWeight: 600, bgcolor: '#0D3282', color: 'white', fontSize: '0.75rem', py: 0.3, px: 0.5 }}>Kapı No</TableCell>
+                  <TableCell sx={{ fontWeight: 600, bgcolor: '#0D3282', color: 'white', fontSize: '0.75rem', py: 0.3, px: 0.5 }}>Telefon</TableCell>
+                  <TableCell sx={{ fontWeight: 600, bgcolor: '#0D3282', color: 'white', fontSize: '0.75rem', py: 0.3, px: 0.5 }}>Ürün</TableCell>
+                  <TableCell sx={{ fontWeight: 600, bgcolor: '#0D3282', color: 'white', fontSize: '0.75rem', py: 0.3, px: 0.5 }}>Marka</TableCell>
+                  <TableCell sx={{ fontWeight: 600, bgcolor: '#0D3282', color: 'white', fontSize: '0.75rem', py: 0.3, px: 0.5 }}>Şikayet</TableCell>
+                  <TableCell sx={{ fontWeight: 600, bgcolor: '#0D3282', color: 'white', fontSize: '0.75rem', py: 0.3, px: 0.5 }}>Yapılan İşlem</TableCell>
+                  <TableCell sx={{ fontWeight: 600, bgcolor: '#0D3282', color: 'white', fontSize: '0.75rem', py: 0.3, px: 0.5 }}>Tutar</TableCell>
+                  <TableCell sx={{ fontWeight: 600, bgcolor: '#0D3282', color: 'white', fontSize: '0.75rem', py: 0.3, px: 0.5 }}>Durum</TableCell>
+                </TableRow>
+                {/* Filter Row */}
+                <TableRow sx={{ bgcolor: '#f5f5f5' }}>
+                  <TableCell sx={{ py: 0.5, px: 0.5 }}>
+                    <TextField
+                      size="small"
+                      placeholder="Sıra..."
+                      value={filters.sira}
+                      onChange={(e) => handleFilterChange('sira', e.target.value)}
+                      sx={{ '& .MuiInputBase-input': { fontSize: '0.75rem', py: 0.5, px: 0.5 }, width: '60px' }}
+                    />
+                  </TableCell>
+                  <TableCell sx={{ py: 0.5, px: 0.5 }}>
+                    <TextField
+                      size="small"
+                      placeholder="Tarih..."
+                      value={filters.tarih}
+                      onChange={(e) => handleFilterChange('tarih', e.target.value)}
+                      sx={{ '& .MuiInputBase-input': { fontSize: '0.75rem', py: 0.5, px: 0.5 }, minWidth: '90px' }}
+                    />
+                  </TableCell>
+                  <TableCell sx={{ py: 0.5, px: 0.5 }}>
+                    <TextField
+                      size="small"
+                      placeholder="Müşteri..."
+                      value={filters.ad_soyad}
+                      onChange={(e) => handleFilterChange('ad_soyad', e.target.value)}
+                      sx={{ '& .MuiInputBase-input': { fontSize: '0.75rem', py: 0.5, px: 0.5 }, minWidth: '100px' }}
+                    />
+                  </TableCell>
+                  <TableCell sx={{ py: 0.5, px: 0.5 }}>
+                    <TextField
+                      size="small"
+                      placeholder="İlçe..."
+                      value={filters.ilce}
+                      onChange={(e) => handleFilterChange('ilce', e.target.value)}
+                      sx={{ '& .MuiInputBase-input': { fontSize: '0.75rem', py: 0.5, px: 0.5 }, minWidth: '80px' }}
+                    />
+                  </TableCell>
+                  <TableCell sx={{ py: 0.5, px: 0.5 }}>
+                    <TextField
+                      size="small"
+                      placeholder="Mahalle..."
+                      value={filters.mahalle}
+                      onChange={(e) => handleFilterChange('mahalle', e.target.value)}
+                      sx={{ '& .MuiInputBase-input': { fontSize: '0.75rem', py: 0.5, px: 0.5 }, minWidth: '100px' }}
+                    />
+                  </TableCell>
+                  <TableCell sx={{ py: 0.5, px: 0.5 }}>
+                    <TextField
+                      size="small"
+                      placeholder="Cadde..."
+                      value={filters.cadde}
+                      onChange={(e) => handleFilterChange('cadde', e.target.value)}
+                      sx={{ '& .MuiInputBase-input': { fontSize: '0.75rem', py: 0.5, px: 0.5 }, minWidth: '100px' }}
+                    />
+                  </TableCell>
+                  <TableCell sx={{ py: 0.5, px: 0.5 }}>
+                    <TextField
+                      size="small"
+                      placeholder="Sokak..."
+                      value={filters.sokak}
+                      onChange={(e) => handleFilterChange('sokak', e.target.value)}
+                      sx={{ '& .MuiInputBase-input': { fontSize: '0.75rem', py: 0.5, px: 0.5 }, minWidth: '100px' }}
+                    />
+                  </TableCell>
+                  <TableCell sx={{ py: 0.5, px: 0.5 }}>
+                    <TextField
+                      size="small"
+                      placeholder="Kapı..."
+                      value={filters.kapi_no}
+                      onChange={(e) => handleFilterChange('kapi_no', e.target.value)}
+                      sx={{ '& .MuiInputBase-input': { fontSize: '0.75rem', py: 0.5, px: 0.5 }, width: '60px' }}
+                    />
+                  </TableCell>
+                  <TableCell sx={{ py: 0.5, px: 0.5 }}>
+                    <TextField
+                      size="small"
+                      placeholder="Telefon..."
+                      value={filters.cep_tel}
+                      onChange={(e) => handleFilterChange('cep_tel', e.target.value)}
+                      sx={{ '& .MuiInputBase-input': { fontSize: '0.75rem', py: 0.5, px: 0.5 }, minWidth: '100px' }}
+                    />
+                  </TableCell>
+                  <TableCell sx={{ py: 0.5, px: 0.5 }}>
+                    <TextField
+                      size="small"
+                      placeholder="Ürün..."
+                      value={filters.urun}
+                      onChange={(e) => handleFilterChange('urun', e.target.value)}
+                      sx={{ '& .MuiInputBase-input': { fontSize: '0.75rem', py: 0.5, px: 0.5 }, minWidth: '100px' }}
+                    />
+                  </TableCell>
+                  <TableCell sx={{ py: 0.5, px: 0.5 }}>
+                    <TextField
+                      size="small"
+                      placeholder="Marka..."
+                      value={filters.marka}
+                      onChange={(e) => handleFilterChange('marka', e.target.value)}
+                      sx={{ '& .MuiInputBase-input': { fontSize: '0.75rem', py: 0.5, px: 0.5 }, minWidth: '100px' }}
+                    />
+                  </TableCell>
+                  <TableCell sx={{ py: 0.5, px: 0.5 }}>
+                    <TextField
+                      size="small"
+                      placeholder="Şikayet..."
+                      value={filters.sikayet}
+                      onChange={(e) => handleFilterChange('sikayet', e.target.value)}
+                      sx={{ '& .MuiInputBase-input': { fontSize: '0.75rem', py: 0.5, px: 0.5 }, minWidth: '120px' }}
+                    />
+                  </TableCell>
+                  <TableCell sx={{ py: 0.5, px: 0.5 }}>
+                    <TextField
+                      size="small"
+                      placeholder="Yapılan İşlem..."
+                      value={filters.yapilan_islem}
+                      onChange={(e) => handleFilterChange('yapilan_islem', e.target.value)}
+                      sx={{ '& .MuiInputBase-input': { fontSize: '0.75rem', py: 0.5, px: 0.5 }, minWidth: '120px' }}
+                    />
+                  </TableCell>
+                  <TableCell sx={{ py: 0.5, px: 0.5 }}>
+                    <TextField
+                      size="small"
+                      placeholder="Tutar..."
+                      value={filters.tutar}
+                      onChange={(e) => handleFilterChange('tutar', e.target.value)}
+                      sx={{ '& .MuiInputBase-input': { fontSize: '0.75rem', py: 0.5, px: 0.5 }, width: '70px' }}
+                    />
+                  </TableCell>
+                  <TableCell sx={{ py: 0.5, px: 0.5 }}>
+                    <TextField
+                      size="small"
+                      placeholder="Durum..."
+                      value={filters.durum}
+                      onChange={(e) => handleFilterChange('durum', e.target.value)}
+                      sx={{ '& .MuiInputBase-input': { fontSize: '0.75rem', py: 0.5, px: 0.5 }, minWidth: '90px' }}
+                    />
+                  </TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
-                {searchResults.map((islem) => (
+                {filteredResults.map((islem) => {
+                  // Orijinal listedeki sırayı bul
+                  const originalIndex = searchResults.findIndex(item => item.id === islem.id);
+                  const originalSira = originalIndex + 1;
+                  
+                  return (
                   <TableRow key={islem.id} hover>
-                    <TableCell>
+                    <TableCell sx={{ fontSize: '0.75rem', py: 0.3, px: 0.5 }}>{originalSira}</TableCell>
+                    <TableCell sx={{ fontSize: '0.75rem', py: 0.3, px: 0.5 }}>
                       {islem.full_tarih
                         ? new Date(islem.full_tarih).toLocaleDateString('tr-TR')
                         : '-'}
                     </TableCell>
-                    <TableCell>{islem.ad_soyad}</TableCell>
-                    <TableCell>
-                      {islem.ilce} {islem.mahalle} {islem.cadde} {islem.sokak} No:{islem.kapi_no}
-                    </TableCell>
-                    <TableCell>{formatPhoneNumber(islem.cep_tel)}</TableCell>
-                    <TableCell>{islem.urun}</TableCell>
-                    <TableCell>{islem.marka}</TableCell>
-                    <TableCell sx={{ maxWidth: 200 }}>
-                      <Typography variant="body2" noWrap>
+                    <TableCell sx={{ fontSize: '0.75rem', py: 0.3, px: 0.5 }}>{islem.ad_soyad}</TableCell>
+                    <TableCell sx={{ fontSize: '0.75rem', py: 0.3, px: 0.5 }}>{islem.ilce || '-'}</TableCell>
+                    <TableCell sx={{ fontSize: '0.75rem', py: 0.3, px: 0.5 }}>{islem.mahalle || '-'}</TableCell>
+                    <TableCell sx={{ fontSize: '0.75rem', py: 0.3, px: 0.5 }}>{islem.cadde || '-'}</TableCell>
+                    <TableCell sx={{ fontSize: '0.75rem', py: 0.3, px: 0.5 }}>{islem.sokak || '-'}</TableCell>
+                    <TableCell sx={{ fontSize: '0.75rem', py: 0.3, px: 0.5 }}>{islem.kapi_no || '-'}</TableCell>
+                    <TableCell sx={{ fontSize: '0.75rem', py: 0.3, px: 0.5 }}>{formatPhoneNumber(islem.cep_tel)}</TableCell>
+                    <TableCell sx={{ fontSize: '0.75rem', py: 0.3, px: 0.5 }}>{islem.urun}</TableCell>
+                    <TableCell sx={{ fontSize: '0.75rem', py: 0.3, px: 0.5 }}>{islem.marka}</TableCell>
+                    <TableCell sx={{ maxWidth: 200, fontSize: '0.75rem', py: 0.3, px: 0.5 }}>
+                      <Typography variant="body2" noWrap title={islem.sikayet} sx={{ fontSize: '0.75rem' }}>
                         {islem.sikayet}
                       </Typography>
                     </TableCell>
-                    <TableCell>{islem.teknisyen_ismi || '-'}</TableCell>
-                    <TableCell sx={{ maxWidth: 200 }}>
-                      <Typography variant="body2" noWrap>
+                    <TableCell sx={{ maxWidth: 200, fontSize: '0.75rem', py: 0.3, px: 0.5 }}>
+                      <Typography variant="body2" noWrap title={islem.yapilan_islem || '-'} sx={{ fontSize: '0.75rem' }}>
                         {islem.yapilan_islem || '-'}
                       </Typography>
                     </TableCell>
-                    <TableCell>{islem.tutar ? `${islem.tutar} TL` : '-'}</TableCell>
-                    <TableCell>
+                    <TableCell sx={{ fontSize: '0.75rem', py: 0.3, px: 0.5 }}>{islem.tutar ? `${islem.tutar} TL` : '-'}</TableCell>
+                    <TableCell sx={{ fontSize: '0.75rem', py: 0.3, px: 0.5 }}>
                       <Chip
                         label={islem.is_durumu === 'tamamlandi' ? 'Tamamlandı' : 'Açık'}
                         color={islem.is_durumu === 'tamamlandi' ? 'success' : 'warning'}
@@ -306,7 +614,8 @@ const MusteriGecmisi: React.FC = () => {
                       />
                     </TableCell>
                   </TableRow>
-                ))}
+                  );
+                })}
               </TableBody>
             </Table>
           </TableContainer>
