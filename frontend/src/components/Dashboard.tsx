@@ -52,7 +52,10 @@ const Dashboard: React.FC = () => {
   const [selectedIslem, setSelectedIslem] = useState<Islem | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  // Bayi için tab değeri her zaman 0 (tek tab var)
   const [activeTab, setActiveTab] = useState(0);
+  
+  const isBayi = user?.role === 'bayi';
 
   useEffect(() => {
     // Socket.IO bağlantısı
@@ -232,49 +235,77 @@ const Dashboard: React.FC = () => {
 
       {/* Navigation Tabs */}
       <Box sx={{ bgcolor: 'background.paper', borderBottom: 1, borderColor: 'divider' }}>
-        <Tabs 
-          value={activeTab} 
-          onChange={(_, newValue) => setActiveTab(newValue)}
-          sx={{
-            minHeight: '42px',
-            '& .MuiTab-root': {
+        {isBayi ? (
+          <Tabs 
+            value={0}
+            sx={{
               minHeight: '42px',
-              py: 1,
-              px: 3,
-              fontSize: '0.85rem',
-              textTransform: 'none',
-            }
-          }}
-        >
-          <Tab 
-            icon={<Home sx={{ fontSize: '1.1rem' }} />} 
-            iconPosition="start" 
-            label="Ana Sayfa" 
-          />
-          <Tab 
-            icon={<History sx={{ fontSize: '1.1rem' }} />} 
-            iconPosition="start" 
-            label="Müşteri Geçmişi" 
-          />
-          <Tab 
-            icon={<Build sx={{ fontSize: '1.1rem' }} />} 
-            iconPosition="start" 
-            label="Atölye Takip" 
-          />
-          <Tab 
-            icon={<SettingsIcon sx={{ fontSize: '1.1rem' }} />} 
-            iconPosition="start" 
-            label="Tanımlamalar" 
-          />
-        </Tabs>
+              '& .MuiTab-root': {
+                minHeight: '42px',
+                py: 1,
+                px: 3,
+                fontSize: '0.85rem',
+                textTransform: 'none',
+              }
+            }}
+          >
+            <Tab 
+              icon={<Build sx={{ fontSize: '1.1rem' }} />} 
+              iconPosition="start" 
+              label="Atölye Takip" 
+            />
+          </Tabs>
+        ) : (
+          <Tabs 
+            value={activeTab} 
+            onChange={(_, newValue) => setActiveTab(newValue)}
+            sx={{
+              minHeight: '42px',
+              '& .MuiTab-root': {
+                minHeight: '42px',
+                py: 1,
+                px: 3,
+                fontSize: '0.85rem',
+                textTransform: 'none',
+              }
+            }}
+          >
+            <Tab 
+              icon={<Home sx={{ fontSize: '1.1rem' }} />} 
+              iconPosition="start" 
+              label="Ana Sayfa" 
+            />
+            <Tab 
+              icon={<History sx={{ fontSize: '1.1rem' }} />} 
+              iconPosition="start" 
+              label="Müşteri Geçmişi" 
+            />
+            <Tab 
+              icon={<Build sx={{ fontSize: '1.1rem' }} />} 
+              iconPosition="start" 
+              label="Atölye Takip" 
+            />
+            <Tab 
+              icon={<SettingsIcon sx={{ fontSize: '1.1rem' }} />} 
+              iconPosition="start" 
+              label="Tanımlamalar" 
+            />
+          </Tabs>
+        )}
       </Box>
 
       <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
-        {activeTab === 0 ? (
-          // Ana Sayfa Tab
-          error ? (
-            <ErrorMessage message={error} onRetry={loadIslemler} />
-          ) : loading ? (
+        {isBayi ? (
+          // Bayi sadece Atölye Takip görür (activeTab her zaman 0)
+          <AtolyeTakip />
+        ) : (
+          <>
+            {/* Admin için tab kontrolü */}
+            {activeTab === 0 ? (
+              // Ana Sayfa Tab
+              error ? (
+                <ErrorMessage message={error} onRetry={loadIslemler} />
+              ) : loading ? (
             <Loading message="İşlemler yükleniyor..." />
           ) : (
             <>
@@ -332,6 +363,8 @@ const Dashboard: React.FC = () => {
         ) : (
           // Tanımlamalar Tab
           <Settings />
+        )}
+          </>
         )}
 
         <IslemDialog

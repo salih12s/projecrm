@@ -1,0 +1,10 @@
+-- Bayiler tablosunu sil ve yeniden oluştur
+DROP TABLE IF EXISTS bayiler CASCADE;
+
+CREATE TABLE bayiler (
+  id SERIAL PRIMARY KEY,
+  isim VARCHAR(100) UNIQUE NOT NULL,
+  username VARCHAR(100) UNIQUE NOT NULL,
+  password VARCHAR(255) NOT NULL DEFAULT '123456',
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);

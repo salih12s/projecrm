@@ -85,4 +85,49 @@ router.post('/login', async (req: Request, res: Response): Promise<void> => {
   }
 });
 
+// Bayi Girişi
+router.post('/bayi-login', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { username, password } = req.body;
+
+    // Bayi'yi bul
+    const bayi = await pool.query(
+      'SELECT * FROM bayiler WHERE username = $1',
+      [username]
+    );
+
+    if (bayi.rows.length === 0) {
+      res.status(401).json({ message: 'Kullanıcı adı veya şifre hatalı' });
+      return;
+    }
+
+    // Şifreyi kontrol et (plaintext karşılaştırma - basit sistem için)
+    if (password !== bayi.rows[0].password) {
+      res.status(401).json({ message: 'Kullanıcı adı veya şifre hatalı' });
+      return;
+    }
+
+    // Token oluştur
+    const token = jwt.sign(
+      { id: bayi.rows[0].id, username: bayi.rows[0].username, role: 'bayi', bayiIsim: bayi.rows[0].isim },
+      process.env.JWT_SECRET || '',
+      { expiresIn: '24h' }
+    );
+
+    res.json({
+      message: 'Giriş başarılı',
+      token,
+      user: {
+        id: bayi.rows[0].id,
+        username: bayi.rows[0].username,
+        role: 'bayi',
+        bayiIsim: bayi.rows[0].isim
+      }
+    });
+  } catch (error) {
+    console.error('Bayi giriş hatası:', error);
+    res.status(500).json({ message: 'Sunucu hatası' });
+  }
+});
+
 export default router;

@@ -27,9 +27,12 @@ router.post('/', auth, async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Bayi ismi gereklidir' });
     }
 
+    const username = isim.trim();
+    const password = '123456'; // Varsayılan şifre
+
     const result = await pool.query<Bayi>(
-      'INSERT INTO bayiler (isim) VALUES ($1) RETURNING *',
-      [isim.trim()]
+      'INSERT INTO bayiler (isim, username, password) VALUES ($1, $2, $3) RETURNING *',
+      [username, username, password]
     );
 
     return res.status(201).json(result.rows[0]);

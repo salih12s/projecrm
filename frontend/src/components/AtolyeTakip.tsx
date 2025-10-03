@@ -18,6 +18,7 @@ import { Edit, Delete, Add } from '@mui/icons-material';
 import { Atolye } from '../types';
 import { api } from '../services/api';
 import { useSnackbar } from '../context/SnackbarContext';
+import { useAuth } from '../context/AuthContext';
 import AtolyeDialog from './AtolyeDialog.tsx';
 
 const AtolyeTakip: React.FC = () => {
@@ -27,6 +28,10 @@ const AtolyeTakip: React.FC = () => {
   const [selectedAtolyeId, setSelectedAtolyeId] = useState<number | null>(null);
   const [activeStatusFilter, setActiveStatusFilter] = useState<string>(''); // Yeni state
   const { showSnackbar } = useSnackbar();
+  const { user } = useAuth();
+  
+  const isBayi = user?.role === 'bayi';
+  const bayiIsim = user?.bayiIsim || '';
 
   // Filter states
   const [filters, setFilters] = useState({
@@ -58,8 +63,15 @@ const AtolyeTakip: React.FC = () => {
   const fetchAtolyeList = async () => {
     try {
       const response = await api.get('/atolye');
+      let data = response.data;
+      
+      // Bayi ise sadece kendi kayıtlarını göster
+      if (isBayi) {
+        data = data.filter((item: Atolye) => item.bayi_adi === bayiIsim);
+      }
+      
       // En eski kayıtlar en üstte, en yeni kayıtlar en altta (id'ye göre küçükten büyüğe)
-      const sortedData = response.data.sort((a: Atolye, b: Atolye) => a.id - b.id);
+      const sortedData = data.sort((a: Atolye, b: Atolye) => a.id - b.id);
       setAtolyeList(sortedData);
     } catch (error) {
       showSnackbar('Atölye kayıtları yüklenirken hata oluştu', 'error');
@@ -403,14 +415,16 @@ const AtolyeTakip: React.FC = () => {
             </Box>
           </Box>
 
-          <Button
-            variant="contained"
-            startIcon={<Add />}
-            onClick={handleAdd}
-            sx={{ backgroundColor: '#0D3282', '&:hover': { backgroundColor: '#082052' } }}
-          >
-            Yeni Kayıt
-          </Button>
+          {!isBayi && (
+            <Button
+              variant="contained"
+              startIcon={<Add />}
+              onClick={handleAdd}
+              sx={{ backgroundColor: '#0D3282', '&:hover': { backgroundColor: '#082052' } }}
+            >
+              Yeni Kayıt
+            </Button>
+          )}
         </Box>
 
         <TableContainer sx={{ maxHeight: 'calc(100vh - 250px)', overflow: 'auto' }}>
@@ -600,7 +614,7 @@ const AtolyeTakip: React.FC = () => {
                     }}
                   />
                 </TableCell>
-                <TableCell sx={{ width: '80px', padding: '3px', position: 'sticky', top: 0, backgroundColor: '#f5f5f5', zIndex: 10 }}></TableCell>
+                {!isBayi && <TableCell sx={{ width: '80px', padding: '3px', position: 'sticky', top: 0, backgroundColor: '#f5f5f5', zIndex: 10 }}></TableCell>}
               </TableRow>
               {/* Header Row */}
               <TableRow sx={{ backgroundColor: '#0D3282' }}>
@@ -618,7 +632,7 @@ const AtolyeTakip: React.FC = () => {
                 <TableCell sx={{ color: 'white', fontWeight: 'bold', padding: '6px', fontSize: '0.75rem', position: 'sticky', top: 30, backgroundColor: '#0D3282', zIndex: 9 }}>Yapılan İşlem</TableCell>
                 <TableCell sx={{ color: 'white', fontWeight: 'bold', padding: '6px', fontSize: '0.75rem', position: 'sticky', top: 30, backgroundColor: '#0D3282', zIndex: 9 }}>Ücret</TableCell>
                 <TableCell sx={{ color: 'white', fontWeight: 'bold', padding: '6px', fontSize: '0.75rem', position: 'sticky', top: 30, backgroundColor: '#0D3282', zIndex: 9 }}>Yapılma Tarihi</TableCell>
-                <TableCell sx={{ color: 'white', fontWeight: 'bold', padding: '6px', fontSize: '0.75rem', position: 'sticky', top: 30, backgroundColor: '#0D3282', zIndex: 9 }}>İşlemler</TableCell>
+                {!isBayi && <TableCell sx={{ color: 'white', fontWeight: 'bold', padding: '6px', fontSize: '0.75rem', position: 'sticky', top: 30, backgroundColor: '#0D3282', zIndex: 9 }}>İşlemler</TableCell>}
               </TableRow>
             </TableHead>
             <TableBody>
@@ -679,20 +693,22 @@ const AtolyeTakip: React.FC = () => {
                   </TableCell>
                   <TableCell sx={{ padding: '3px', fontSize: '0.75rem' }}>{atolye.ucret ? `${atolye.ucret} ₺` : '-'}</TableCell>
                   <TableCell sx={{ padding: '3px', fontSize: '0.75rem' }}>{atolye.yapilma_tarihi ? formatDate(atolye.yapilma_tarihi) : '-'}</TableCell>
-                  <TableCell sx={{ padding: '3px' }}>
-                    <IconButton size="small" onClick={() => handleEdit(atolye.id)} sx={{ mr: 0.5, padding: '3px' }}>
-                      <Edit fontSize="small" sx={{ fontSize: '1rem' }} />
-                    </IconButton>
-                    <IconButton size="small" onClick={() => handleDelete(atolye.id)} color="error" sx={{ padding: '3px' }}>
-                      <Delete fontSize="small" sx={{ fontSize: '1rem' }} />
-                    </IconButton>
-                  </TableCell>
+                  {!isBayi && (
+                    <TableCell sx={{ padding: '3px' }}>
+                      <IconButton size="small" onClick={() => handleEdit(atolye.id)} sx={{ mr: 0.5, padding: '3px' }}>
+                        <Edit fontSize="small" sx={{ fontSize: '1rem' }} />
+                      </IconButton>
+                      <IconButton size="small" onClick={() => handleDelete(atolye.id)} color="error" sx={{ padding: '3px' }}>
+                        <Delete fontSize="small" sx={{ fontSize: '1rem' }} />
+                      </IconButton>
+                    </TableCell>
+                  )}
                 </TableRow>
                 );
               })}
               {filteredList.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={15} align="center" sx={{ py: 3 }}>
+                  <TableCell colSpan={isBayi ? 14 : 15} align="center" sx={{ py: 3 }}>
                     {atolyeList.length === 0 ? 'Henüz kayıt bulunmamaktadır' : 'Filtreye uygun kayıt bulunamadı'}
                   </TableCell>
                 </TableRow>

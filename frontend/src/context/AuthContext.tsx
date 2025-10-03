@@ -5,6 +5,7 @@ import { authService } from '../services/api';
 interface AuthContextType {
   user: User | null;
   login: (username: string, password: string) => Promise<void>;
+  bayiLogin: (username: string, password: string) => Promise<void>;
   register: (username: string, password: string) => Promise<void>;
   logout: () => void;
   isAuthenticated: boolean;
@@ -27,6 +28,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setUser(data.user);
   };
 
+  const bayiLogin = async (username: string, password: string) => {
+    const data = await authService.bayiLogin(username, password);
+    setUser(data.user);
+  };
+
   const register = async (username: string, password: string) => {
     await authService.register(username, password);
   };
@@ -41,6 +47,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       value={{
         user,
         login,
+        bayiLogin,
         register,
         logout,
         isAuthenticated: !!user,

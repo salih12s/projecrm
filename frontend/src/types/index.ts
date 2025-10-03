@@ -1,6 +1,8 @@
 export interface User {
   id: number;
   username: string;
+  role?: 'admin' | 'bayi';
+  bayiIsim?: string;
 }
 
 export interface Islem {
@@ -103,6 +105,8 @@ export interface Marka {
 export interface Bayi {
   id: number;
   isim: string;
+  username: string;
+  password: string;
   created_at: string;
 }
 

@@ -91,6 +91,8 @@ export interface Marka {
 export interface Bayi {
   id: number;
   isim: string;
+  username: string;
+  password: string;
   created_at: Date;
 }
 
