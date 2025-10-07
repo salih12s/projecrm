@@ -9,7 +9,10 @@ export interface Islem {
   id: number;
   full_tarih: string;
   teknisyen_ismi?: string;
+  teknisyen?: string;  // Alias for teknisyen_ismi
   yapilan_islem?: string;
+  ariza?: string;  // Alias for sikayet
+  aciklama?: string;  // Alias for yapilan_islem
   tutar?: number;
   ad_soyad: string;
   ilce: string;

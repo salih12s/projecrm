@@ -1,6 +1,8 @@
 import { Islem } from '../types';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { PDFDocument, rgb } from 'pdf-lib';
+import fontkit from '@pdf-lib/fontkit';
 
 // Telefon numarasını formatla
 const formatPhoneNumber = (phone: string | undefined): string => {
@@ -12,7 +14,165 @@ const formatPhoneNumber = (phone: string | undefined): string => {
   return phone;
 };
 
-export const printIslem = (islem: Islem) => {
+// PDF şablonuna koordinatlarla veri yazma fonksiyonu
+async function printWithPdfTemplate(islem: Islem, templateUrl: string) {
+  try {
+    // PDF şablonunu yükle
+    const templateBytes = await fetch(templateUrl).then(res => res.arrayBuffer());
+    const pdfDoc = await PDFDocument.load(templateBytes);
+    
+    // Fontkit'i kaydet (özel font desteği için gerekli)
+    pdfDoc.registerFontkit(fontkit);
+    
+    // İlk sayfayı al
+    const pages = pdfDoc.getPages();
+    const firstPage = pages[0];
+    
+    // Türkçe destekli font yükle - Roboto
+    const fontUrl = '/fonts/Roboto-Regular.ttf';
+    const fontBytes = await fetch(fontUrl).then(res => res.arrayBuffer());
+    const font = await pdfDoc.embedFont(fontBytes);
+    
+    // Sayfa boyutları (A4: 595.28pt x 841.89pt)
+    const { height } = firstPage.getSize();
+    
+    // Koordinatlara veri yaz - Siembra formuna göre ayarlandı
+    // PDF koordinat sistemi: Sol alt köşe (0,0), height=841.89
+    
+    // SAĞ ÜST BÖLGESİ - MÜŞTERİ BİLGİLERİ
+    
+    // İsmi (sağ üst - "İsmi" satırı)
+    if (islem.ad_soyad) {
+      firstPage.drawText(islem.ad_soyad.toUpperCase(), {
+        x: 365,
+        y: height - 317,
+        size: 9,
+        font: font,
+        color: rgb(0, 0, 0),
+      });
+    }
+    
+    // Adresi (sağ üst - "Adresi" satırı)
+    if (islem.ilce || islem.mahalle || islem.cadde) {
+      const adresParcalari = [
+        islem.ilce,
+        islem.mahalle,
+        islem.cadde,
+        islem.sokak,
+        islem.apartman_site,
+        islem.kapi_no ? 'No:' + islem.kapi_no : '',
+        islem.blok_no ? 'Blok:' + islem.blok_no : '',
+        islem.daire_no ? 'D:' + islem.daire_no : ''
+      ].filter(Boolean);
+      const adres = adresParcalari.join(', ');
+      firstPage.drawText(adres.substring(0, 60), {
+        x: 365,
+        y: height - 332,
+        size: 7,
+        font: font,
+        color: rgb(0, 0, 0),
+      });
+    }
+    
+    // Şikayeti (sağ üst - "Şikayeti" satırı)
+    if (islem.sikayet) {
+      firstPage.drawText(islem.sikayet.substring(0, 70), {
+        x: 365,
+        y: height - 347,
+        size: 9,
+        font: font,
+        color: rgb(0, 0, 0),
+      });
+    }
+    
+    // Mücaddat Tarihi (sağ üst - "Mücaddat Tarihi" satırı)
+    if (islem.full_tarih) {
+      const tarih = new Date(islem.full_tarih).toLocaleDateString('tr-TR');
+      firstPage.drawText(tarih, {
+        x: 365,
+        y: height - 362,
+        size: 9,
+        font: font,
+        color: rgb(0, 0, 0),
+      });
+    }
+    
+    // Telefon (sağ üst - "Telefon" satırı)
+    if (islem.cep_tel) {
+      const telefon = formatPhoneNumber(islem.cep_tel) + 
+        (islem.yedek_tel ? ' / ' + formatPhoneNumber(islem.yedek_tel) : '');
+      firstPage.drawText(telefon, {
+        x: 365,
+        y: height - 376,
+        size: 9,
+        font: font,
+        color: rgb(0, 0, 0),
+      });
+    }
+    
+    // SOL ÜST BÖLGESİ - CİHAZ BİLGİLERİ
+    
+    // Cihazı - Model/Marka (sol üst - "Model-Marka/sı" satırı)
+    if (islem.urun || islem.marka) {
+      const cihaz = [islem.urun, islem.marka].filter(Boolean).join(' - ');
+      firstPage.drawText(cihaz, {
+        x: 180,
+        y: height - 340,
+        size: 9,
+        font: font,
+        color: rgb(0, 0, 0),
+      });
+    }
+    
+    
+    // Garanti Tarihi (sol üst - "Garanti Tarihi" satırı - boş kalabilir)
+    // firstPage.drawText('', { x: 262, y: height - 310, size: 9, font: font, color: rgb(0, 0, 0) });
+    
+    // ALT BÖLGESİ - İMZA VE KONTROL
+    
+    // Teknisyen Adı, İmzası (sol alt - "Teknisyen Adı, İmzası")
+    if (islem.teknisyen_ismi) {
+      firstPage.drawText(islem.teknisyen_ismi.toUpperCase(), {
+        x: 58,
+        y: height - 532,
+        size: 9,
+        font: font,
+        color: rgb(0, 0, 0),
+      });
+    }
+    
+    // PDF'i kaydet ve indir
+    const pdfBytes = await pdfDoc.save();
+    const blob = new Blob([new Uint8Array(pdfBytes)], { type: 'application/pdf' });
+    const url = URL.createObjectURL(blob);
+    
+    // Yeni pencerede aç ve yazdır
+    const printWindow = window.open(url, '_blank');
+    if (printWindow) {
+      printWindow.onload = () => {
+        printWindow.print();
+      };
+    }
+  } catch (error) {
+    console.error('PDF yazdırma hatası:', error);
+    alert('PDF yazdırılırken bir hata oluştu. Lütfen tekrar deneyin.');
+  }
+}
+
+export const printIslem = async (islem: Islem) => {
+  // Siembra markası için PDF şablonu kullan
+  if (islem.marka && (
+    islem.marka.toLowerCase() === 'siembra' || 
+    islem.marka.toUpperCase() === 'SİEMBRA' ||
+    islem.marka.toUpperCase() === 'SIEMBRA'
+  )) {
+    // PDF şablon dosyasının yolu
+    const templateUrl = '/templates/siembra-template.pdf';
+    await printWithPdfTemplate(islem, templateUrl);
+    return;
+  }
+  
+  // Diğer markalar için HTML şablon kullan
   const printContent = `
     <!DOCTYPE html>
     <html>
@@ -79,7 +239,16 @@ export const printIslem = (islem: Islem) => {
               </div>
               <div class="info-row">
                 <span class="info-label">Adres:</span>
-                <span class="info-value">${[islem.ilce, islem.mahalle, islem.cadde, islem.sokak, 'No:' + islem.kapi_no, islem.apartman_site, islem.blok_no ? 'Blok:' + islem.blok_no : '', islem.daire_no ? 'D:' + islem.daire_no : ''].filter(v => v && v !== 'No:' && v !== 'Blok:' && v !== 'D:').join(' ') || ''}</span>
+                <span class="info-value">${[
+                  islem.ilce,
+                  islem.mahalle,
+                  islem.cadde,
+                  islem.sokak,
+                  islem.apartman_site,
+                  islem.kapi_no ? 'No:' + islem.kapi_no : '',
+                  islem.blok_no ? 'Blok:' + islem.blok_no : '',
+                  islem.daire_no ? 'D:' + islem.daire_no : ''
+                ].filter(Boolean).join(' ') || ''}</span>
               </div>
               <div class="info-row">
                 <span class="info-label">Telefon:</span>

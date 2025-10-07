@@ -1,0 +1,1433 @@
+import { Islem } from '../types';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
+
+// Telefon numarasını formatla
+const formatPhoneNumber = (phone: string | undefined): string => {
+  if (!phone) return '';
+  const cleaned = phone.replace(/\D/g, '');
+  if (cleaned.length === 11) {
+    return `${cleaned.slice(0, 4)} ${cleaned.slice(4, 7)} ${cleaned.slice(7, 9)} ${cleaned.slice(9)}`;
+  }
+  return phone;
+};
+
+// Siembra markası için özel yazdırma şablonu
+const printSiembraForm = (islem: Islem) => {
+  const printContent = `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta charset="UTF-8">
+        <title>Siembra Servis Raporu</title>
+        <style>
+          @page { size: A4; margin: 8mm; }
+          * { margin: 0; padding: 0; box-sizing: border-box; }
+          body { 
+            font-family: Arial, sans-serif; 
+            font-size: 7.5px; 
+            color: #000; 
+            padding: 3px;
+            line-height: 1.2;
+          }
+          
+          .form-container { 
+            border: 3px solid #000; 
+            padding: 6px;
+          }
+          
+          /* Header Section */
+          .header-section {
+            display: grid;
+            grid-template-columns: 35% 35% 30%;
+            gap: 5px;
+            border-bottom: 2px solid #000;
+            padding-bottom: 6px;
+            margin-bottom: 4px;
+          }
+          
+          .logo-area .logo {
+            font-size: 32px;
+            font-weight: bold;
+            color: #2d4a9e;
+            letter-spacing: 3px;
+            margin-bottom: 2px;
+          }
+          
+          .logo-area .company-info {
+            font-size: 6.5px;
+            line-height: 1.3;
+            font-weight: bold;
+          }
+          
+          .title-area {
+            text-align: center;
+          }
+          
+          .title-area .main-title {
+            font-size: 15px;
+            font-weight: bold;
+            color: #2d4a9e;
+            margin-bottom: 3px;
+          }
+          
+          .title-area .form-number {
+            font-size: 18px;
+            font-weight: bold;
+            color: #c62828;
+            margin-bottom: 4px;
+          }
+          
+          .code-inputs {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 3px;
+          }
+          
+          .code-group {
+            text-align: center;
+          }
+          
+          .code-label {
+            font-size: 6.5px;
+            font-weight: bold;
+            margin-bottom: 2px;
+          }
+          
+          .code-boxes {
+            display: flex;
+            gap: 1px;
+          }
+          
+          .code-box {
+            width: 14px;
+            height: 16px;
+            border: 1px solid #000;
+          }
+          
+          .date-area {
+            text-align: right;
+            font-size: 7px;
+          }
+          
+          /* Main Table - YETKİLİ SERVİS */
+          .main-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 4px;
+          }
+          
+          .main-table td, .main-table th {
+            border: 1px solid #000;
+            padding: 2px 4px;
+            font-size: 7px;
+          }
+          
+          .main-table th {
+            font-weight: bold;
+            background-color: #f0f0f0;
+            text-align: center;
+          }
+          
+          .main-table .label-cell {
+            font-weight: bold;
+            background-color: #f5f5f5;
+          }
+          
+          .serial-boxes {
+            display: flex;
+            gap: 1px;
+          }
+          
+          .serial-box {
+            width: 12px;
+            height: 14px;
+            border: 1px solid #000;
+            display: inline-block;
+          }
+          
+          /* Müşterinin Bölümü */
+          .customer-section {
+            display: grid;
+            grid-template-columns: 12% 88%;
+            border: 1px solid #000;
+            margin-bottom: 4px;
+          }
+          
+          .customer-section .left-col {
+            border-right: 1px solid #000;
+            writing-mode: vertical-rl;
+            text-align: center;
+            font-weight: bold;
+            font-size: 7px;
+            padding: 3px;
+            background-color: #f5f5f5;
+          }
+          
+          .customer-section .right-col {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+          }
+          
+          .customer-section .field {
+            border-bottom: 1px solid #000;
+            padding: 2px 4px;
+            font-size: 7px;
+          }
+          
+          .customer-section .field:nth-child(odd) {
+            border-right: 1px solid #000;
+          }
+          
+          .customer-section .field:last-child,
+          .customer-section .field:nth-last-child(2) {
+            border-bottom: none;
+          }
+          
+          .customer-section .field strong {
+            font-weight: bold;
+          }
+          
+          /* Arızanın Tanımı Table */
+          .fault-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 4px;
+          }
+          
+          .fault-table td, .fault-table th {
+            border: 1px solid #000;
+            padding: 2px 3px;
+            font-size: 6.5px;
+            text-align: center;
+          }
+          
+          .fault-table th {
+            font-weight: bold;
+            background-color: #f0f0f0;
+          }
+          
+          /* Değişen Parçalar Table */
+          .parts-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 4px;
+          }
+          
+          .parts-table td, .parts-table th {
+            border: 1px solid #000;
+            padding: 2px 3px;
+            font-size: 6.5px;
+            text-align: center;
+          }
+          
+          .parts-table th {
+            font-weight: bold;
+            background-color: #f0f0f0;
+          }
+          
+          .parts-table .section-header {
+            font-weight: bold;
+            background-color: #e0e0e0;
+          }
+          
+          /* Bottom Section */
+          .bottom-section {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 0;
+            border: 1px solid #000;
+            margin-bottom: 4px;
+          }
+          
+          .bottom-section .cell {
+            border-right: 1px solid #000;
+            border-bottom: 1px solid #000;
+            padding: 3px;
+            font-size: 6.5px;
+            min-height: 35px;
+          }
+          
+          .bottom-section .cell:nth-child(3),
+          .bottom-section .cell:nth-child(6),
+          .bottom-section .cell:last-child {
+            border-right: none;
+          }
+          
+          .bottom-section .cell:nth-last-child(-n+3) {
+            border-bottom: none;
+          }
+          
+          .bottom-section .cell strong {
+            font-weight: bold;
+            font-size: 7px;
+          }
+          
+          .checkbox-row {
+            display: flex;
+            gap: 8px;
+            margin-top: 3px;
+            align-items: center;
+          }
+          
+          .checkbox-row .cb {
+            width: 10px;
+            height: 10px;
+            border: 1px solid #000;
+            display: inline-block;
+          }
+          
+          /* Note Section */
+          .note-section {
+            border: 1px solid #000;
+            padding: 3px;
+            font-size: 5.5px;
+            line-height: 1.3;
+            margin-bottom: 3px;
+          }
+          
+          .note-section strong {
+            font-weight: bold;
+          }
+          
+          /* Stamp Section */
+          .stamp-section {
+            text-align: right;
+            font-size: 6px;
+            font-style: italic;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="form-container">
+          <!-- HEADER -->
+          <div class="header-section">
+            <!-- Logo Area -->
+            <div class="logo-area">
+              <div class="logo">SIEMBRA</div>
+              <div class="company-info">
+                <strong>DAYANIKLI TÜKETİM MALLARI SAN. VE TİC. LTD. ŞTİ.</strong><br>
+                <strong>Şehiller Mh. Kaya Sk. No:8A Esenler / İSTANBUL</strong><br>
+                <strong>Tel: 0212 689 05 34</strong>
+              </div>
+            </div>
+            
+            <!-- Title Area -->
+            <div class="title-area">
+              <div class="main-title">SERVİS RAPORU / 20</div>
+              <div class="form-number">001272</div>
+              <div class="code-inputs">
+                <div class="code-group">
+                  <div class="code-label">SERVİS KODU</div>
+                  <div class="code-boxes">
+                    <div class="code-box"></div>
+                    <div class="code-box"></div>
+                    <div class="code-box"></div>
+                    <div class="code-box"></div>
+                    <div class="code-box"></div>
+                  </div>
+                </div>
+                <div class="code-group">
+                  <div class="code-label">MÜŞT. GRNT. KODU</div>
+                  <div class="code-boxes">
+                    <div class="code-box"></div>
+                    <div class="code-box"></div>
+                    <div class="code-box"></div>
+                    <div class="code-box"></div>
+                    <div class="code-box"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Date Area -->
+            <div class="date-area">
+              <strong>Tarih: ........./.........../20.......</strong>
+            </div>
+          </div>
+          
+          <!-- YETKİLİ SERVİS TABLE -->
+          <table class="main-table">
+            <tr>
+              <th colspan="4" style="text-align:center; font-size: 8px;">YETKİLİ SERVİS</th>
+            </tr>
+            <tr>
+              <td rowspan="3" class="label-cell" style="vertical-align: middle; text-align: center; width: 10%;">Cihazın</td>
+              <td class="label-cell" style="width: 20%;">Modeli-Markası</td>
+              <td colspan="2" style="width: 70%;">${islem.urun || ''} - ${islem.marka || ''}</td>
+            </tr>
+            <tr>
+              <td class="label-cell">Seri No</td>
+              <td colspan="2">
+                <div class="serial-boxes">
+                  <div class="serial-box"></div>
+                  <div class="serial-box"></div>
+                  <div class="serial-box"></div>
+                  <div class="serial-box"></div>
+                  <div class="serial-box"></div>
+                  <div class="serial-box"></div>
+                  <div class="serial-box"></div>
+                  <div class="serial-box"></div>
+                  <div class="serial-box"></div>
+                  <div class="serial-box"></div>
+                  <div class="serial-box"></div>
+                  <div class="serial-box"></div>
+                </div>
+              </td>
+            </tr>
+            <tr>
+              <td class="label-cell">Garanti Tarihi</td>
+              <td colspan="2"></td>
+            </tr>
+          </table>
+          
+          <!-- MÜŞTERİNİN SECTION -->
+          <div class="customer-section">
+            <div class="left-col">Müşterinin</div>
+            <div class="right-col">
+              <div class="field"><strong>İsmi:</strong> ${islem.ad_soyad || ''}</div>
+              <div class="field"><strong>Adresi:</strong> ${[islem.ilce, islem.mahalle, islem.cadde, islem.sokak, islem.kapi_no ? 'No:' + islem.kapi_no : ''].filter(v => v && v !== 'No:').join(', ') || ''}</div>
+              <div class="field"><strong>Şikayeti:</strong> ${islem.sikayet || ''}</div>
+              <div class="field"><strong>Müracaat Tarihi:</strong> ${islem.full_tarih ? new Date(islem.full_tarih).toLocaleDateString('tr-TR') : ''}</div>
+              <div class="field"><strong>Telefon:</strong> ${formatPhoneNumber(islem.cep_tel)}${islem.yedek_tel ? ' / ' + formatPhoneNumber(islem.yedek_tel) : ''}</div>
+              <div class="field"></div>
+            </div>
+          </div>
+          
+          <!-- ARIZANIN TANIMI TABLE -->
+          <table class="fault-table">
+            <tr>
+              <th colspan="5">ARIZANIN TANIMI</th>
+              <th colspan="2">km Gidiş-Dönüş</th>
+            </tr>
+            <tr>
+              <th rowspan="2">Malzeme</th>
+              <th colspan="2">İşçilik</th>
+              <th colspan="2" rowspan="2">NOTLAR</th>
+              <th rowspan="2"></th>
+              <th rowspan="2"></th>
+            </tr>
+            <tr>
+              <th>TL</th>
+              <th>KR</th>
+            </tr>
+            <tr>
+              <td style="min-height: 15px;"></td>
+              <td></td>
+              <td></td>
+              <td colspan="2" rowspan="3"></td>
+              <td rowspan="3"></td>
+              <td rowspan="3"></td>
+            </tr>
+            <tr>
+              <td></td>
+              <td></td>
+              <td></td>
+            </tr>
+            <tr>
+              <td></td>
+              <td></td>
+              <td></td>
+            </tr>
+          </table>
+          
+          <!-- DEĞİŞEN PARÇALAR TABLE -->
+          <table class="parts-table">
+            <tr>
+              <th colspan="6">DEĞİŞEN PARÇALAR</th>
+            </tr>
+            <tr>
+              <th>Kodu</th>
+              <th>Adı</th>
+              <th>Adet</th>
+              <th colspan="2">Malzeme</th>
+              <th colspan="2">İşçilik</th>
+            </tr>
+            <tr>
+              <td class="section-header"></td>
+              <td class="section-header"></td>
+              <td class="section-header"></td>
+              <td class="section-header">TL</td>
+              <td class="section-header">KR</td>
+              <td class="section-header">TL</td>
+              <td class="section-header">KR</td>
+            </tr>
+            <tr>
+              <td></td>
+              <td></td>
+              <td></td>
+              <td></td>
+              <td></td>
+              <td></td>
+              <td></td>
+            </tr>
+            <tr>
+              <td></td>
+              <td></td>
+              <td></td>
+              <td></td>
+              <td></td>
+              <td></td>
+              <td></td>
+            </tr>
+            <tr>
+              <td></td>
+              <td></td>
+              <td></td>
+              <td></td>
+              <td></td>
+              <td></td>
+              <td></td>
+            </tr>
+            <tr>
+              <td colspan="3" style="text-align: right; font-weight: bold;">TOPLAM</td>
+              <td></td>
+              <td></td>
+              <td></td>
+              <td></td>
+            </tr>
+            <tr>
+              <td colspan="3" style="text-align: right; font-weight: bold;">K.D.V. %........</td>
+              <td></td>
+              <td></td>
+              <td></td>
+              <td></td>
+            </tr>
+            <tr>
+              <td colspan="3" style="text-align: right; font-weight: bold;">Genel Toplam</td>
+              <td></td>
+              <td></td>
+              <td></td>
+              <td></td>
+            </tr>
+          </table>
+          
+          <!-- BOTTOM SECTION (Teknisyen, Müşteri, Evde, Atölyede, Bayide, Kontrol, etc) -->
+          <div class="bottom-section">
+            <div class="cell">
+              <strong>Teknisyen Adı, İmzası</strong><br>
+              ${islem.teknisyen_ismi || ''}
+            </div>
+            <div class="cell">
+              <strong>Müşteri İmz.</strong>
+            </div>
+            <div class="cell">
+              <strong>Evde</strong>
+              <div class="checkbox-row">
+                <span class="cb"></span>
+              </div>
+            </div>
+            
+            <div class="cell">
+              <strong>Atölyede</strong>
+              <div class="checkbox-row">
+                <span class="cb"></span>
+              </div>
+            </div>
+            <div class="cell">
+              <strong>Bayide</strong>
+              <div class="checkbox-row">
+                <span class="cb"></span>
+              </div>
+            </div>
+            <div class="cell">
+              <strong>KONTROL</strong><br>
+              <strong>BÖLGE MÜDÜRLÜĞÜ</strong>
+            </div>
+            
+            <div class="cell" colspan="2">
+              <strong>Yapılan Servisten Memnunum</strong> <span class="cb"></span><br>
+              <strong>Değilim</strong> <span class="cb"></span>
+            </div>
+            <div class="cell">
+              <strong>MERKEZ</strong>
+            </div>
+          </div>
+          
+          <!-- NOTE SECTION -->
+          <div class="note-section">
+            <strong>NOT:</strong> Garanti ancak imalat hatalarını kapsar. Cam Kırılmaları ve Mamülün yanlış kullanıldığı veya yetkili 
+            servisimizin dışındaki kimseler tarafından müdahalesi halinde <strong>GARANTİ GEÇERLİ DEĞİLDİR.</strong><br>
+            Geçerli Garanti belgesi'nin İbrazi şarttır, aksi takdirde yapılan işlem ücrete tabidir.<br>
+            Fiyat listelerinde (x) işaretli malzemenin arızalısı iade alınır.
+          </div>
+          
+          <!-- STAMP -->
+          <div class="stamp-section">
+            Bu belge, <strong>FATURA, PERAKENDE SATIŞ FİŞİ ve ÖDEME MAKBUZU</strong><br>
+            yerine geçerli <strong>DEĞİLDİR</strong>.
+          </div>
+        </div>
+      </body>
+    </html>
+  `;
+
+  const printWindow = window.open('', '_blank');
+  if (printWindow) {
+    printWindow.document.write(printContent);
+    printWindow.document.close();
+    printWindow.onload = () => {
+      printWindow.print();
+    };
+  }
+};
+
+export const printIslem = (islem: Islem) => {
+  // Siembra markası için özel şablon (büyük/küçük harf duyarsız)
+  if (islem.marka && (
+    islem.marka.toLowerCase() === 'siembra' || 
+    islem.marka.toUpperCase() === 'SİEMBRA' ||
+    islem.marka.toUpperCase() === 'SIEMBRA'
+  )) {
+    printSiembraForm(islem);
+    return;
+  }
+  
+  // Varsayılan şablon
+  const printContent = `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta charset="UTF-8">
+        <title>Siembra Servis Raporu</title>
+        <style>
+          @page { size: A4; margin: 8mm; }
+          * { margin: 0; padding: 0; box-sizing: border-box; }
+          body { 
+            font-family: Arial, sans-serif; 
+            font-size: 8px; 
+            color: #000; 
+            padding: 5px; 
+          }
+          
+          .container { border: 2px solid #000; padding: 8px; }
+          
+          /* Header - Siembra Logo ve Bilgiler */
+          .header { 
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 5px;
+            border-bottom: 2px solid #000;
+            padding-bottom: 8px;
+            margin-bottom: 5px;
+          }
+          
+          .logo-section {
+            display: flex;
+            flex-direction: column;
+          }
+          
+          .logo-text {
+            font-size: 24px;
+            font-weight: bold;
+            color: #2c3e9e;
+            letter-spacing: 2px;
+            margin-bottom: 3px;
+          }
+          
+          .company-details {
+            font-size: 7px;
+            line-height: 1.4;
+            color: #000;
+          }
+          
+          .form-title-section {
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+          }
+          
+          .form-title {
+            font-size: 14px;
+            font-weight: bold;
+            color: #2c3e9e;
+            margin-bottom: 5px;
+          }
+          
+          .form-number {
+            font-size: 16px;
+            font-weight: bold;
+            color: #d32f2f;
+          }
+          
+          .form-inputs {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 5px;
+          }
+          
+          .input-group {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+          }
+          
+          .input-label {
+            font-size: 7px;
+            font-weight: bold;
+            margin-bottom: 2px;
+          }
+          
+          .input-boxes {
+            display: flex;
+            gap: 2px;
+          }
+          
+          .input-box {
+            width: 18px;
+            height: 18px;
+            border: 1px solid #000;
+            display: inline-block;
+          }
+          
+          .date-section {
+            text-align: right;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+            font-size: 7px;
+          }
+          
+          .date-label {
+            margin-bottom: 3px;
+          }
+          
+          /* Servis Bilgileri Tablosu */
+          .info-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 8px 0;
+          }
+          
+          .info-table td {
+            border: 1px solid #000;
+            padding: 4px 6px;
+            font-size: 9px;
+          }
+          
+          .info-table td.label {
+            font-weight: bold;
+            background-color: #f5f5f5;
+            width: 25%;
+          }
+          
+          .info-table td.value {
+            width: 25%;
+          }
+          
+          /* Garanti ve Servis Durumu */
+          .warranty-section {
+            display: flex;
+            gap: 10px;
+            margin: 8px 0;
+          }
+          
+          .warranty-box {
+            flex: 1;
+            border: 1px solid #000;
+            padding: 5px;
+            font-size: 8px;
+          }
+          
+          .warranty-title {
+            font-weight: bold;
+            margin-bottom: 3px;
+          }
+          
+          /* Checkbox Grid */
+          .checkbox-section {
+            border: 1px solid #000;
+            padding: 8px;
+            margin: 8px 0;
+          }
+          
+          .checkbox-title {
+            font-weight: bold;
+            font-size: 9px;
+            margin-bottom: 5px;
+            text-align: center;
+            border-bottom: 1px solid #000;
+            padding-bottom: 3px;
+          }
+          
+          .checkbox-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 5px;
+          }
+          
+          .checkbox-item {
+            display: flex;
+            align-items: center;
+            font-size: 8px;
+          }
+          
+          .checkbox {
+            width: 12px;
+            height: 12px;
+            border: 1px solid #000;
+            margin-right: 5px;
+            display: inline-block;
+          }
+          
+          /* Desişen Parçalar Tablosu */
+          .parts-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 8px 0;
+          }
+          
+          .parts-table th,
+          .parts-table td {
+            border: 1px solid #000;
+            padding: 3px 5px;
+            font-size: 8px;
+            text-align: center;
+          }
+          
+          .parts-table th {
+            background-color: #f5f5f5;
+            font-weight: bold;
+          }
+          
+          /* Müşteri Şikayeti ve Yapılan İşlem */
+          .notes-section {
+            border: 1px solid #000;
+            padding: 6px;
+            margin: 8px 0;
+            min-height: 50px;
+          }
+          
+          .notes-title {
+            font-weight: bold;
+            font-size: 9px;
+            margin-bottom: 3px;
+            border-bottom: 1px solid #000;
+            padding-bottom: 2px;
+          }
+          
+          .notes-content {
+            font-size: 8px;
+            line-height: 1.5;
+            margin-top: 3px;
+          }
+          
+          /* İmza Bölümü */
+          .signatures {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-top: 10px;
+          }
+          
+          .signature-box {
+            border: 1px solid #000;
+            padding: 8px;
+            min-height: 70px;
+            display: flex;
+            flex-direction: column;
+          }
+          
+          .signature-title {
+            font-size: 8px;
+            font-weight: bold;
+            margin-bottom: 5px;
+            text-align: center;
+            border-bottom: 1px solid #000;
+            padding-bottom: 3px;
+          }
+          
+          .signature-content {
+            flex: 1;
+          }
+          
+          .signature-line {
+            border-top: 1px dotted #000;
+            margin-top: auto;
+            padding-top: 3px;
+            text-align: center;
+            font-size: 7px;
+          }
+          
+          /* Footer */
+          .footer {
+            margin-top: 8px;
+            font-size: 7px;
+            text-align: center;
+            color: #666;
+            border-top: 1px solid #ccc;
+            padding-top: 5px;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <!-- Header -->
+          <div class="header">
+            <div class="logo-section">
+              <div class="logo-text">SIEMBRA</div>
+              <div class="company-details">
+                DAYANIKLI TÜKETİM MALLARI<br>
+                SAN. VE TİC. LTD. ŞTİ.<br>
+                Sanailer Mh., Kaya Sk. No:84<br>
+                Esenler / İstanbul<br>
+                Tel: 0212 689 06 34
+              </div>
+            </div>
+            
+            <div class="form-title-section">
+              <div class="form-title">SERVİS RAPORU / 20</div>
+              <div class="form-code">RAPORU/20</div>
+            </div>
+            
+            <div class="date-section">
+              <div class="date-box">
+                <strong>SERVİS NO:</strong> ${islem.id || '........'}
+              </div>
+              <div class="date-box">
+                <strong>Tarih:</strong><br>
+                ${islem.full_tarih ? new Date(islem.full_tarih).toLocaleDateString('tr-TR') : '.../.../20...'}
+              </div>
+            </div>
+          </div>
+          
+          <!-- Müşteri ve Cihaz Bilgileri -->
+          <table class="info-table">
+            <tr>
+              <td class="label">Müşteri Adı Soyadı</td>
+              <td class="value" colspan="3"><strong>${islem.ad_soyad || ''}</strong></td>
+            </tr>
+            <tr>
+              <td class="label">Telefon</td>
+              <td class="value">${formatPhoneNumber(islem.cep_tel)}${islem.yedek_tel ? ' / ' + formatPhoneNumber(islem.yedek_tel) : ''}</td>
+              <td class="label">Model</td>
+              <td class="value">${islem.urun || ''}</td>
+            </tr>
+            <tr>
+              <td class="label">Adres</td>
+              <td class="value" colspan="3">${[islem.ilce, islem.mahalle, islem.cadde, islem.sokak, islem.kapi_no ? 'No:' + islem.kapi_no : ''].filter(v => v && v !== 'No:').join(', ') || ''}</td>
+            </tr>
+            <tr>
+              <td class="label">Teknisyen</td>
+              <td class="value">${islem.teknisyen_ismi || ''}</td>
+              <td class="label">Marka</td>
+              <td class="value">${islem.marka || ''}</td>
+            </tr>
+          </table>
+          
+          <!-- Garanti Tarihi ve Servis Türü -->
+          <div class="warranty-section">
+            <div class="warranty-box">
+              <div class="warranty-title">Garanti Tarihi</div>
+              <div>................................................</div>
+            </div>
+            <div class="warranty-box">
+              <div class="warranty-title">Servis Türü</div>
+              <div style="display: flex; gap: 15px; margin-top: 3px;">
+                <span><span class="checkbox"></span> Garanti İçi</span>
+                <span><span class="checkbox"></span> Garanti Dışı</span>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Yetkili Servis Checkboxları -->
+          <div class="checkbox-section">
+            <div class="checkbox-title">YETKİLİ SERVİS BİLGİLERİ</div>
+            <div class="checkbox-grid">
+              <div class="checkbox-item">
+                <span class="checkbox"></span>
+                <span>Müşteriden İmza Alındı</span>
+              </div>
+              <div class="checkbox-item">
+                <span class="checkbox"></span>
+                <span>Evde Servis</span>
+              </div>
+              <div class="checkbox-item">
+                <span class="checkbox"></span>
+                <span>Atölyede Servis</span>
+              </div>
+              <div class="checkbox-item">
+                <span class="checkbox"></span>
+                <span>Bayide Servis</span>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Desişen Parçalar Tablosu -->
+          <table class="parts-table">
+            <thead>
+              <tr>
+                <th colspan="4">DESİGEN PARÇALAR</th>
+              </tr>
+              <tr>
+                <th>Parça Adı</th>
+                <th>Parça Kodu</th>
+                <th>Adet</th>
+                <th>Açıklama</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>&nbsp;</td>
+                <td>&nbsp;</td>
+                <td>&nbsp;</td>
+                <td>&nbsp;</td>
+              </tr>
+              <tr>
+                <td>&nbsp;</td>
+                <td>&nbsp;</td>
+                <td>&nbsp;</td>
+                <td>&nbsp;</td>
+              </tr>
+              <tr>
+                <td>&nbsp;</td>
+                <td>&nbsp;</td>
+                <td>&nbsp;</td>
+                <td>&nbsp;</td>
+              </tr>
+            </tbody>
+          </table>
+          
+          <!-- Müşteri Şikayeti -->
+          <div class="notes-section">
+            <div class="notes-title">MÜŞTERİ ŞİKAYETİ / ARIZA</div>
+            <div class="notes-content">
+              ${islem.sikayet || ''}
+            </div>
+          </div>
+          
+          <!-- Yapılan İşlem -->
+          <div class="notes-section">
+            <div class="notes-title">YAPILAN İŞLEM / AÇIKLAMA</div>
+            <div class="notes-content">
+              ${islem.yapilan_islem || ''}
+            </div>
+          </div>
+          
+          <!-- İmza Bölümü -->
+          <div class="signatures">
+            <div class="signature-box">
+              <div class="signature-title">MÜŞTERİ İMZASI</div>
+              <div class="signature-content"></div>
+              <div class="signature-line">İmza ve Tarih</div>
+            </div>
+            
+            <div class="signature-box">
+              <div class="signature-title">TEKNİSYEN İMZASI</div>
+              <div class="signature-content"></div>
+              <div class="signature-line">${islem.teknisyen_ismi || 'Teknisyen'}</div>
+            </div>
+            
+            <div class="signature-box">
+              <div class="signature-title">BÖLGE MÜDÜRLÜĞÜ / KONTROL</div>
+              <div class="signature-content"></div>
+              <div class="signature-line">İmza ve Tarih</div>
+            </div>
+          </div>
+          
+          <!-- Footer -->
+          <div class="footer">
+            Bu form Siembra yetkili servisi tarafından düzenlenmiştir.
+          </div>
+        </div>
+      </body>
+    </html>
+  `;
+
+  const printWindow = window.open('', '_blank');
+  if (printWindow) {
+    printWindow.document.write(printContent);
+    printWindow.document.close();
+    printWindow.onload = () => {
+      printWindow.print();
+    };
+  }
+};
+
+export const printIslem = (islem: Islem) => {
+  // Siembra markası için özel şablon (büyük/küçük harf duyarsız)
+  if (islem.marka && (
+    islem.marka.toLowerCase() === 'siembra' || 
+    islem.marka.toUpperCase() === 'SİEMBRA' ||
+    islem.marka.toUpperCase() === 'SIEMBRA'
+  )) {
+    printSiembraForm(islem);
+    return;
+  }
+  
+  // Varsayılan şablon
+  const printContent = `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta charset="UTF-8">
+        <title>Servis Formu</title>
+        <style>
+          @page { size: A4; margin: 15mm; }
+          * { margin: 0; padding: 0; box-sizing: border-box; }
+          body { font-family: Arial, sans-serif; font-size: 11px; color: #000; padding: 10px; }
+          
+          .header { border: 2px solid #000; padding: 10px; margin-bottom: 15px; }
+          .header-top { display: flex; justify-content: space-between; border-bottom: 1px solid #000; padding-bottom: 10px; margin-bottom: 10px; }
+          .company-info { font-size: 10px; line-height: 1.4; }
+          .company-name { font-weight: bold; font-size: 12px; margin-bottom: 3px; }
+          .form-title { text-align: center; font-weight: bold; font-size: 14px; flex: 1; }
+          .form-no { text-align: right; font-size: 10px; }
+          
+          .customer-device { display: flex; gap: 10px; margin-top: 10px; }
+          .customer-section { flex: 1; border: 1px solid #000; padding: 8px; }
+          .device-section { width: 200px; border: 1px solid #000; padding: 8px; }
+          .section-title { font-weight: bold; margin-bottom: 8px; border-bottom: 1px solid #000; padding-bottom: 3px; font-size: 11px; }
+          .info-row { display: flex; margin: 4px 0; font-size: 10px; }
+          .info-label { font-weight: bold; min-width: 80px; }
+          .info-value { flex: 1; border-bottom: 1px dotted #999; }
+          
+          .service-table { width: 100%; border-collapse: collapse; margin: 15px 0; border: 1px solid #000; }
+          .service-table th, .service-table td { border: 1px solid #000; padding: 5px; text-align: left; font-size: 10px; }
+          .service-table th { background-color: #f0f0f0; font-weight: bold; }
+          
+          .solution-section { border: 1px solid #000; padding: 8px; margin: 10px 0; }
+          .solution-table { width: 100%; border-collapse: collapse; }
+          .solution-table td { padding: 4px; font-size: 10px; border-bottom: 1px solid #ddd; }
+          
+          .notes { border: 1px solid #000; padding: 8px; margin: 10px 0; min-height: 60px; }
+          .signatures { display: flex; justify-content: space-between; margin-top: 30px; }
+          .signature-box { text-align: center; width: 40%; }
+          .signature-line { border-top: 1px solid #000; margin-top: 50px; padding-top: 5px; font-size: 10px; }
+          .footer { margin-top: 20px; font-size: 8px; line-height: 1.3; border-top: 1px solid #000; padding-top: 5px; }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <div class="header-top">
+            <div class="company-info">
+              <div class="company-name">FMS TEKNİK SERVİS HİZMETLERİ</div>
+              <div>GÜZELTEPE MAH KABAAĞAÇ SOKAK</div>
+              <div>NO:11/A</div>
+              <div>VERGİ DAİRESİ/NO: İVRİZ</div>
+            </div>
+            <div class="form-title">- SERVİS FORMU -</div>
+            <div class="form-no">
+              <div>Servis No: ${islem.id || '-'}</div>
+              <div>Kayıt Tarihi: ${islem.full_tarih ? new Date(islem.full_tarih).toLocaleDateString('tr-TR') + ' ' + new Date(islem.full_tarih).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }) : '-'}</div>
+            </div>
+          </div>
+          
+          <div class="customer-device">
+            <div class="customer-section">
+              <div class="section-title">- MÜŞTERİ BİLGİLERİ -</div>
+              <div class="info-row">
+                <span class="info-label">Taşıdı:</span>
+                <span class="info-value">${islem.ad_soyad || ''}</span>
+              </div>
+              <div class="info-row">
+                <span class="info-label">Adres:</span>
+                <span class="info-value">${[islem.ilce, islem.mahalle, islem.cadde, islem.sokak, 'No:' + islem.kapi_no, islem.apartman_site, islem.blok_no ? 'Blok:' + islem.blok_no : '', islem.daire_no ? 'D:' + islem.daire_no : ''].filter(v => v && v !== 'No:' && v !== 'Blok:' && v !== 'D:').join(' ') || ''}</span>
+              </div>
+              <div class="info-row">
+                <span class="info-label">Telefon:</span>
+                <span class="info-value">${formatPhoneNumber(islem.cep_tel)}${islem.sabit_tel ? ' / Sabit: ' + formatPhoneNumber(islem.sabit_tel) : ''}${islem.yedek_tel ? ' / Yedek: ' + formatPhoneNumber(islem.yedek_tel) : ''}</span>
+              </div>
+              <div class="info-row">
+                <span class="info-label">Vergi Daire/No:</span>
+                <span class="info-value"></span>
+              </div>
+              <div class="info-row">
+                <span class="info-label">Operatör:</span>
+                <span class="info-value">${islem.teknisyen_ismi || ''}</span>
+              </div>
+            </div>
+            
+            <div class="device-section">
+              <div class="section-title">- CİHAZ BİLGİSİ -</div>
+              <div class="info-row">
+                <span class="info-label">Cihaz Türü:</span>
+                <span class="info-value">${islem.urun || ''}</span>
+              </div>
+              <div class="info-row">
+                <span class="info-label">Cihaz Tipi:</span>
+                <span class="info-value">${islem.marka || ''}</span>
+              </div>
+              <div class="info-row">
+                <span class="info-label">Cihaz Modeli:</span>
+                <span class="info-value"></span>
+              </div>
+              <div class="info-row">
+                <span class="info-label">Seri No:</span>
+                <span class="info-value"></span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="section-title" style="border: 1px solid #000; padding: 5px; margin-bottom: 0;">- SERVİS DURUMU: ${islem.is_durumu === 'tamamlandi' ? 'Arıza Giderildi' : 'Açık'} -</div>
+
+        <table class="service-table">
+          <thead>
+            <tr>
+              <th style="width: 15%;">TARİH</th>
+              <th style="width: 20%;">İŞLEM ADI</th>
+              <th style="width: 65%;">AÇIKLAMA</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>${islem.full_tarih ? new Date(islem.full_tarih).toLocaleDateString('tr-TR') + ' - ' + new Date(islem.full_tarih).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }) : ''}</td>
+              <td>Arıza Giderildi</td>
+              <td>Açıklama: ${islem.sikayet || ''}</td>
+            </tr>
+            <tr>
+              <td>${islem.full_tarih ? new Date(islem.full_tarih).toLocaleDateString('tr-TR') + ' - ' + new Date(islem.full_tarih).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }) : ''}</td>
+              <td>Serva Yönlendirildi</td>
+              <td></td>
+            </tr>
+            <tr>
+              <td>${islem.full_tarih ? new Date(islem.full_tarih).toLocaleDateString('tr-TR') + ' - ' + new Date(islem.full_tarih).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }) : ''}</td>
+              <td>Servis İşlemi Gerçekleşti</td>
+              <td>Açıklama: ${islem.yapilan_islem || ''}</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="solution-section">
+          <div class="section-title">- ÇÖZÜM HARKETLERİ -</div>
+          <table class="solution-table">
+            <tr>
+              <td style="width: 30%;"><strong>TARİHLİ, EDER</strong></td>
+              <td style="width: 45%;"><strong>ÇÖZÜM ŞEKLİ:</strong></td>
+              <td style="width: 25%; text-align: right;"><strong>TUTAR</strong></td>
+            </tr>
+            <tr>
+              <td>${islem.full_tarih ? new Date(islem.full_tarih).toLocaleDateString('tr-TR') : ''}</td>
+              <td>Fırma Teknik Taşıdı-Arazla(11157478)</td>
+              <td style="text-align: right;">${islem.tutar ? Number(islem.tutar).toFixed(2) + ' TL' : '0.00 TL'}</td>
+            </tr>
+          </table>
+        </div>
+
+        <div class="notes">
+          <div style="font-weight: bold; margin-bottom: 5px;">- NOTLAR -</div>
+          <div style="font-size: 9px; line-height: 1.3;">
+            1- YAPILAN İŞLEMLER İLE İLGİLİ SON VE USULUNCE HABERDAR OLDUĞUMU<br>
+            2- CİHAZIN İLK KULLANIMDA VE GARANTİYE TABİ İSE GARANTİ SÜRESİNİ BEYANI ETTİĞİMİ<br>
+            3- YAPILAN İKİNCİ EL ÜRÜNLERE YAPILAN<br>
+            4- TESLİM ALINAN APARATLARIN İŞ GEREĞİ DEFORME OLDUĞU
+          </div>
+        </div>
+
+        <div class="signatures">
+          <div class="signature-box">
+            <div>Müşteri İmzası:</div>
+            <div class="signature-line">Birim Teknisyeni</div>
+          </div>
+          <div class="signature-box">
+            <div>Yetkili İmzası:</div>
+            <div class="signature-line">Firma Teknik Taşıdı</div>
+          </div>
+        </div>
+
+        <div class="footer">
+          Bu Servis Formu ${islem.full_tarih ? new Date(islem.full_tarih).toLocaleDateString('tr-TR') + ' - ' + new Date(islem.full_tarih).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }) : ''} Tarihinde Oluşturulmuştur.
+        </div>
+      </body>
+    </html>
+  `;
+
+  const printWindow = window.open('', '_blank');
+  if (printWindow) {
+    printWindow.document.write(printContent);
+    printWindow.document.close();
+    printWindow.focus();
+    setTimeout(() => { printWindow.print(); }, 500);
+  }
+};
+
+export const exportToExcel = (islemler: Islem[]) => {
+  // Başlıklar
+  const headers = [
+    'Tarih',
+    'Müşteri',
+    'İlçe',
+    'Mahalle',
+    'Cadde',
+    'Sokak',
+    'Kapı No',
+    'Cep Tel',
+    'Ürün',
+    'Marka',
+    'Yapılan İşlem',
+    'Teknisyen',
+    'Tutar',
+    'Şikayet',
+    'Durum'
+  ];
+
+  // Satırlar
+  const rows = islemler.map(i => {
+    // Metinleri temizle
+    const sikayetTemiz = (i.sikayet || '').replace(/[\t\n\r]/g, ' ').trim();
+    const yapilan_islemTemiz = (i.yapilan_islem || '').replace(/[\t\n\r]/g, ' ').trim();
+    
+    return [
+      i.full_tarih ? new Date(i.full_tarih).toLocaleDateString('tr-TR') : '',
+      i.ad_soyad || '',
+      i.ilce || '',
+      i.mahalle || '',
+      i.cadde || '',
+      i.sokak || '',
+      i.kapi_no || '',
+      i.cep_tel || '',
+      i.urun || '',
+      i.marka || '',
+      yapilan_islemTemiz,
+      i.teknisyen_ismi || '',
+      i.tutar || '',
+      sikayetTemiz,
+      i.is_durumu === 'acik' ? 'Açık' : 'Tamamlandı'
+    ];
+  });
+
+  // CSV formatı - Virgül ile ayrılmış, tırnak içinde
+  const csvContent = '\uFEFF' + [
+    headers.map(h => `"${h}"`).join(','),
+    ...rows.map(r => r.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','))
+  ].join('\r\n');
+
+  // Dosyayı indir
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const link = document.createElement('a');
+  const tarih = new Date().toLocaleDateString('tr-TR').replace(/\./g, '-');
+  const fileName = `islemler_${tarih}.csv`;
+  link.setAttribute('href', URL.createObjectURL(blob));
+  link.setAttribute('download', fileName);
+  link.style.visibility = 'hidden';
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+};
+
+// Liste için PDF Export
+export const exportListToPDF = (islemler: Islem[]) => {
+  const doc = new jsPDF('l', 'mm', 'a4'); // Landscape (yatay) A4
+  
+  // Türkçe karakter desteği için font ayarı
+  doc.setFont('helvetica');
+  
+  // Başlık
+  doc.setFontSize(16);
+  doc.setFont('helvetica', 'bold');
+  const baslik = 'ISLEMLER LISTESI';
+  doc.text(baslik, doc.internal.pageSize.getWidth() / 2, 15, { align: 'center' });
+  
+  // Tarih ve kayıt sayısı
+  doc.setFontSize(10);
+  doc.setFont('helvetica', 'normal');
+  const tarihStr = new Date().toLocaleDateString('tr-TR') + ' ' + new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  doc.text('Tarih: ' + tarihStr, 14, 25);
+  doc.text('Toplam Kayit: ' + islemler.length, 14, 30);
+  
+  // Tablo verileri hazırla - Türkçe karakterleri düzelt
+  const turkishCharFix = (str: string) => {
+    if (!str) return '-';
+    return str
+      .replace(/İ/g, 'I')
+      .replace(/ı/g, 'i')
+      .replace(/Ğ/g, 'G')
+      .replace(/ğ/g, 'g')
+      .replace(/Ü/g, 'U')
+      .replace(/ü/g, 'u')
+      .replace(/Ş/g, 'S')
+      .replace(/ş/g, 's')
+      .replace(/Ö/g, 'O')
+      .replace(/ö/g, 'o')
+      .replace(/Ç/g, 'C')
+      .replace(/ç/g, 'c');
+  };
+  
+  const tableData = islemler.map((islem, index) => [
+    index + 1, // Sıra
+    islem.full_tarih ? new Date(islem.full_tarih).toLocaleDateString('tr-TR') : '-',
+    turkishCharFix(islem.ad_soyad || ''),
+    turkishCharFix(islem.ilce || ''),
+    turkishCharFix(islem.mahalle || ''),
+    islem.cep_tel || '-',
+    turkishCharFix(islem.urun || ''),
+    turkishCharFix(islem.marka || ''),
+    turkishCharFix((islem.sikayet || '').substring(0, 35) + ((islem.sikayet || '').length > 35 ? '...' : '')),
+    turkishCharFix(islem.teknisyen_ismi || ''),
+    islem.tutar ? islem.tutar + ' TL' : '-',
+    islem.is_durumu === 'acik' ? 'Acik' : 'Tamamlandi'
+  ]);
+  
+  // AutoTable ile tablo oluştur
+  autoTable(doc, {
+    startY: 35,
+    head: [[
+      'Sira',
+      'Tarih',
+      'Musteri',
+      'Ilce', 
+      'Mahalle',
+      'Telefon',
+      'Urun',
+      'Marka',
+      'Sikayet',
+      'Teknisyen',
+      'Tutar',
+      'Durum'
+    ]],
+    body: tableData,
+    styles: {
+      fontSize: 7,
+      cellPadding: 1.5,
+      halign: 'left',
+      valign: 'middle',
+      overflow: 'linebreak',
+    },
+    headStyles: {
+      fillColor: [13, 50, 130],
+      textColor: [255, 255, 255],
+      fontStyle: 'bold',
+      fontSize: 7,
+      halign: 'center',
+    },
+    alternateRowStyles: {
+      fillColor: [245, 245, 245],
+    },
+    columnStyles: {
+      0: { cellWidth: 10, halign: 'center' }, // Sıra
+      1: { cellWidth: 20 }, // Tarih
+      2: { cellWidth: 28 }, // Müşteri
+      3: { cellWidth: 22 }, // İlçe
+      4: { cellWidth: 25 }, // Mahalle
+      5: { cellWidth: 24 }, // Telefon
+      6: { cellWidth: 18 }, // Ürün
+      7: { cellWidth: 18 }, // Marka
+      8: { cellWidth: 35 }, // Şikayet
+      9: { cellWidth: 22 }, // Teknisyen
+      10: { cellWidth: 18, halign: 'right' }, // Tutar
+      11: { cellWidth: 20, halign: 'center' }, // Durum
+    },
+    margin: { top: 35, left: 10, right: 10 },
+    didDrawPage: function (data) {
+      // Sayfa numarası
+      const pageCount = (doc as any).internal.getNumberOfPages();
+      const pageSize = doc.internal.pageSize;
+      const pageHeight = pageSize.height ? pageSize.height : pageSize.getHeight();
+      doc.setFontSize(8);
+      doc.text(
+        'Sayfa ' + data.pageNumber + ' / ' + pageCount,
+        pageSize.width / 2,
+        pageHeight - 10,
+        { align: 'center' }
+      );
+    },
+  });
+  
+  // PDF'i indir
+  const tarih = new Date().toLocaleDateString('tr-TR').replace(/\./g, '_');
+  doc.save(`islemler_${tarih}.pdf`);
+};
