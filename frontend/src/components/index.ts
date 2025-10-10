@@ -10,3 +10,4 @@ export { default as MusteriGecmisi } from './MusteriGecmisi.tsx';
 export { default as AtolyeTakip } from './AtolyeTakip.tsx';
 export { default as AtolyeDialog } from './AtolyeDialog.tsx';
 export { default as Settings } from './Settings';
+export { default as PrintEditor } from './PrintEditor';

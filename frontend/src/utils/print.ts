@@ -554,3 +554,4 @@ export const exportListToPDF = (islemler: Islem[]) => {
   const tarih = new Date().toLocaleDateString('tr-TR').replace(/\./g, '_');
   doc.save(`islemler_${tarih}.pdf`);
 };
+

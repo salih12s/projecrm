@@ -13,6 +13,10 @@ import {
   Box,
   Tooltip,
   TextField,
+  Menu,
+  MenuItem,
+  ListItemIcon,
+  ListItemText,
 } from '@mui/material';
 import {
   Edit,
@@ -21,10 +25,13 @@ import {
   Check,
   Print,
   DragIndicator,
+  MoreVert,
+  EditNote,
 } from '@mui/icons-material';
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
 import { Islem } from '../types';
 import { printIslem } from '../utils/print.ts';
+import PrintEditor from './PrintEditor';
 
 // Telefon numarasını formatla: 0544 448 88 88
 const formatPhoneNumber = (phone: string | undefined): string => {
@@ -60,6 +67,10 @@ const IslemTable: React.FC<IslemTableProps> = ({
   isAdminMode = false,
 }) => {
   const [filteredIslemler, setFilteredIslemler] = useState<Islem[]>(islemler);
+  const [printEditorOpen, setPrintEditorOpen] = useState(false);
+  const [selectedIslemForPrint, setSelectedIslemForPrint] = useState<Islem | null>(null);
+  const [printMenuAnchor, setPrintMenuAnchor] = useState<null | HTMLElement>(null);
+  const [printMenuIslem, setPrintMenuIslem] = useState<Islem | null>(null);
   
   // Filter states
   const [filters, setFilters] = useState({
@@ -219,8 +230,34 @@ const IslemTable: React.FC<IslemTableProps> = ({
     setFilters((prev) => ({ ...prev, [field]: value }));
   };
 
-  const handlePrint = (islem: Islem) => {
-    printIslem(islem);
+  const handlePrintMenuOpen = (event: React.MouseEvent<HTMLElement>, islem: Islem) => {
+    setPrintMenuAnchor(event.currentTarget);
+    setPrintMenuIslem(islem);
+  };
+
+  const handlePrintMenuClose = () => {
+    setPrintMenuAnchor(null);
+    setPrintMenuIslem(null);
+  };
+
+  const handleNormalPrint = () => {
+    if (printMenuIslem) {
+      printIslem(printMenuIslem);
+    }
+    handlePrintMenuClose();
+  };
+
+  const handleCustomPrint = () => {
+    if (printMenuIslem) {
+      setSelectedIslemForPrint(printMenuIslem);
+      setPrintEditorOpen(true);
+    }
+    handlePrintMenuClose();
+  };
+
+  const handleClosePrintEditor = () => {
+    setPrintEditorOpen(false);
+    setSelectedIslemForPrint(null);
   };
 
   // Sütun sırasını localStorage'dan yükle
@@ -390,6 +427,7 @@ const IslemTable: React.FC<IslemTableProps> = ({
   }
 
   return (
+    <>
     <TableContainer component={Paper} elevation={3}>
       <Table size="small" sx={{ '& .MuiTableCell-root': { py: 0.3, px: 0.5, fontSize: '0.75rem' } }}>
         <TableHead>
@@ -552,7 +590,7 @@ const IslemTable: React.FC<IslemTableProps> = ({
                   <Tooltip title="Yazdır">
                     <IconButton 
                       size="small" 
-                      onClick={() => handlePrint(islem)}
+                      onClick={(e) => handlePrintMenuOpen(e, islem)}
                       sx={{ 
                         bgcolor: 'info.light',
                         width: 28,
@@ -562,7 +600,7 @@ const IslemTable: React.FC<IslemTableProps> = ({
                         }
                       }}
                     >
-                      <Print sx={{ color: 'white', fontSize: '1rem' }} />
+                      <MoreVert sx={{ color: 'white', fontSize: '1rem' }} />
                     </IconButton>
                   </Tooltip>
                   <Tooltip title="Sil">
@@ -589,6 +627,36 @@ const IslemTable: React.FC<IslemTableProps> = ({
         </TableBody>
       </Table>
     </TableContainer>
+
+    {/* Yazdırma Menüsü */}
+    <Menu
+      anchorEl={printMenuAnchor}
+      open={Boolean(printMenuAnchor)}
+      onClose={handlePrintMenuClose}
+    >
+      <MenuItem onClick={handleNormalPrint}>
+        <ListItemIcon>
+          <Print fontSize="small" />
+        </ListItemIcon>
+        <ListItemText>Normal Yazdır</ListItemText>
+      </MenuItem>
+      <MenuItem onClick={handleCustomPrint}>
+        <ListItemIcon>
+          <EditNote fontSize="small" />
+        </ListItemIcon>
+        <ListItemText>Koordinatları Düzenle ve Yazdır</ListItemText>
+      </MenuItem>
+    </Menu>
+
+    {/* Yazdırma Düzenleyici */}
+    {selectedIslemForPrint && (
+      <PrintEditor
+        open={printEditorOpen}
+        onClose={handleClosePrintEditor}
+        islem={selectedIslemForPrint}
+      />
+    )}
+    </>
   );
 };
 
