@@ -56,9 +56,9 @@ async function printWithPdfTemplate(islem: Islem, templateUrl: string) {
     if (islem.ilce || islem.mahalle || islem.cadde) {
       const adresParcalari = [
         islem.ilce,
-        islem.mahalle,
-        islem.cadde,
-        islem.sokak,
+        islem.mahalle ? islem.mahalle + ' Mah.' : '',
+        islem.cadde ? islem.cadde + ' Cad.' : '',
+        islem.sokak ? islem.sokak + ' Sok.' : '',
         islem.apartman_site,
         islem.kapi_no ? 'No:' + islem.kapi_no : '',
         islem.blok_no ? 'Blok:' + islem.blok_no : '',
@@ -241,9 +241,9 @@ export const printIslem = async (islem: Islem) => {
                 <span class="info-label">Adres:</span>
                 <span class="info-value">${[
                   islem.ilce,
-                  islem.mahalle,
-                  islem.cadde,
-                  islem.sokak,
+                  islem.mahalle ? islem.mahalle + ' Mah.' : '',
+                  islem.cadde ? islem.cadde + ' Cad.' : '',
+                  islem.sokak ? islem.sokak + ' Sok.' : '',
                   islem.apartman_site,
                   islem.kapi_no ? 'No:' + islem.kapi_no : '',
                   islem.blok_no ? 'Blok:' + islem.blok_no : '',
@@ -475,7 +475,7 @@ export const exportListToPDF = (islemler: Islem[]) => {
     islem.full_tarih ? new Date(islem.full_tarih).toLocaleDateString('tr-TR') : '-',
     turkishCharFix(islem.ad_soyad || ''),
     turkishCharFix(islem.ilce || ''),
-    turkishCharFix(islem.mahalle || ''),
+    turkishCharFix(islem.mahalle ? islem.mahalle + ' Mah.' : ''),
     islem.cep_tel || '-',
     turkishCharFix(islem.urun || ''),
     turkishCharFix(islem.marka || ''),

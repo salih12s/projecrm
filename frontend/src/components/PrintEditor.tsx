@@ -64,11 +64,12 @@ const PrintEditor: React.FC<PrintEditorProps> = ({ open, onClose, islem }) => {
 
   // Varsayılan alan pozisyonları (mm cinsinden)
   const getDefaultFields = (): FieldConfig[] => {
+    // Adres parçalarını formatla (Mah., Cad., Sok. ekleri ile)
     const adresParcalari = [
       islem.ilce,
-      islem.mahalle,
-      islem.cadde,
-      islem.sokak,
+      islem.mahalle ? islem.mahalle + ' Mah.' : '',
+      islem.cadde ? islem.cadde + ' Cad.' : '',
+      islem.sokak ? islem.sokak + ' Sok.' : '',
       islem.apartman_site,
       islem.kapi_no ? 'No:' + islem.kapi_no : '',
       islem.blok_no ? 'Blok:' + islem.blok_no : '',
