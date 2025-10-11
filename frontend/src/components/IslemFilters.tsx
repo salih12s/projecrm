@@ -7,9 +7,13 @@ import {
   Grid,
   Button,
   Typography,
+  Autocomplete,
+  Chip,
 } from '@mui/material';
 import { FilterList, Clear } from '@mui/icons-material';
-import { Islem } from '../types';
+import { Islem, Montaj, Aksesuar } from '../types';
+import { api } from '../services/api';
+import { useAuth } from '../context/AuthContext';
 
 interface IslemFiltersProps {
   islemler: Islem[];
@@ -36,15 +40,45 @@ const filterFields = [
 ];
 
 const IslemFilters: React.FC<IslemFiltersProps> = ({ islemler, onFilterChange }) => {
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
+  
   const [selectedField, setSelectedField] = useState('ad_soyad');
   const [searchValue, setSearchValue] = useState('');
   const [isDurumuFilter, setIsDurumuFilter] = useState<string>('');
   const [filteredCount, setFilteredCount] = useState(0);
+  
+  // Montaj ve Aksesuar filtreleri (sadece admin için)
+  const [montajlar, setMontajlar] = useState<Montaj[]>([]);
+  const [aksesuarlar, setAksesuarlar] = useState<Aksesuar[]>([]);
+  const [selectedMontajlar, setSelectedMontajlar] = useState<string[]>([]);
+  const [selectedAksesuarlar, setSelectedAksesuarlar] = useState<string[]>([]);
+  const [filteredTutar, setFilteredTutar] = useState<number>(0);
+
+  // Montaj ve Aksesuarları yükle
+  useEffect(() => {
+    if (isAdmin) {
+      loadMontajVeAksesuar();
+    }
+  }, [isAdmin]);
+
+  const loadMontajVeAksesuar = async () => {
+    try {
+      const [montajResponse, aksesuarResponse] = await Promise.all([
+        api.get<Montaj[]>('/montajlar'),
+        api.get<Aksesuar[]>('/aksesuarlar'),
+      ]);
+      setMontajlar(montajResponse.data);
+      setAksesuarlar(aksesuarResponse.data);
+    } catch (error) {
+      console.error('Montaj/Aksesuar yükleme hatası:', error);
+    }
+  };
 
   useEffect(() => {
     applyFilters();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchValue, isDurumuFilter, islemler]);
+  }, [searchValue, isDurumuFilter, selectedMontajlar, selectedAksesuarlar, islemler]);
 
   const applyFilters = () => {
     let filtered = [...islemler];
@@ -65,6 +99,35 @@ const IslemFilters: React.FC<IslemFiltersProps> = ({ islemler, onFilterChange })
       });
     }
 
+    // Montaj filtresi (sadece admin için)
+    if (isAdmin && selectedMontajlar.length > 0) {
+      filtered = filtered.filter((islem) => {
+        const yapilanIslem = (islem.yapilan_islem || '').toLowerCase();
+        return selectedMontajlar.some(montaj => 
+          yapilanIslem.includes(montaj.toLowerCase())
+        );
+      });
+    }
+
+    // Aksesuar filtresi (sadece admin için)
+    if (isAdmin && selectedAksesuarlar.length > 0) {
+      filtered = filtered.filter((islem) => {
+        const yapilanIslem = (islem.yapilan_islem || '').toLowerCase();
+        return selectedAksesuarlar.some(aksesuar => 
+          yapilanIslem.includes(aksesuar.toLowerCase())
+        );
+      });
+    }
+
+    // Filtrelenmiş kayıtların toplam tutarını hesapla (sadece admin için)
+    if (isAdmin) {
+      const tutar = filtered.reduce((sum, i) => {
+        const tutarVal = typeof i.tutar === 'number' ? i.tutar : parseFloat(String(i.tutar || 0));
+        return sum + (isNaN(tutarVal) ? 0 : tutarVal);
+      }, 0);
+      setFilteredTutar(tutar);
+    }
+
     setFilteredCount(filtered.length);
     onFilterChange(filtered);
   };
@@ -72,6 +135,8 @@ const IslemFilters: React.FC<IslemFiltersProps> = ({ islemler, onFilterChange })
   const handleClearFilters = () => {
     setSearchValue('');
     setIsDurumuFilter('');
+    setSelectedMontajlar([]);
+    setSelectedAksesuarlar([]);
     onFilterChange(islemler);
   };
 
@@ -138,12 +203,77 @@ const IslemFilters: React.FC<IslemFiltersProps> = ({ islemler, onFilterChange })
             Temizle
           </Button>
         </Grid>
+
+        {/* Montaj ve Aksesuar filtreleri - Sadece admin için */}
+        {isAdmin && (
+          <>
+            <Grid item xs={12} sm={6} md={4}>
+              <Autocomplete
+                multiple
+                size="small"
+                options={montajlar.map(m => m.isim)}
+                value={selectedMontajlar}
+                onChange={(_, newValue) => setSelectedMontajlar(newValue)}
+                renderInput={(params) => (
+                  <TextField {...params} label="Montaj Filtresi" placeholder="Montaj seçin..." />
+                )}
+                renderTags={(value, getTagProps) =>
+                  value.map((option, index) => (
+                    <Chip
+                      {...getTagProps({ index })}
+                      key={index}
+                      label={option}
+                      size="small"
+                      color="primary"
+                      variant="outlined"
+                    />
+                  ))
+                }
+              />
+            </Grid>
+
+            <Grid item xs={12} sm={6} md={4}>
+              <Autocomplete
+                multiple
+                size="small"
+                options={aksesuarlar.map(a => a.isim)}
+                value={selectedAksesuarlar}
+                onChange={(_, newValue) => setSelectedAksesuarlar(newValue)}
+                renderInput={(params) => (
+                  <TextField {...params} label="Aksesuar Filtresi" placeholder="Aksesuar seçin..." />
+                )}
+                renderTags={(value, getTagProps) =>
+                  value.map((option, index) => (
+                    <Chip
+                      {...getTagProps({ index })}
+                      key={index}
+                      label={option}
+                      size="small"
+                      color="secondary"
+                      variant="outlined"
+                    />
+                  ))
+                }
+              />
+            </Grid>
+          </>
+        )}
       </Grid>
 
-      <Box sx={{ mt: 1 }}>
+      <Box sx={{ mt: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 1 }}>
         <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.75rem' }}>
           Toplam {islemler.length} kayıttan {filteredCount} kayıt gösteriliyor
         </Typography>
+        
+        {/* Filtrelenmiş toplam tutar - Sadece admin için ve filtre aktifken */}
+        {isAdmin && (selectedMontajlar.length > 0 || selectedAksesuarlar.length > 0) && (
+          <Chip
+            label={`Filtrelenmiş Tutar: ${filteredTutar.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ₺`}
+            color="success"
+            size="small"
+            sx={{ fontWeight: 600 }}
+          />
+        )}
       </Box>
     </Paper>
   );

@@ -338,7 +338,7 @@ const IslemTable: React.FC<IslemTableProps> = ({
       label: 'Tutar',
       render: (islem) => (
         <TableCell sx={{ fontWeight: 600, fontSize: '0.8rem', py: 0.5, px: 1 }}>
-          {islem.tutar ? `${Number(islem.tutar).toFixed(2)} TL` : '-'}
+          {islem.tutar ? `${Number(islem.tutar).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ₺` : '-'}
         </TableCell>
       ),
     },

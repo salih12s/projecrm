@@ -7,12 +7,16 @@ import {
   AttachMoney,
 } from '@mui/icons-material';
 import { Islem } from '../types';
+import { useAuth } from '../context/AuthContext';
 
 interface StatsCardsProps {
   islemler: Islem[];
 }
 
 const StatsCards: React.FC<StatsCardsProps> = ({ islemler }) => {
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
+  
   const acikIsler = islemler.filter(i => i.is_durumu === 'acik').length;
   const tamamlananIsler = islemler.filter(i => i.is_durumu === 'tamamlandi').length;
   const toplamTutar = islemler.reduce((sum, i) => {
@@ -20,7 +24,13 @@ const StatsCards: React.FC<StatsCardsProps> = ({ islemler }) => {
     return sum + (isNaN(tutar) ? 0 : tutar);
   }, 0);
 
-  const stats = [
+  const stats: Array<{
+    title: string;
+    value: string | number;
+    icon: JSX.Element;
+    color: string;
+    bgColor: string;
+  }> = [
     {
       title: 'Toplam İşlem',
       value: islemler.length,
@@ -42,19 +52,23 @@ const StatsCards: React.FC<StatsCardsProps> = ({ islemler }) => {
       color: '#2e7d32',
       bgColor: '#e8f5e9',
     },
-    {
+  ];
+
+  // Toplam Tutar sadece admin için
+  if (isAdmin) {
+    stats.push({
       title: 'Toplam Tutar',
-      value: `${Number(toplamTutar).toFixed(2)} ₺`,
+      value: `${toplamTutar.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ₺`,
       icon: <AttachMoney />,
       color: '#0D3282',
       bgColor: '#E8EDF7',
-    },
-  ];
+    });
+  }
 
   return (
     <Grid container spacing={2} sx={{ mb: 2 }}>
       {stats.map((stat, index) => (
-        <Grid item xs={12} sm={6} md={3} key={index}>
+        <Grid item xs={12} sm={6} md={isAdmin ? 3 : 4} key={index}>
           <Paper
             elevation={1}
             sx={{
