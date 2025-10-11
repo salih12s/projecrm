@@ -12,6 +12,8 @@ import markalarRoutes from './routes/markalar';
 import bayilerRoutes from './routes/bayiler';
 import atolyeRoutes from './routes/atolye';
 import adminRoutes from './routes/admin';
+import montajlarRoutes from './routes/montajlar';
+import aksesuarlarRoutes from './routes/aksesuarlar';
 
 dotenv.config();
 
@@ -48,6 +50,8 @@ app.use('/api/markalar', markalarRoutes);
 app.use('/api/bayiler', bayilerRoutes);
 app.use('/api/atolye', atolyeRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/montajlar', montajlarRoutes);
+app.use('/api/aksesuarlar', aksesuarlarRoutes);
 
 // Ana route
 app.get('/', (_req, res) => {

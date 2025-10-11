@@ -90,6 +90,24 @@ const createTables = async (): Promise<void> => {
       )
     `);
 
+    // Montaj tablosu
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS montajlar (
+        id SERIAL PRIMARY KEY,
+        isim VARCHAR(100) UNIQUE NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    // Aksesuarlar tablosu
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS aksesuarlar (
+        id SERIAL PRIMARY KEY,
+        isim VARCHAR(100) UNIQUE NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
     console.log('Tablolar başarıyla oluşturuldu');
   } catch (error) {
     console.error('Tablo oluşturma hatası:', error);

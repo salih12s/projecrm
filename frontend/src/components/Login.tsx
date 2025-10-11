@@ -16,71 +16,28 @@ import { AdminPanelSettings, Store, Person } from '@mui/icons-material';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { useSnackbar } from '../context/SnackbarContext';
-import { authService } from '../services/api';
 
 const Login: React.FC = () => {
-  const [loginType, setLoginType] = useState<'select' | 'admin' | 'bayi' | 'user' | 'admin-password'>('select');
+  const [loginType, setLoginType] = useState<'select' | 'admin' | 'bayi' | 'user'>('select');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const [systemPassword, setSystemPassword] = useState('');
   const [error, setError] = useState('');
   const { login, bayiLogin, adminLogin } = useAuth();
   const navigate = useNavigate();
   const { showSnackbar } = useSnackbar();
 
   const handleLoginTypeSelect = (type: 'admin' | 'bayi' | 'user') => {
-    if (type === 'admin') {
-      // Admin için önce sistem şifresi sor
-      setLoginType('admin-password');
-    } else {
-      // Bayi ve normal kullanıcı için direkt login ekranı
-      setLoginType(type);
-    }
+    setLoginType(type);
     setError('');
     setUsername('');
     setPassword('');
-    setSystemPassword('');
   };
 
   const handleBack = () => {
-    if (loginType === 'admin-password') {
-      // Sistem şifresinden geri dön
-      setLoginType('select');
-    } else if (loginType === 'admin') {
-      // Admin logindan sistem şifresine dön
-      setLoginType('admin-password');
-    } else {
-      // Bayi logindan ana ekrana dön
-      setLoginType('select');
-    }
+    setLoginType('select');
     setError('');
     setUsername('');
     setPassword('');
-    setSystemPassword('');
-  };
-
-  const handleSystemPasswordSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
-
-    if (!systemPassword) {
-      setError('Lütfen sistem şifresini girin');
-      return;
-    }
-
-    try {
-      // Backend'e sistem şifresini doğrulat
-      await authService.verifySystemPassword(systemPassword);
-      
-      // Doğru şifre - admin login ekranına geç
-      setLoginType('admin');
-      setSystemPassword('');
-      showSnackbar('Sistem şifresi doğrulandı', 'success');
-    } catch (err: any) {
-      const errorMsg = err.response?.data?.message || 'Geçersiz sistem şifresi!';
-      setError(errorMsg);
-      showSnackbar(errorMsg, 'error');
-    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -176,54 +133,6 @@ const Login: React.FC = () => {
                 </Card>
               </Grid>
             </Grid>
-          )}
-
-          {loginType === 'admin-password' && (
-            <>
-              <Typography variant="h6" align="center" sx={{ mb: 3 }}>
-                Sistem Güvenlik Şifresi
-              </Typography>
-
-              <Typography variant="body2" align="center" color="text.secondary" sx={{ mb: 3 }}>
-                Admin paneline erişmek için sistem şifresini girin
-              </Typography>
-
-              {error && (
-                <Alert severity="error" sx={{ mb: 2 }}>
-                  {error}
-                </Alert>
-              )}
-
-              <Box component="form" onSubmit={handleSystemPasswordSubmit}>
-                <TextField
-                  margin="normal"
-                  required
-                  fullWidth
-                  label="Sistem Şifresi"
-                  type="password"
-                  autoFocus
-                  value={systemPassword}
-                  onChange={(e) => setSystemPassword(e.target.value)}
-                  placeholder="Sistem şifresini girin"
-                />
-                <Button
-                  type="submit"
-                  fullWidth
-                  variant="contained"
-                  sx={{ mt: 3, mb: 2, backgroundColor: '#0D3282', '&:hover': { backgroundColor: '#082052' } }}
-                >
-                  Devam Et
-                </Button>
-                <Button
-                  fullWidth
-                  variant="outlined"
-                  onClick={handleBack}
-                  sx={{ borderColor: '#0D3282', color: '#0D3282' }}
-                >
-                  Geri Dön
-                </Button>
-              </Box>
-            </>
           )}
 
           {(loginType === 'admin' || loginType === 'bayi' || loginType === 'user') && (

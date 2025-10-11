@@ -116,6 +116,18 @@ export interface Bayi {
   created_at: string;
 }
 
+export interface Montaj {
+  id: number;
+  isim: string;
+  created_at: string;
+}
+
+export interface Aksesuar {
+  id: number;
+  isim: string;
+  created_at: string;
+}
+
 export interface Atolye {
   id: number;
   teslim_durumu: 'beklemede' | 'siparis_verildi' | 'yapildi' | 'fabrika_gitti' | 'odeme_bekliyor' | 'teslim_edildi';

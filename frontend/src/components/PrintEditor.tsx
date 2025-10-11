@@ -20,6 +20,7 @@ import RestartAltIcon from '@mui/icons-material/RestartAlt';
 import SaveIcon from '@mui/icons-material/Save';
 import DeleteIcon from '@mui/icons-material/Delete';
 import { Islem } from '../types';
+import { useAuth } from '../context/AuthContext';
 
 interface PrintEditorProps {
   open: boolean;
@@ -49,6 +50,8 @@ const formatPhoneNumber = (phone: string | undefined): string => {
 };
 
 const PrintEditor: React.FC<PrintEditorProps> = ({ open, onClose, islem }) => {
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
   const [selectedField, setSelectedField] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
@@ -164,6 +167,15 @@ const PrintEditor: React.FC<PrintEditorProps> = ({ open, onClose, islem }) => {
   const pxToMm = (px: number) => px / SCALE;
 
   const handleMouseDown = (e: React.MouseEvent, fieldId: string) => {
+    if (!isAdmin) {
+      setSnackbar({
+        open: true,
+        message: 'Sadece admin kullanıcılar ayarları değiştirebilir!',
+        severity: 'warning'
+      });
+      return;
+    }
+    
     setSelectedField(fieldId);
     setIsDragging(true);
     
@@ -202,6 +214,15 @@ const PrintEditor: React.FC<PrintEditorProps> = ({ open, onClose, islem }) => {
   };
 
   const handlePositionChange = (fieldId: string, axis: 'left' | 'top', value: string) => {
+    if (!isAdmin) {
+      setSnackbar({
+        open: true,
+        message: 'Sadece admin kullanıcılar ayarları değiştirebilir!',
+        severity: 'warning'
+      });
+      return;
+    }
+    
     const numValue = parseFloat(value);
     if (isNaN(numValue)) return;
 
@@ -215,6 +236,15 @@ const PrintEditor: React.FC<PrintEditorProps> = ({ open, onClose, islem }) => {
   };
 
   const handleDeleteField = (fieldId: string) => {
+    if (!isAdmin) {
+      setSnackbar({
+        open: true,
+        message: 'Sadece admin kullanıcılar alanları silebilir!',
+        severity: 'warning'
+      });
+      return;
+    }
+    
     setFields(prev => prev.filter(field => field.id !== fieldId));
     if (selectedField === fieldId) {
       setSelectedField(null);
@@ -222,6 +252,15 @@ const PrintEditor: React.FC<PrintEditorProps> = ({ open, onClose, islem }) => {
   };
 
   const handleSave = () => {
+    if (!isAdmin) {
+      setSnackbar({
+        open: true,
+        message: 'Sadece admin kullanıcılar ayarları kaydedebilir!',
+        severity: 'error'
+      });
+      return;
+    }
+    
     const storageKey = getStorageKey();
     localStorage.setItem(storageKey, JSON.stringify(fields));
     setSnackbar({
@@ -232,6 +271,15 @@ const PrintEditor: React.FC<PrintEditorProps> = ({ open, onClose, islem }) => {
   };
 
   const handleReset = () => {
+    if (!isAdmin) {
+      setSnackbar({
+        open: true,
+        message: 'Sadece admin kullanıcılar ayarları sıfırlayabilir!',
+        severity: 'error'
+      });
+      return;
+    }
+    
     const defaultFields = getDefaultFields();
     setFields(defaultFields);
     const storageKey = getStorageKey();
@@ -332,15 +380,19 @@ const PrintEditor: React.FC<PrintEditorProps> = ({ open, onClose, islem }) => {
             </Typography>
           </Box>
           <Box>
-            <Tooltip title="Varsayılana Sıfırla">
-              <IconButton onClick={handleReset} color="warning">
-                <RestartAltIcon />
-              </IconButton>
+            <Tooltip title={isAdmin ? "Varsayılana Sıfırla" : "Sadece admin sıfırlayabilir"}>
+              <span>
+                <IconButton onClick={handleReset} color="warning" disabled={!isAdmin}>
+                  <RestartAltIcon />
+                </IconButton>
+              </span>
             </Tooltip>
-            <Tooltip title="Ayarları Kaydet">
-              <IconButton onClick={handleSave} color="primary">
-                <SaveIcon />
-              </IconButton>
+            <Tooltip title={isAdmin ? "Ayarları Kaydet" : "Sadece admin kaydedebilir"}>
+              <span>
+                <IconButton onClick={handleSave} color="primary" disabled={!isAdmin}>
+                  <SaveIcon />
+                </IconButton>
+              </span>
             </Tooltip>
             <IconButton onClick={onClose}>
               <CloseIcon />
@@ -348,12 +400,21 @@ const PrintEditor: React.FC<PrintEditorProps> = ({ open, onClose, islem }) => {
           </Box>
         </Box>
         <Typography variant="caption" color="text.secondary">
-          Alanları sürükleyerek konumlarını ayarlayın. Koordinatları manuel olarak da girebilirsiniz.
-          Bu ayarlar sadece "{islem.marka}" markası için geçerlidir.
+          {isAdmin 
+            ? `Alanları sürükleyerek konumlarını ayarlayın. Koordinatları manuel olarak da girebilirsiniz. Bu ayarlar sadece "${islem.marka}" markası için geçerlidir.`
+            : 'Sadece admin kullanıcılar şablon ayarlarını değiştirebilir. Yazdırma işlemi yapabilirsiniz.'
+          }
         </Typography>
       </DialogTitle>
       
       <DialogContent>
+        {!isAdmin && (
+          <Alert severity="info" sx={{ mb: 2 }}>
+            <strong>Bilgi:</strong> Sadece admin kullanıcılar yazdırma şablonunu düzenleyebilir. 
+            Şablon "{islem.marka}" markası için kaydedilmiştir. Yazdırma işlemi yapabilirsiniz.
+          </Alert>
+        )}
+        
         <Box display="flex" gap={2}>
           {/* Sol panel - A4 kağıt önizleme */}
           <Paper
@@ -398,32 +459,34 @@ const PrintEditor: React.FC<PrintEditorProps> = ({ open, onClose, islem }) => {
                 title={field.label}
               >
                 <Box
-                  sx={{ cursor: 'grab' }}
+                  sx={{ cursor: isAdmin ? 'grab' : 'default' }}
                   onMouseDown={(e) => handleMouseDown(e, field.id)}
                 >
                   {field.value || '(boş)'}
                 </Box>
-                <IconButton
-                  className="delete-btn"
-                  size="small"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleDeleteField(field.id);
-                  }}
-                  sx={{
-                    opacity: 0,
-                    transition: 'opacity 0.2s',
-                    padding: '2px',
-                    minWidth: '20px',
-                    minHeight: '20px',
-                    '&:hover': {
-                      backgroundColor: 'error.light',
-                      color: 'white',
-                    }
-                  }}
-                >
-                  <DeleteIcon sx={{ fontSize: '14px' }} />
-                </IconButton>
+                {isAdmin && (
+                  <IconButton
+                    className="delete-btn"
+                    size="small"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDeleteField(field.id);
+                    }}
+                    sx={{
+                      opacity: 0,
+                      transition: 'opacity 0.2s',
+                      padding: '2px',
+                      minWidth: '20px',
+                      minHeight: '20px',
+                      '&:hover': {
+                        backgroundColor: 'error.light',
+                        color: 'white',
+                      }
+                    }}
+                  >
+                    <DeleteIcon sx={{ fontSize: '14px' }} />
+                  </IconButton>
+                )}
               </Box>
             ))}
           </Paper>
@@ -455,22 +518,27 @@ const PrintEditor: React.FC<PrintEditorProps> = ({ open, onClose, islem }) => {
                     <Typography variant="caption" fontWeight="bold">
                       {field.label}
                     </Typography>
-                    <IconButton
-                      size="small"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDeleteField(field.id);
-                      }}
-                      sx={{
-                        padding: '4px',
-                        '&:hover': {
-                          backgroundColor: 'error.light',
-                          color: 'white',
-                        }
-                      }}
-                    >
-                      <DeleteIcon sx={{ fontSize: '16px' }} />
-                    </IconButton>
+                    <Tooltip title={isAdmin ? "Alanı Sil" : "Sadece admin silebilir"}>
+                      <span>
+                        <IconButton
+                          size="small"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteField(field.id);
+                          }}
+                          disabled={!isAdmin}
+                          sx={{
+                            padding: '4px',
+                            '&:hover': {
+                              backgroundColor: 'error.light',
+                              color: 'white',
+                            }
+                          }}
+                        >
+                          <DeleteIcon sx={{ fontSize: '16px' }} />
+                        </IconButton>
+                      </span>
+                    </Tooltip>
                   </Box>
                   <Box display="flex" gap={1} alignItems="center">
                     <TextField
@@ -481,6 +549,7 @@ const PrintEditor: React.FC<PrintEditorProps> = ({ open, onClose, islem }) => {
                       onChange={(e) => handlePositionChange(field.id, 'left', e.target.value)}
                       sx={{ width: 100 }}
                       inputProps={{ step: 0.5 }}
+                      disabled={!isAdmin}
                     />
                     <TextField
                       size="small"
@@ -490,6 +559,7 @@ const PrintEditor: React.FC<PrintEditorProps> = ({ open, onClose, islem }) => {
                       onChange={(e) => handlePositionChange(field.id, 'top', e.target.value)}
                       sx={{ width: 100 }}
                       inputProps={{ step: 0.5 }}
+                      disabled={!isAdmin}
                     />
                     <Typography variant="caption" sx={{ flex: 1, fontSize: '11px' }}>
                       {field.value.substring(0, 30)}{field.value.length > 30 ? '...' : ''}

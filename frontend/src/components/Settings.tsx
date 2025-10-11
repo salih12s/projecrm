@@ -16,9 +16,10 @@ import {
   DialogContent,
   DialogActions,
   Alert,
+  Typography,
 } from '@mui/material';
 import { Edit, Delete, Add } from '@mui/icons-material';
-import { Teknisyen, Marka, Bayi } from '../types';
+import { Teknisyen, Marka, Bayi, Montaj, Aksesuar } from '../types';
 import { api } from '../services/api';
 import { useSnackbar } from '../context/SnackbarContext';
 
@@ -27,11 +28,14 @@ const Settings: React.FC = () => {
   const [teknisyenler, setTeknisyenler] = useState<Teknisyen[]>([]);
   const [markalar, setMarkalar] = useState<Marka[]>([]);
   const [bayiler, setBayiler] = useState<Bayi[]>([]);
+  const [montajlar, setMontajlar] = useState<Montaj[]>([]);
+  const [aksesuarlar, setAksesuarlar] = useState<Aksesuar[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [currentId, setCurrentId] = useState<number | null>(null);
   const [inputValue, setInputValue] = useState('');
   const [error, setError] = useState('');
+  const [editType, setEditType] = useState<'montaj' | 'aksesuar' | null>(null);
   const { showSnackbar } = useSnackbar();
 
   useEffect(() => {
@@ -46,9 +50,15 @@ const Settings: React.FC = () => {
       } else if (tabValue === 1) {
         const response = await api.get('/markalar');
         setMarkalar(response.data);
-      } else {
+      } else if (tabValue === 2) {
         const response = await api.get('/bayiler');
         setBayiler(response.data);
+      } else if (tabValue === 3) {
+        // Montaj ve Aksesuarlar - iki tablo yan yana
+        const montajResponse = await api.get('/montajlar');
+        const aksesuarResponse = await api.get('/aksesuarlar');
+        setMontajlar(montajResponse.data);
+        setAksesuarlar(aksesuarResponse.data);
       }
     } catch (err) {
       showSnackbar('Veri yüklenirken hata oluştu', 'error');
@@ -78,7 +88,13 @@ const Settings: React.FC = () => {
     }
 
     try {
-      const endpoint = tabValue === 0 ? '/teknisyenler' : tabValue === 1 ? '/markalar' : '/bayiler';
+      let endpoint = '';
+      if (tabValue === 0) endpoint = '/teknisyenler';
+      else if (tabValue === 1) endpoint = '/markalar';
+      else if (tabValue === 2) endpoint = '/bayiler';
+      else if (tabValue === 3) {
+        endpoint = editType === 'aksesuar' ? '/aksesuarlar' : '/montajlar';
+      }
       
       if (editMode && currentId) {
         await api.put(`${endpoint}/${currentId}`, { isim: inputValue.trim() });
@@ -89,6 +105,7 @@ const Settings: React.FC = () => {
       }
       
       setDialogOpen(false);
+      setEditType(null);
       fetchData();
     } catch (err: any) {
       const message = err.response?.data?.message || 'Bir hata oluştu';
@@ -97,11 +114,18 @@ const Settings: React.FC = () => {
     }
   };
 
-  const handleDelete = async (id: number) => {
+  const handleDelete = async (id: number, type?: 'montaj' | 'aksesuar') => {
     if (!window.confirm('Silmek istediğinize emin misiniz?')) return;
 
     try {
-      const endpoint = tabValue === 0 ? '/teknisyenler' : tabValue === 1 ? '/markalar' : '/bayiler';
+      let endpoint = '';
+      if (tabValue === 0) endpoint = '/teknisyenler';
+      else if (tabValue === 1) endpoint = '/markalar';
+      else if (tabValue === 2) endpoint = '/bayiler';
+      else if (tabValue === 3) {
+        endpoint = type === 'aksesuar' ? '/aksesuarlar' : '/montajlar';
+      }
+      
       await api.delete(`${endpoint}/${id}`);
       showSnackbar('Başarıyla silindi', 'success');
       fetchData();
@@ -122,17 +146,53 @@ const Settings: React.FC = () => {
           <Tab label="Teknisyenler" />
           <Tab label="Markalar" />
           <Tab label="Bayiler" />
+          <Tab label="Montaj & Aksesuarlar" />
         </Tabs>
 
         <Box sx={{ mb: 2 }}>
-          <Button
-            variant="contained"
-            startIcon={<Add />}
-            onClick={handleAdd}
-            sx={{ backgroundColor: '#0D3282', '&:hover': { backgroundColor: '#082052' } }}
-          >
-            {tabValue === 0 ? 'Yeni Teknisyen Ekle' : tabValue === 1 ? 'Yeni Marka Ekle' : 'Yeni Bayi Ekle'}
-          </Button>
+          {tabValue === 3 ? (
+            <Box sx={{ display: 'flex', gap: 2 }}>
+              <Button
+                variant="contained"
+                startIcon={<Add />}
+                onClick={() => {
+                  setEditMode(false);
+                  setCurrentId(null);
+                  setInputValue('');
+                  setError('');
+                  setEditType('montaj');
+                  setDialogOpen(true);
+                }}
+                sx={{ backgroundColor: '#0D3282', '&:hover': { backgroundColor: '#082052' } }}
+              >
+                Yeni Montaj Ekle
+              </Button>
+              <Button
+                variant="contained"
+                startIcon={<Add />}
+                onClick={() => {
+                  setEditMode(false);
+                  setCurrentId(null);
+                  setInputValue('');
+                  setError('');
+                  setEditType('aksesuar');
+                  setDialogOpen(true);
+                }}
+                sx={{ backgroundColor: '#0D8220', '&:hover': { backgroundColor: '#085210' } }}
+              >
+                Yeni Aksesuar Ekle
+              </Button>
+            </Box>
+          ) : (
+            <Button
+              variant="contained"
+              startIcon={<Add />}
+              onClick={handleAdd}
+              sx={{ backgroundColor: '#0D3282', '&:hover': { backgroundColor: '#082052' } }}
+            >
+              {tabValue === 0 ? 'Yeni Teknisyen Ekle' : tabValue === 1 ? 'Yeni Marka Ekle' : 'Yeni Bayi Ekle'}
+            </Button>
+          )}
         </Box>
 
         <List>
@@ -172,7 +232,7 @@ const Settings: React.FC = () => {
                 </ListItem>
               ))
             )
-          ) : (
+          ) : tabValue === 2 ? (
             bayiler.length === 0 ? (
               <Alert severity="info">Henüz bayi eklenmedi</Alert>
             ) : (
@@ -190,20 +250,102 @@ const Settings: React.FC = () => {
                 </ListItem>
               ))
             )
-          )}
+          ) : tabValue === 3 ? (
+            <Box sx={{ display: 'flex', gap: 3 }}>
+              {/* Montaj Listesi */}
+              <Box sx={{ flex: 1 }}>
+                <Paper elevation={2} sx={{ p: 2, bgcolor: '#f5f5f5' }}>
+                  <Typography variant="h6" sx={{ mb: 2, color: '#0D3282', fontWeight: 'bold' }}>
+                    Montaj
+                  </Typography>
+                  <List>
+                    {montajlar.length === 0 ? (
+                      <Alert severity="info">Henüz montaj eklenmedi</Alert>
+                    ) : (
+                      montajlar.map((montaj) => (
+                        <ListItem key={montaj.id} sx={{ border: '1px solid #e0e0e0', mb: 1, borderRadius: 1, bgcolor: 'white' }}>
+                          <ListItemText primary={montaj.isim} />
+                          <ListItemSecondaryAction>
+                            <IconButton 
+                              edge="end" 
+                              onClick={() => {
+                                setEditType('montaj');
+                                handleEdit(montaj.id, montaj.isim);
+                              }} 
+                              sx={{ mr: 1 }}
+                            >
+                              <Edit />
+                            </IconButton>
+                            <IconButton edge="end" onClick={() => handleDelete(montaj.id, 'montaj')} color="error">
+                              <Delete />
+                            </IconButton>
+                          </ListItemSecondaryAction>
+                        </ListItem>
+                      ))
+                    )}
+                  </List>
+                </Paper>
+              </Box>
+
+              {/* Aksesuarlar Listesi */}
+              <Box sx={{ flex: 1 }}>
+                <Paper elevation={2} sx={{ p: 2, bgcolor: '#f5f5f5' }}>
+                  <Typography variant="h6" sx={{ mb: 2, color: '#0D8220', fontWeight: 'bold' }}>
+                    Aksesuarlar
+                  </Typography>
+                  <List>
+                    {aksesuarlar.length === 0 ? (
+                      <Alert severity="info">Henüz aksesuar eklenmedi</Alert>
+                    ) : (
+                      aksesuarlar.map((aksesuar) => (
+                        <ListItem key={aksesuar.id} sx={{ border: '1px solid #e0e0e0', mb: 1, borderRadius: 1, bgcolor: 'white' }}>
+                          <ListItemText primary={aksesuar.isim} />
+                          <ListItemSecondaryAction>
+                            <IconButton 
+                              edge="end" 
+                              onClick={() => {
+                                setEditType('aksesuar');
+                                handleEdit(aksesuar.id, aksesuar.isim);
+                              }} 
+                              sx={{ mr: 1 }}
+                            >
+                              <Edit />
+                            </IconButton>
+                            <IconButton edge="end" onClick={() => handleDelete(aksesuar.id, 'aksesuar')} color="error">
+                              <Delete />
+                            </IconButton>
+                          </ListItemSecondaryAction>
+                        </ListItem>
+                      ))
+                    )}
+                  </List>
+                </Paper>
+              </Box>
+            </Box>
+          ) : null}
         </List>
       </Paper>
 
       <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} maxWidth="sm" fullWidth>
         <DialogTitle>
-          {editMode ? 'Düzenle' : 'Yeni Ekle'} - {tabValue === 0 ? 'Teknisyen' : tabValue === 1 ? 'Marka' : 'Bayi'}
+          {editMode ? 'Düzenle' : 'Yeni Ekle'} - {
+            tabValue === 0 ? 'Teknisyen' : 
+            tabValue === 1 ? 'Marka' : 
+            tabValue === 2 ? 'Bayi' : 
+            editType === 'aksesuar' ? 'Aksesuar' : 'Montaj'
+          }
         </DialogTitle>
         <DialogContent>
           {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
           <TextField
             autoFocus
             margin="dense"
-            label={tabValue === 0 ? 'Teknisyen İsmi' : tabValue === 1 ? 'Marka İsmi' : 'Bayi İsmi'}
+            label={
+              tabValue === 0 ? 'Teknisyen İsmi' : 
+              tabValue === 1 ? 'Marka İsmi' : 
+              tabValue === 2 ? 'Bayi İsmi' : 
+              editType === 'aksesuar' ? 'Aksesuar İsmi' : 'Montaj İsmi'
+            }
             fullWidth
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
@@ -211,7 +353,10 @@ const Settings: React.FC = () => {
           />
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setDialogOpen(false)}>İptal</Button>
+          <Button onClick={() => {
+            setDialogOpen(false);
+            setEditType(null);
+          }}>İptal</Button>
           <Button onClick={handleSave} variant="contained" sx={{ backgroundColor: '#0D3282' }}>
             Kaydet
           </Button>

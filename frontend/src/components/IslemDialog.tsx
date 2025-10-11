@@ -12,8 +12,12 @@ import {
   Alert,
   AlertTitle,
   Box,
+  FormControlLabel,
+  Checkbox,
+  Typography,
+  FormGroup,
 } from '@mui/material';
-import { Islem, IslemCreateDto, IslemUpdateDto, Teknisyen, Marka } from '../types';
+import { Islem, IslemCreateDto, IslemUpdateDto, Teknisyen, Marka, Montaj, Aksesuar } from '../types';
 import { islemService } from '../services/api';
 import { api } from '../services/api';
 import { useSnackbar } from '../context/SnackbarContext';
@@ -44,6 +48,10 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave 
   const { showSnackbar } = useSnackbar();
   const [teknisyenler, setTeknisyenler] = useState<Teknisyen[]>([]);
   const [markalar, setMarkalar] = useState<Marka[]>([]);
+  const [montajlar, setMontajlar] = useState<Montaj[]>([]);
+  const [aksesuarlar, setAksesuarlar] = useState<Aksesuar[]>([]);
+  const [selectedMontajlar, setSelectedMontajlar] = useState<number[]>([]);
+  const [selectedAksesuarlar, setSelectedAksesuarlar] = useState<number[]>([]);
   const [existingRecord, setExistingRecord] = useState<Islem | null>(null);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [showPhoneQuery, setShowPhoneQuery] = useState(false);
@@ -76,12 +84,16 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave 
   useEffect(() => {
     const loadData = async () => {
       try {
-        const [teknisyenResponse, markaResponse] = await Promise.all([
+        const [teknisyenResponse, markaResponse, montajResponse, aksesuarResponse] = await Promise.all([
           api.get<Teknisyen[]>('/teknisyenler'),
           api.get<Marka[]>('/markalar'),
+          api.get<Montaj[]>('/montajlar'),
+          api.get<Aksesuar[]>('/aksesuarlar'),
         ]);
         setTeknisyenler(teknisyenResponse.data);
         setMarkalar(markaResponse.data);
+        setMontajlar(montajResponse.data);
+        setAksesuarlar(aksesuarResponse.data);
       } catch (error) {
         console.error('Veri yükleme hatası:', error);
       }
@@ -90,6 +102,13 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave 
       loadData();
     }
   }, [open]);
+
+  // Montaj ve aksesuarlar yüklendikten sonra parse et
+  useEffect(() => {
+    if (islem && montajlar.length > 0 && aksesuarlar.length > 0) {
+      parseYapilanIslem(islem.yapilan_islem || '');
+    }
+  }, [montajlar, aksesuarlar]);
 
   useEffect(() => {
     if (islem) {
@@ -117,11 +136,16 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave 
         tutar: islem.tutar || 0,
         is_durumu: islem.is_durumu,
       });
+      
+      // Yapılan işlem alanından checkbox'ları otomatik işaretle
+      parseYapilanIslem(islem.yapilan_islem || '');
     } else {
       // Yeni kayıt modu - önce telefon sorgusu göster
       setShowForm(false);
       setShowPhoneQuery(true);
       setPhoneNumber('');
+      setSelectedMontajlar([]);
+      setSelectedAksesuarlar([]);
       setFormData({
         ad_soyad: '',
         ilce: '',
@@ -147,6 +171,52 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave 
       setExistingRecord(null);
     }
   }, [islem, open]);
+
+  // Yapılan işlem metninden montaj ve aksesuar ID'lerini çıkar
+  const parseYapilanIslem = (yapilanIslem: string) => {
+    if (!yapilanIslem || montajlar.length === 0 && aksesuarlar.length === 0) {
+      setSelectedMontajlar([]);
+      setSelectedAksesuarlar([]);
+      return;
+    }
+
+    const selectedMontajIds: number[] = [];
+    const selectedAksesuarIds: number[] = [];
+
+    // "Davlumbaz, Klima montajı yapıldı + Karbon filtresi, X aksesuar"
+    const parts = yapilanIslem.split('+').map(p => p.trim());
+
+    parts.forEach(part => {
+      // Montaj kısmı
+      if (part.includes('montajı yapıldı')) {
+        const montajText = part.replace('montajı yapıldı', '').trim();
+        const montajIsimler = montajText.split(',').map(m => m.trim());
+        
+        montajIsimler.forEach(isim => {
+          const montaj = montajlar.find(m => 
+            m.isim.toLowerCase() === isim.toLowerCase()
+          );
+          if (montaj && !selectedMontajIds.includes(montaj.id)) {
+            selectedMontajIds.push(montaj.id);
+          }
+        });
+      } else {
+        // Aksesuar kısmı
+        const aksesuarIsimler = part.split(',').map(a => a.trim());
+        aksesuarIsimler.forEach(isim => {
+          const aksesuar = aksesuarlar.find(a => 
+            a.isim.toLowerCase() === isim.toLowerCase()
+          );
+          if (aksesuar && !selectedAksesuarIds.includes(aksesuar.id)) {
+            selectedAksesuarIds.push(aksesuar.id);
+          }
+        });
+      }
+    });
+
+    setSelectedMontajlar(selectedMontajIds);
+    setSelectedAksesuarlar(selectedAksesuarIds);
+  };
 
   const handleChange = (field: keyof IslemUpdateDto) => (
     e: React.ChangeEvent<HTMLInputElement>
@@ -237,6 +307,56 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave 
     setShowConfirmDialog(false);
     setShowForm(true);
     setExistingRecord(null);
+  };
+
+  // Montaj checkbox değişikliği
+  const handleMontajChange = (montajId: number) => {
+    const newSelected = selectedMontajlar.includes(montajId)
+      ? selectedMontajlar.filter(id => id !== montajId)
+      : [...selectedMontajlar, montajId];
+    
+    setSelectedMontajlar(newSelected);
+    updateYapilanIslem(newSelected, selectedAksesuarlar);
+  };
+
+  // Aksesuar checkbox değişikliği
+  const handleAksesuarChange = (aksesuarId: number) => {
+    const newSelected = selectedAksesuarlar.includes(aksesuarId)
+      ? selectedAksesuarlar.filter(id => id !== aksesuarId)
+      : [...selectedAksesuarlar, aksesuarId];
+    
+    setSelectedAksesuarlar(newSelected);
+    updateYapilanIslem(selectedMontajlar, newSelected);
+  };
+
+  // Yapılan İşlem alanını güncelle
+  const updateYapilanIslem = (montajIds: number[], aksesuarIds: number[]) => {
+    const parts: string[] = [];
+
+    // Montajlar
+    if (montajIds.length > 0) {
+      const montajIsimler = montajIds
+        .map(id => montajlar.find(m => m.id === id)?.isim)
+        .filter(Boolean);
+      if (montajIsimler.length > 0) {
+        parts.push(montajIsimler.join(', ') + ' montajı yapıldı');
+      }
+    }
+
+    // Aksesuarlar
+    if (aksesuarIds.length > 0) {
+      const aksesuarIsimler = aksesuarIds
+        .map(id => aksesuarlar.find(a => a.id === id)?.isim)
+        .filter(Boolean);
+      if (aksesuarIsimler.length > 0) {
+        parts.push(aksesuarIsimler.join(', '));
+      }
+    }
+
+    setFormData(prev => ({
+      ...prev,
+      yapilan_islem: parts.join(' + ')
+    }));
   };
 
   const handleConfirmTamamla = async () => {
@@ -541,6 +661,70 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave 
               )}
             />
           </Grid>
+
+          {/* Montaj ve Aksesuar Checkboxları */}
+          {(montajlar.length > 0 || aksesuarlar.length > 0) && (
+            <Grid item xs={12}>
+              <Box sx={{ mt: 2, p: 2, border: '1px solid #e0e0e0', borderRadius: 1, bgcolor: '#f9f9f9' }}>
+                <Grid container spacing={2}>
+                  {/* Montajlar */}
+                  {montajlar.length > 0 && (
+                    <Grid item xs={12} sm={6}>
+                      <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 'bold', color: '#0D3282' }}>
+                        Montaj
+                      </Typography>
+                      <FormGroup>
+                        {montajlar.map((montaj) => (
+                          <FormControlLabel
+                            key={montaj.id}
+                            control={
+                              <Checkbox
+                                checked={selectedMontajlar.includes(montaj.id)}
+                                onChange={() => handleMontajChange(montaj.id)}
+                                sx={{
+                                  color: '#0D3282',
+                                  '&.Mui-checked': { color: '#0D3282' }
+                                }}
+                              />
+                            }
+                            label={montaj.isim}
+                          />
+                        ))}
+                      </FormGroup>
+                    </Grid>
+                  )}
+
+                  {/* Aksesuarlar */}
+                  {aksesuarlar.length > 0 && (
+                    <Grid item xs={12} sm={6}>
+                      <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 'bold', color: '#0D8220' }}>
+                        Aksesuarlar
+                      </Typography>
+                      <FormGroup>
+                        {aksesuarlar.map((aksesuar) => (
+                          <FormControlLabel
+                            key={aksesuar.id}
+                            control={
+                              <Checkbox
+                                checked={selectedAksesuarlar.includes(aksesuar.id)}
+                                onChange={() => handleAksesuarChange(aksesuar.id)}
+                                sx={{
+                                  color: '#0D8220',
+                                  '&.Mui-checked': { color: '#0D8220' }
+                                }}
+                              />
+                            }
+                            label={aksesuar.isim}
+                          />
+                        ))}
+                      </FormGroup>
+                    </Grid>
+                  )}
+                </Grid>
+              </Box>
+            </Grid>
+          )}
+
           <Grid item xs={12} sm={6}>
             <TextField
               fullWidth
