@@ -9,7 +9,7 @@
     "dev:backend": "cd backend && npm run dev",
     "dev:frontend": "cd frontend && npm run dev",
     "install:all": "npm install && cd backend && npm install && cd ../frontend && npm install",
-    "build": "cd backend && npm run build && cd ../frontend && npm run build",
+    "build": "npx tsc -p backend/tsconfig.json && cd frontend && npm run build",
     "clean": "cd backend && rmdir /s /q node_modules dist 2>nul & cd ../frontend && rmdir /s /q node_modules dist 2>nul & rmdir /s /q node_modules 2>nul",
     "test:api": "powershell -ExecutionPolicy Bypass -File ./test-api.ps1"
   },
@@ -31,7 +31,8 @@
   },
   "homepage": "https://github.com/salih12s/projecrm#readme",
   "dependencies": {
-    "dotenv": "^16.3.1"
+    "dotenv": "^16.3.1",
+    "typescript": "^5.3.2"
   },
   "devDependencies": {
     "concurrently": "^9.2.1"
