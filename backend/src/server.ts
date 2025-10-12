@@ -26,13 +26,17 @@ const allowedOrigins = [
   'http://localhost:5173',
   'http://localhost:5174',
   'http://localhost:3000',
+  'https://crm-msssoft.com',
+  'https://www.crm-msssoft.com',
+  'https://projecrm-production.up.railway.app',
   process.env.FRONTEND_URL || '',
 ].filter(Boolean);
 
 const io = new Server(server, {
   cors: {
     origin: allowedOrigins,
-    methods: ["GET", "POST", "PUT", "DELETE", "PATCH"]
+    methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
+    credentials: true
   }
 });
 
