@@ -66,8 +66,12 @@ const Dashboard: React.FC = () => {
   const isAdmin = user?.role === 'admin';
 
   useEffect(() => {
-    // Socket.IO bağlantısı
-    const newSocket = io('http://localhost:5000', {
+    // Socket.IO bağlantısı - Production'da aynı domain, development'da localhost
+    const SOCKET_URL = import.meta.env.MODE === 'production' 
+      ? window.location.origin 
+      : 'http://localhost:5000';
+    
+    const newSocket = io(SOCKET_URL, {
       reconnection: true,
       reconnectionDelay: 1000,
       reconnectionAttempts: 5,
