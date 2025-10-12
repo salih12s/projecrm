@@ -6,5 +6,14 @@ export default defineConfig({
   plugins: [react()],
   server: {
     port: 5173,
-  }
+  },
+  build: {
+    // .htaccess dosyasını dist'e kopyala
+    rollupOptions: {
+      output: {
+        manualChunks: undefined,
+      }
+    }
+  },
+  publicDir: 'public',
 })
