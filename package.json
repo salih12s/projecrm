@@ -4,6 +4,7 @@
   "description": "Modern bir CRM (Müşteri İlişkileri Yönetimi) sistemi. React, Node.js, PostgreSQL ve TypeScript kullanılarak geliştirilmiştir.",
   "main": "index.js",
   "scripts": {
+    "start": "node index.js",
     "dev": "concurrently -n \"BACKEND,FRONTEND\" -c \"bgBlue.bold,bgMagenta.bold\" \"npm run dev:backend\" \"npm run dev:frontend\"",
     "dev:backend": "cd backend && npm run dev",
     "dev:frontend": "cd frontend && npm run dev",
@@ -29,6 +30,9 @@
     "url": "https://github.com/salih12s/projecrm/issues"
   },
   "homepage": "https://github.com/salih12s/projecrm#readme",
+  "dependencies": {
+    "dotenv": "^16.3.1"
+  },
   "devDependencies": {
     "concurrently": "^9.2.1"
   }

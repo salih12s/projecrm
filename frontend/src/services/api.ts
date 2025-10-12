@@ -1,7 +1,13 @@
 import axios, { InternalAxiosRequestConfig } from 'axios';
 import { Islem, IslemCreateDto, IslemUpdateDto, FilterParams } from '../types';
 
-const API_URL = 'http://localhost:5000/api';
+// Environment variable'dan API URL'i al
+// Development: http://localhost:5000/api
+// Production: /api (aynı domain)
+// Local + Production API: .env.local dosyasında override edilebilir
+const API_URL = import.meta.env.VITE_API_URL || '/api';
+
+console.log('API URL:', API_URL); // Debug için
 
 const api = axios.create({
   baseURL: API_URL,

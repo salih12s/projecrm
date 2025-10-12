@@ -3,6 +3,7 @@ import cors from 'cors';
 import http from 'http';
 import { Server } from 'socket.io';
 import dotenv from 'dotenv';
+import path from 'path';
 
 import createTables from './createTables';
 import authRoutes from './routes/auth';
@@ -19,15 +20,36 @@ dotenv.config();
 
 const app = express();
 const server = http.createServer(app);
+
+// CORS origin - development ve production
+const allowedOrigins = [
+  'http://localhost:5173',
+  'http://localhost:5174',
+  'http://localhost:3000',
+  process.env.FRONTEND_URL || '',
+].filter(Boolean);
+
 const io = new Server(server, {
   cors: {
-    origin: "http://localhost:5173",
+    origin: allowedOrigins,
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH"]
   }
 });
 
 // Middleware
-app.use(cors());
+app.use(cors({
+  origin: (origin, callback) => {
+    // Allow requests with no origin (mobile apps, Postman, etc.)
+    if (!origin) return callback(null, true);
+    
+    if (allowedOrigins.indexOf(origin) !== -1 || process.env.NODE_ENV === 'production') {
+      callback(null, true);
+    } else {
+      callback(new Error('CORS policy violation'));
+    }
+  },
+  credentials: true
+}));
 app.use(express.json());
 
 // Socket.IO bağlantısı
@@ -53,10 +75,21 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/montajlar', montajlarRoutes);
 app.use('/api/aksesuarlar', aksesuarlarRoutes);
 
-// Ana route
-app.get('/', (_req, res) => {
-  res.json({ message: 'CRM API çalışıyor' });
-});
+// Serve static files from frontend build (production only)
+if (process.env.NODE_ENV === 'production') {
+  const frontendPath = path.join(__dirname, '../../frontend/dist');
+  app.use(express.static(frontendPath));
+  
+  // Serve index.html for all non-API routes
+  app.get('*', (_req, res) => {
+    res.sendFile(path.join(frontendPath, 'index.html'));
+  });
+} else {
+  // Ana route (development)
+  app.get('/', (_req, res) => {
+    res.json({ message: 'CRM API çalışıyor' });
+  });
+}
 
 const PORT = process.env.PORT || 5000;
 
