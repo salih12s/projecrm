@@ -27,7 +27,6 @@ import {
 } from '@mui/material';
 import {
   Edit,
-  Delete,
   CheckCircle,
   Check,
   Print,
@@ -54,7 +53,6 @@ interface IslemTableProps {
   allIslemler?: Islem[]; // Tüm kayıtlar (global sıra hesabı için)
   loading: boolean;
   onEdit: (islem: Islem) => void;
-  onDelete: (id: number) => void;
   onToggleDurum: (islem: Islem) => void;
   isAdminMode?: boolean; // Admin için tamamlanan işlemleri de düzenleme izni
 }
@@ -70,7 +68,6 @@ const IslemTable: React.FC<IslemTableProps> = ({
   allIslemler,
   loading,
   onEdit,
-  onDelete,
   onToggleDurum,
   isAdminMode = false,
 }) => {
@@ -618,15 +615,6 @@ const IslemTable: React.FC<IslemTableProps> = ({
                       <Print sx={{ fontSize: '1rem' }} />
                     </IconButton>
                   </Tooltip>
-                  <Tooltip title="Sil">
-                    <IconButton 
-                      size="small" 
-                      onClick={() => onDelete(islem.id)}
-                      sx={{ bgcolor: 'error.light' }}
-                    >
-                      <Delete sx={{ fontSize: '1rem' }} />
-                    </IconButton>
-                  </Tooltip>
                 </CardActions>
               </Card>
             );
@@ -899,22 +887,6 @@ const IslemTable: React.FC<IslemTableProps> = ({
                       }}
                     >
                       <Print sx={{ color: 'white', fontSize: '0.85rem' }} />
-                    </IconButton>
-                  </Tooltip>
-                  <Tooltip title="Sil">
-                    <IconButton 
-                      size="small" 
-                      onClick={() => onDelete(islem.id)}
-                      sx={{ 
-                        bgcolor: 'error.light',
-                        width: 24,
-                        height: 24,
-                        '&:hover': {
-                          bgcolor: 'error.main',
-                        }
-                      }}
-                    >
-                      <Delete sx={{ color: 'white', fontSize: '0.85rem' }} />
                     </IconButton>
                   </Tooltip>
                 </Box>

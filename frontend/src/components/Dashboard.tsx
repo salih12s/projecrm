@@ -180,19 +180,6 @@ const Dashboard: React.FC = () => {
     handleCloseDialog();
   };
 
-  const handleDeleteIslem = async (id: number) => {
-    if (window.confirm('Bu işlemi silmek istediğinizden emin misiniz?')) {
-      try {
-        await islemService.delete(id);
-        setIslemler((prev) => prev.filter((islem) => islem.id !== id));
-        showSnackbar('İşlem başarıyla silindi!', 'success');
-      } catch (error) {
-        console.error('İşlem silinirken hata:', error);
-        showSnackbar('İşlem silinirken hata oluştu!', 'error');
-      }
-    }
-  };
-
   const handleToggleDurum = async (islem: Islem) => {
     // Her durumda tamamlama modalını aç (admin isterse durumu değiştirebilir)
     setSelectedIslem(islem);
@@ -483,7 +470,6 @@ const Dashboard: React.FC = () => {
               allIslemler={islemler}
               loading={loading}
               onEdit={handleOpenDialog}
-              onDelete={handleDeleteIslem}
               onToggleDurum={handleToggleDurum}
               isAdminMode={isAdmin}
             />

@@ -16,6 +16,7 @@ import adminRoutes from './routes/admin';
 import montajlarRoutes from './routes/montajlar';
 import aksesuarlarRoutes from './routes/aksesuarlar';
 import urunlerRoutes from './routes/urunler';
+import locationsRoutes from './routes/locations';
 
 dotenv.config();
 
@@ -80,6 +81,7 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/montajlar', montajlarRoutes);
 app.use('/api/aksesuarlar', aksesuarlarRoutes);
 app.use('/api/urunler', urunlerRoutes);
+app.use('/api/ilceler', locationsRoutes);
 
 // Serve static files from frontend build (production only)
 if (process.env.NODE_ENV === 'production') {

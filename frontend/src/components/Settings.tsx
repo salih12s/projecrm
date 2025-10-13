@@ -18,7 +18,7 @@ import {
   Alert,
   Typography,
 } from '@mui/material';
-import { Edit, Delete, Add } from '@mui/icons-material';
+import { Edit, Add } from '@mui/icons-material';
 import { Teknisyen, Marka, Bayi, Montaj, Aksesuar, Urun } from '../types';
 import { api } from '../services/api';
 import { useSnackbar } from '../context/SnackbarContext';
@@ -119,28 +119,6 @@ const Settings: React.FC = () => {
     }
   };
 
-  const handleDelete = async (id: number, type?: 'montaj' | 'aksesuar') => {
-    if (!window.confirm('Silmek istediğinize emin misiniz?')) return;
-
-    try {
-      let endpoint = '';
-      if (tabValue === 0) endpoint = '/teknisyenler';
-      else if (tabValue === 1) endpoint = '/markalar';
-      else if (tabValue === 2) endpoint = '/bayiler';
-      else if (tabValue === 3) endpoint = '/urunler';
-      else if (tabValue === 4) {
-        endpoint = type === 'aksesuar' ? '/aksesuarlar' : '/montajlar';
-      }
-      
-      await api.delete(`${endpoint}/${id}`);
-      showSnackbar('Başarıyla silindi', 'success');
-      fetchData();
-    } catch (err: any) {
-      const message = err.response?.data?.message || 'Silme hatası';
-      showSnackbar(message, 'error');
-    }
-  };
-
   return (
     <Box sx={{ mt: 2 }}>
       <Paper elevation={3} sx={{ p: 3 }}>
@@ -215,11 +193,8 @@ const Settings: React.FC = () => {
                 <ListItem key={tek.id} sx={{ border: '1px solid #e0e0e0', mb: 1, borderRadius: 1 }}>
                   <ListItemText primary={tek.isim} />
                   <ListItemSecondaryAction>
-                    <IconButton edge="end" onClick={() => handleEdit(tek.id, tek.isim)} sx={{ mr: 1 }}>
+                    <IconButton edge="end" onClick={() => handleEdit(tek.id, tek.isim)}>
                       <Edit />
-                    </IconButton>
-                    <IconButton edge="end" onClick={() => handleDelete(tek.id)} color="error">
-                      <Delete />
                     </IconButton>
                   </ListItemSecondaryAction>
                 </ListItem>
@@ -233,11 +208,8 @@ const Settings: React.FC = () => {
                 <ListItem key={marka.id} sx={{ border: '1px solid #e0e0e0', mb: 1, borderRadius: 1 }}>
                   <ListItemText primary={marka.isim} />
                   <ListItemSecondaryAction>
-                    <IconButton edge="end" onClick={() => handleEdit(marka.id, marka.isim)} sx={{ mr: 1 }}>
+                    <IconButton edge="end" onClick={() => handleEdit(marka.id, marka.isim)}>
                       <Edit />
-                    </IconButton>
-                    <IconButton edge="end" onClick={() => handleDelete(marka.id)} color="error">
-                      <Delete />
                     </IconButton>
                   </ListItemSecondaryAction>
                 </ListItem>
@@ -251,11 +223,8 @@ const Settings: React.FC = () => {
                 <ListItem key={bayi.id} sx={{ border: '1px solid #e0e0e0', mb: 1, borderRadius: 1 }}>
                   <ListItemText primary={bayi.isim} />
                   <ListItemSecondaryAction>
-                    <IconButton edge="end" onClick={() => handleEdit(bayi.id, bayi.isim)} sx={{ mr: 1 }}>
+                    <IconButton edge="end" onClick={() => handleEdit(bayi.id, bayi.isim)}>
                       <Edit />
-                    </IconButton>
-                    <IconButton edge="end" onClick={() => handleDelete(bayi.id)} color="error">
-                      <Delete />
                     </IconButton>
                   </ListItemSecondaryAction>
                 </ListItem>
@@ -269,11 +238,8 @@ const Settings: React.FC = () => {
                 <ListItem key={urun.id} sx={{ border: '1px solid #e0e0e0', mb: 1, borderRadius: 1 }}>
                   <ListItemText primary={urun.isim} />
                   <ListItemSecondaryAction>
-                    <IconButton edge="end" onClick={() => handleEdit(urun.id, urun.isim)} sx={{ mr: 1 }}>
+                    <IconButton edge="end" onClick={() => handleEdit(urun.id, urun.isim)}>
                       <Edit />
-                    </IconButton>
-                    <IconButton edge="end" onClick={() => handleDelete(urun.id)} color="error">
-                      <Delete />
                     </IconButton>
                   </ListItemSecondaryAction>
                 </ListItem>
@@ -300,13 +266,9 @@ const Settings: React.FC = () => {
                               onClick={() => {
                                 setEditType('montaj');
                                 handleEdit(montaj.id, montaj.isim);
-                              }} 
-                              sx={{ mr: 1 }}
+                              }}
                             >
                               <Edit />
-                            </IconButton>
-                            <IconButton edge="end" onClick={() => handleDelete(montaj.id, 'montaj')} color="error">
-                              <Delete />
                             </IconButton>
                           </ListItemSecondaryAction>
                         </ListItem>
@@ -335,13 +297,9 @@ const Settings: React.FC = () => {
                               onClick={() => {
                                 setEditType('aksesuar');
                                 handleEdit(aksesuar.id, aksesuar.isim);
-                              }} 
-                              sx={{ mr: 1 }}
+                              }}
                             >
                               <Edit />
-                            </IconButton>
-                            <IconButton edge="end" onClick={() => handleDelete(aksesuar.id, 'aksesuar')} color="error">
-                              <Delete />
                             </IconButton>
                           </ListItemSecondaryAction>
                         </ListItem>

@@ -56,6 +56,9 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
   const [montajlar, setMontajlar] = useState<Montaj[]>([]);
   const [aksesuarlar, setAksesuarlar] = useState<Aksesuar[]>([]);
   const [urunler, setUrunler] = useState<Urun[]>([]);
+  const [ilceler, setIlceler] = useState<{ ilce_id: number; isim: string }[]>([]);
+  const [mahalleler, setMahalleler] = useState<{ mahalle_id: number; isim: string }[]>([]);
+  const [selectedIlceId, setSelectedIlceId] = useState<number | null>(null);
   const [selectedMontajlar, setSelectedMontajlar] = useState<number[]>([]);
   const [selectedAksesuarlar, setSelectedAksesuarlar] = useState<number[]>([]);
   const [existingRecord, setExistingRecord] = useState<Islem | null>(null);
@@ -86,22 +89,24 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
     is_durumu: 'acik',
   });
 
-  // Teknisyen, marka, montaj, aksesuar ve ürün listelerini yükle
+  // Teknisyen, marka, montaj, aksesuar, ürün ve ilçe listelerini yükle
   useEffect(() => {
     const loadData = async () => {
       try {
-        const [teknisyenResponse, markaResponse, montajResponse, aksesuarResponse, urunResponse] = await Promise.all([
+        const [teknisyenResponse, markaResponse, montajResponse, aksesuarResponse, urunResponse, ilcelerResponse] = await Promise.all([
           api.get<Teknisyen[]>('/teknisyenler'),
           api.get<Marka[]>('/markalar'),
           api.get<Montaj[]>('/montajlar'),
           api.get<Aksesuar[]>('/aksesuarlar'),
           api.get<Urun[]>('/urunler'),
+          api.get<{ ilce_id: number; isim: string }[]>('/ilceler'),
         ]);
         setTeknisyenler(teknisyenResponse.data);
         setMarkalar(markaResponse.data);
         setMontajlar(montajResponse.data);
         setAksesuarlar(aksesuarResponse.data);
         setUrunler(urunResponse.data);
+        setIlceler(ilcelerResponse.data);
       } catch (error) {
         console.error('Veri yükleme hatası:', error);
       }
@@ -110,6 +115,23 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
       loadData();
     }
   }, [open]);
+
+  // İlçe seçildiğinde mahalleleri yükle
+  useEffect(() => {
+    const loadMahalleler = async () => {
+      if (selectedIlceId) {
+        try {
+          const response = await api.get<{ mahalle_id: number; isim: string }[]>(`/ilceler/${selectedIlceId}/mahalleler`);
+          setMahalleler(response.data);
+        } catch (error) {
+          console.error('Mahalleler yüklenirken hata:', error);
+        }
+      } else {
+        setMahalleler([]);
+      }
+    };
+    loadMahalleler();
+  }, [selectedIlceId]);
 
   // Montaj ve aksesuarlar yüklendikten sonra parse et
   useEffect(() => {
@@ -558,6 +580,12 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
                   onChange={handlePhoneNumberChange}
                   placeholder="0544 448 88 88"
                   helperText={`${phoneNumber.length}/11 hane`}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handlePhoneSubmit();
+                    }
+                  }}
                 />
               </Grid>
               <Grid item xs={12} sm={4}>
@@ -609,20 +637,31 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
             />
           </Grid>
           <Grid item xs={12} sm={6}>
-            <TextField
-              fullWidth
-              required
-              label="İlçe"
-              value={formData.ilce}
-              onChange={handleChange('ilce')}
+            <Autocomplete
+              options={ilceler}
+              getOptionLabel={(option) => option.isim}
+              value={ilceler.find(i => i.isim === formData.ilce) || null}
+              onChange={(_, newValue) => {
+                setFormData({ ...formData, ilce: newValue?.isim || '', mahalle: '' });
+                setSelectedIlceId(newValue?.ilce_id || null);
+              }}
+              renderInput={(params) => (
+                <TextField {...params} required label="İlçe" />
+              )}
             />
           </Grid>
           <Grid item xs={12} sm={6}>
-            <TextField
-              fullWidth
-              label="Mahalle"
-              value={formData.mahalle}
-              onChange={handleChange('mahalle')}
+            <Autocomplete
+              options={mahalleler}
+              getOptionLabel={(option) => option.isim}
+              value={mahalleler.find(m => m.isim === formData.mahalle) || null}
+              onChange={(_, newValue) => {
+                setFormData({ ...formData, mahalle: newValue?.isim || '' });
+              }}
+              disabled={!selectedIlceId}
+              renderInput={(params) => (
+                <TextField {...params} label="Mahalle" />
+              )}
             />
           </Grid>
           <Grid item xs={12} sm={6}>
