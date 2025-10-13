@@ -104,11 +104,11 @@ const IslemTable: React.FC<IslemTableProps> = ({
   const applyFilters = () => {
     let filtered = [...islemler];
 
-    // Sıra filtresi varsa, önce orijinal listedeki pozisyonları işaretle
+    // Sıra filtresi varsa, önce orijinal listedeki pozisyonları işaretle (tersine çevrilmiş)
     const originalIndices = new Map<number, number>();
     if (filters.sira) {
       islemler.forEach((item, index) => {
-        originalIndices.set(item.id, index + 1);
+        originalIndices.set(item.id, islemler.length - index);
       });
     }
 
@@ -545,9 +545,9 @@ const IslemTable: React.FC<IslemTableProps> = ({
         </TableHead>
         <TableBody>
           {filteredIslemler.map((islem) => {
-            // Orijinal listedeki sırayı bul
+            // Orijinal listedeki sırayı bul ve tersine çevir (en yeni en üstte en büyük numara)
             const originalIndex = islemler.findIndex(item => item.id === islem.id);
-            const originalSira = originalIndex + 1;
+            const originalSira = islemler.length - originalIndex;
             
             return (
             <TableRow 

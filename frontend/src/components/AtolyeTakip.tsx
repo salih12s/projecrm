@@ -32,6 +32,7 @@ const AtolyeTakip: React.FC = () => {
   const { user } = useAuth();
   
   const isBayi = user?.role === 'bayi';
+  const isAdmin = user?.role === 'admin';
   const bayiIsim = user?.bayiIsim || '';
 
   // Filter states
@@ -130,8 +131,8 @@ const AtolyeTakip: React.FC = () => {
         data = data.filter((item: Atolye) => item.bayi_adi === bayiIsim);
       }
       
-      // En eski kayıtlar en üstte, en yeni kayıtlar en altta (id'ye göre küçükten büyüğe)
-      const sortedData = data.sort((a: Atolye, b: Atolye) => a.id - b.id);
+      // En yeni kayıtlar en üstte, en eski kayıtlar en altta (id'ye göre büyükten küçüğe)
+      const sortedData = data.sort((a: Atolye, b: Atolye) => b.id - a.id);
       setAtolyeList(sortedData);
     } catch (error) {
       showSnackbar('Atölye kayıtları yüklenirken hata oluştu', 'error');
@@ -358,6 +359,14 @@ const AtolyeTakip: React.FC = () => {
     return phone;
   };
 
+  // Her durum için kayıt sayısını hesapla
+  const getStatusCount = (status: string) => {
+    if (status === 'all') {
+      return atolyeList.length;
+    }
+    return atolyeList.filter(item => item.teslim_durumu === status).length;
+  };
+
   return (
     <Box sx={{ mt: 2 }}>
       <Paper elevation={3} sx={{ p: 3 }}>
@@ -376,11 +385,16 @@ const AtolyeTakip: React.FC = () => {
                   color: activeStatusFilter === '' ? 'white' : '#0D3282',
                   borderColor: '#0D3282',
                   '&:hover': {
-                    backgroundColor: activeStatusFilter === '' ? '#082052' : 'rgba(13, 50, 130, 0.1)',
+                    backgroundColor: activeStatusFilter === '' ? '#0a2566' : 'rgba(13, 50, 130, 0.1)',
                   },
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 0.3,
+                  py: 0.5,
                 }}
               >
-                Tümü
+                <span>Tümü</span>
+                <span style={{ fontSize: '0.75rem', fontWeight: 'bold' }}>({getStatusCount('all')})</span>
               </Button>
               <Button
                 variant={activeStatusFilter === 'beklemede' ? 'contained' : 'outlined'}
@@ -393,9 +407,14 @@ const AtolyeTakip: React.FC = () => {
                   '&:hover': {
                     backgroundColor: activeStatusFilter === 'beklemede' ? '#f57c00' : 'rgba(255, 152, 0, 0.1)',
                   },
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 0.3,
+                  py: 0.5,
                 }}
               >
-                Beklemede
+                <span>Beklemede</span>
+                <span style={{ fontSize: '0.75rem', fontWeight: 'bold' }}>({getStatusCount('beklemede')})</span>
               </Button>
               <Button
                 variant={activeStatusFilter === 'teslim_edildi' ? 'contained' : 'outlined'}
@@ -408,9 +427,14 @@ const AtolyeTakip: React.FC = () => {
                   '&:hover': {
                     backgroundColor: activeStatusFilter === 'teslim_edildi' ? '#01579b' : 'rgba(2, 136, 209, 0.1)',
                   },
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 0.3,
+                  py: 0.5,
                 }}
               >
-                Teslim Edildi
+                <span>Teslim Edildi</span>
+                <span style={{ fontSize: '0.75rem', fontWeight: 'bold' }}>({getStatusCount('teslim_edildi')})</span>
               </Button>
               <Button
                 variant={activeStatusFilter === 'siparis_verildi' ? 'contained' : 'outlined'}
@@ -423,9 +447,14 @@ const AtolyeTakip: React.FC = () => {
                   '&:hover': {
                     backgroundColor: activeStatusFilter === 'siparis_verildi' ? '#7b1fa2' : 'rgba(156, 39, 176, 0.1)',
                   },
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 0.3,
+                  py: 0.5,
                 }}
               >
-                Sipariş Verildi
+                <span>Sipariş Verildi</span>
+                <span style={{ fontSize: '0.75rem', fontWeight: 'bold' }}>({getStatusCount('siparis_verildi')})</span>
               </Button>
               <Button
                 variant={activeStatusFilter === 'yapildi' ? 'contained' : 'outlined'}
@@ -438,9 +467,14 @@ const AtolyeTakip: React.FC = () => {
                   '&:hover': {
                     backgroundColor: activeStatusFilter === 'yapildi' ? '#689f38' : 'rgba(139, 195, 74, 0.1)',
                   },
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 0.3,
+                  py: 0.5,
                 }}
               >
-                Yapıldı
+                <span>Yapıldı</span>
+                <span style={{ fontSize: '0.75rem', fontWeight: 'bold' }}>({getStatusCount('yapildi')})</span>
               </Button>
               <Button
                 variant={activeStatusFilter === 'fabrika_gitti' ? 'contained' : 'outlined'}
@@ -453,9 +487,14 @@ const AtolyeTakip: React.FC = () => {
                   '&:hover': {
                     backgroundColor: activeStatusFilter === 'fabrika_gitti' ? '#757575' : 'rgba(158, 158, 158, 0.1)',
                   },
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 0.3,
+                  py: 0.5,
                 }}
               >
-                Fabrika Gitti
+                <span>Fabrika Gitti</span>
+                <span style={{ fontSize: '0.75rem', fontWeight: 'bold' }}>({getStatusCount('fabrika_gitti')})</span>
               </Button>
               <Button
                 variant={activeStatusFilter === 'odeme_bekliyor' ? 'contained' : 'outlined'}
@@ -468,9 +507,14 @@ const AtolyeTakip: React.FC = () => {
                   '&:hover': {
                     backgroundColor: activeStatusFilter === 'odeme_bekliyor' ? '#d32f2f' : 'rgba(244, 67, 54, 0.1)',
                   },
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 0.3,
+                  py: 0.5,
                 }}
               >
-                Ödeme Bekliyor
+                <span>Ödeme Bekliyor</span>
+                <span style={{ fontSize: '0.75rem', fontWeight: 'bold' }}>({getStatusCount('odeme_bekliyor')})</span>
               </Button>
             </Box>
           </Box>
@@ -697,9 +741,9 @@ const AtolyeTakip: React.FC = () => {
             </TableHead>
             <TableBody>
               {filteredList.map((atolye) => {
-                // Orijinal listedeki index'i bul
+                // Orijinal listedeki index'i bul ve tersine çevir (en yeni en üstte en büyük numara)
                 const originalIndex = atolyeList.findIndex(item => item.id === atolye.id);
-                const siraNo = originalIndex + 1;
+                const siraNo = atolyeList.length - originalIndex;
                 
                 return (
                 <TableRow 
@@ -758,9 +802,11 @@ const AtolyeTakip: React.FC = () => {
                       <IconButton size="small" onClick={() => handleEdit(atolye.id)} sx={{ mr: 0.5, padding: '3px' }}>
                         <Edit fontSize="small" sx={{ fontSize: '1rem' }} />
                       </IconButton>
-                      <IconButton size="small" onClick={() => handleDelete(atolye.id)} color="error" sx={{ padding: '3px' }}>
-                        <Delete fontSize="small" sx={{ fontSize: '1rem' }} />
-                      </IconButton>
+                      {isAdmin && (
+                        <IconButton size="small" onClick={() => handleDelete(atolye.id)} color="error" sx={{ padding: '3px' }}>
+                          <Delete fontSize="small" sx={{ fontSize: '1rem' }} />
+                        </IconButton>
+                      )}
                     </TableCell>
                   )}
                 </TableRow>

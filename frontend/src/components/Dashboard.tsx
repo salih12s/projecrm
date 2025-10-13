@@ -135,8 +135,10 @@ const Dashboard: React.FC = () => {
       setLoading(true);
       setError(null);
       const data = await islemService.getAll();
-      setIslemler(data);
-      setFilteredIslemler(data);
+      // En yeni kayıtlar en üstte (id'ye göre büyükten küçüğe sırala)
+      const sortedData = data.sort((a, b) => b.id - a.id);
+      setIslemler(sortedData);
+      setFilteredIslemler(sortedData);
     } catch (error: any) {
       console.error('İşlemler yüklenirken hata:', error);
       setError(error.response?.data?.message || 'İşlemler yüklenirken bir hata oluştu');
