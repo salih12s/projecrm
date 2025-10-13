@@ -512,6 +512,13 @@ const IslemTable: React.FC<IslemTableProps> = ({
               size="small"
               sx={{ fontWeight: 600, fontSize: '0.6rem', height: '18px', '& .MuiChip-label': { px: 0.5 } }}
             />
+          ) : islem.is_durumu === 'parca_bekliyor' ? (
+            <Chip
+              label="Parça Bekliyor"
+              color="info"
+              size="small"
+              sx={{ fontWeight: 600, fontSize: '0.6rem', height: '18px', '& .MuiChip-label': { px: 0.5 } }}
+            />
           ) : (
             <Chip
               icon={<CheckCircle sx={{ fontSize: '0.65rem' }} />}
@@ -570,9 +577,9 @@ const IslemTable: React.FC<IslemTableProps> = ({
                       sx={{ fontWeight: 600 }}
                     />
                     <Chip 
-                      label={islem.is_durumu === 'acik' ? 'Açık' : 'Tamamlandı'}
+                      label={islem.is_durumu === 'acik' ? 'Açık' : islem.is_durumu === 'parca_bekliyor' ? 'Parça Bekliyor' : 'Tamamlandı'}
                       size="small"
-                      color={islem.is_durumu === 'acik' ? 'warning' : 'success'}
+                      color={islem.is_durumu === 'acik' ? 'warning' : islem.is_durumu === 'parca_bekliyor' ? 'info' : 'success'}
                     />
                   </Box>
                   
@@ -647,27 +654,33 @@ const IslemTable: React.FC<IslemTableProps> = ({
                 <Divider />
                 
                 <CardActions sx={{ justifyContent: 'space-around', py: 0.5 }}>
-                  <Tooltip title={islem.is_durumu === 'acik' ? 'Tamamla' : (isAdminMode ? 'Durumu Değiştir (Admin)' : 'Tamamlandı')}>
+                  <Tooltip title={
+                    islem.is_durumu === 'acik' ? 'Durumu Değiştir' : 
+                    islem.is_durumu === 'parca_bekliyor' ? 'Durumu Değiştir' :
+                    isAdminMode ? 'Durumu Değiştir (Admin)' : 'Tamamlandı'
+                  }>
                     <span>
                       <IconButton 
                         size="small" 
                         onClick={() => onToggleDurum(islem)}
                         disabled={!isAdminMode && islem.is_durumu === 'tamamlandi'}
                         sx={{ 
-                          bgcolor: (islem.is_durumu === 'acik' || isAdminMode) ? 'success.light' : 'grey.300',
+                          bgcolor: islem.is_durumu === 'tamamlandi' ? 'success.light' :
+                                   islem.is_durumu === 'parca_bekliyor' ? 'warning.light' : 
+                                   'info.light',
                         }}
                       >
                         <CheckCircle sx={{ fontSize: '1rem' }} />
                       </IconButton>
                     </span>
                   </Tooltip>
-                  <Tooltip title="Düzenle">
+                  <Tooltip title={islem.is_durumu === 'tamamlandi' && !isAdminMode ? 'Tamamlanan işlem düzenlenemez' : 'Düzenle'}>
                     <span>
                       <IconButton 
                         size="small" 
                         onClick={() => onEdit(islem)}
                         disabled={!isAdminMode && islem.is_durumu === 'tamamlandi'}
-                        sx={{ bgcolor: 'primary.light' }}
+                        sx={{ bgcolor: (islem.is_durumu !== 'tamamlandi' || isAdminMode) ? 'primary.light' : 'grey.300' }}
                       >
                         <Edit sx={{ fontSize: '1rem' }} />
                       </IconButton>
@@ -755,9 +768,9 @@ const IslemTable: React.FC<IslemTableProps> = ({
                         </Typography>
                       )}
                       <Chip 
-                        label={record.is_durumu === 'acik' ? 'Açık' : 'Tamamlandı'}
+                        label={record.is_durumu === 'acik' ? 'Açık' : record.is_durumu === 'parca_bekliyor' ? 'Parça Bekliyor' : 'Tamamlandı'}
                         size="small"
-                        color={record.is_durumu === 'acik' ? 'warning' : 'success'}
+                        color={record.is_durumu === 'acik' ? 'warning' : record.is_durumu === 'parca_bekliyor' ? 'info' : 'success'}
                         sx={{ mt: 0.5 }}
                       />
                     </CardContent>
@@ -909,18 +922,26 @@ const IslemTable: React.FC<IslemTableProps> = ({
               })}
               <TableCell sx={{ py: 0.1, px: 0.2 }}>
                 <Box sx={{ display: 'flex', gap: 0.15 }}>
-                  <Tooltip title={islem.is_durumu === 'acik' ? 'Tamamla' : (isAdminMode ? 'Tamamlandı' : 'Tamamlandı - Durum değiştirilemez')}>
+                  <Tooltip title={
+                    islem.is_durumu === 'acik' ? 'Durumu Değiştir' : 
+                    islem.is_durumu === 'parca_bekliyor' ? 'Durumu Değiştir' :
+                    isAdminMode ? 'Durumu Değiştir (Admin)' : 'Tamamlandı'
+                  }>
                     <span>
                       <IconButton 
                         size="small" 
                         onClick={() => onToggleDurum(islem)}
                         disabled={!isAdminMode && islem.is_durumu === 'tamamlandi'}
                         sx={{ 
-                          bgcolor: islem.is_durumu === 'acik' ? 'warning.light' : (isAdminMode ? 'success.light' : 'grey.300'),
+                          bgcolor: islem.is_durumu === 'tamamlandi' ? 'success.light' :
+                                   islem.is_durumu === 'parca_bekliyor' ? 'warning.light' : 
+                                   'info.light',
                           width: 20,
                           height: 20,
                           '&:hover': {
-                            bgcolor: islem.is_durumu === 'acik' ? 'warning.main' : (isAdminMode ? 'success.main' : 'grey.300'),
+                            bgcolor: islem.is_durumu === 'tamamlandi' ? 'success.main' :
+                                     islem.is_durumu === 'parca_bekliyor' ? 'warning.main' : 
+                                     'info.main',
                           },
                           '&.Mui-disabled': {
                             bgcolor: 'grey.300',
@@ -928,22 +949,24 @@ const IslemTable: React.FC<IslemTableProps> = ({
                           }
                         }}
                       >
-                        <Check sx={{ color: islem.is_durumu === 'acik' ? 'white' : (isAdminMode ? 'white' : 'grey.500'), fontSize: '0.7rem' }} />
+                        <Check sx={{ color: 'white', fontSize: '0.7rem' }} />
                       </IconButton>
                     </span>
                   </Tooltip>
-                  <Tooltip title={islem.is_durumu === 'acik' ? 'Düzenle' : (isAdminMode ? 'Düzenle (Admin)' : 'Tamamlanan işlem düzenlenemez')}>
+                  <Tooltip title={
+                    islem.is_durumu === 'tamamlandi' && !isAdminMode ? 'Tamamlanan işlem düzenlenemez' : 'Düzenle'
+                  }>
                     <span>
                       <IconButton 
                         size="small" 
                         onClick={() => onEdit(islem)}
                         disabled={!isAdminMode && islem.is_durumu === 'tamamlandi'}
                         sx={{ 
-                          bgcolor: (islem.is_durumu === 'acik' || isAdminMode) ? 'primary.light' : 'grey.300',
+                          bgcolor: (islem.is_durumu !== 'tamamlandi' || isAdminMode) ? 'primary.light' : 'grey.300',
                           width: 20,
                           height: 20,
                           '&:hover': {
-                            bgcolor: (islem.is_durumu === 'acik' || isAdminMode) ? 'primary.main' : 'grey.300',
+                            bgcolor: (islem.is_durumu !== 'tamamlandi' || isAdminMode) ? 'primary.main' : 'grey.300',
                           },
                           '&.Mui-disabled': {
                             bgcolor: 'grey.300',
@@ -951,7 +974,7 @@ const IslemTable: React.FC<IslemTableProps> = ({
                           }
                         }}
                       >
-                        <Edit sx={{ color: (islem.is_durumu === 'acik' || isAdminMode) ? 'white' : 'grey.500', fontSize: '0.7rem' }} />
+                        <Edit sx={{ color: (islem.is_durumu !== 'tamamlandi' || isAdminMode) ? 'white' : 'grey.500', fontSize: '0.7rem' }} />
                       </IconButton>
                     </span>
                   </Tooltip>
@@ -1226,8 +1249,8 @@ const IslemTable: React.FC<IslemTableProps> = ({
                     </TableCell>
                     <TableCell>
                       <Chip 
-                        label={islem.is_durumu === 'acik' ? 'Açık' : 'Tamamlandı'}
-                        color={islem.is_durumu === 'acik' ? 'warning' : 'success'}
+                        label={islem.is_durumu === 'acik' ? 'Açık' : islem.is_durumu === 'parca_bekliyor' ? 'Parça Bekliyor' : 'Tamamlandı'}
+                        color={islem.is_durumu === 'acik' ? 'warning' : islem.is_durumu === 'parca_bekliyor' ? 'info' : 'success'}
                         size="small"
                         sx={{ fontSize: '0.65rem', height: '20px' }}
                       />

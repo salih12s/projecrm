@@ -25,6 +25,7 @@ import {
   ListItemText,
   useMediaQuery,
   useTheme,
+  TextField,
 } from '@mui/material';
 import { 
   Logout as LogoutIcon, 
@@ -37,6 +38,8 @@ import {
   History,
   Menu as MenuIcon,
   AdminPanelSettings,
+  CalendarToday,
+  Clear as ClearIcon,
 } from '@mui/icons-material';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
@@ -72,6 +75,8 @@ const Dashboard: React.FC = () => {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
   const [statusFilter, setStatusFilter] = useState<'all' | 'acik' | 'tamamlandi'>('all');
+  const [dateFilter, setDateFilter] = useState<string>(''); // Tarih filtresi
+  const [showTodayOnly, setShowTodayOnly] = useState(false); // Bugün alınan işler
   // Bayi için tab değeri her zaman 0 (tek tab var)
   const [activeTab, setActiveTab] = useState(0);
   const [confirmDialog, setConfirmDialog] = useState<{ open: boolean; islem: Islem | null }>({ open: false, islem: null });
@@ -214,6 +219,25 @@ const Dashboard: React.FC = () => {
   const handleStatusFilterClick = (filter: 'all' | 'acik' | 'tamamlandi') => {
     setStatusFilter(filter);
     // IslemFilters useEffect'i otomatik olarak filtreyi uygulayacak
+  };
+
+  const handleTodayFilter = () => {
+    setShowTodayOnly(!showTodayOnly);
+    if (!showTodayOnly) {
+      setDateFilter(''); // Bugün filtresi aktifken tarih filtresini temizle
+    }
+  };
+
+  const handleDateFilterChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setDateFilter(event.target.value);
+    if (event.target.value) {
+      setShowTodayOnly(false); // Tarih seçilince bugün filtresini kapat
+    }
+  };
+
+  const handleClearDateFilters = () => {
+    setDateFilter('');
+    setShowTodayOnly(false);
   };
 
   const handleMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
@@ -420,11 +444,60 @@ const Dashboard: React.FC = () => {
                 onFilterClick={handleStatusFilterClick}
                 activeFilter={statusFilter}
               />
+
+              {/* Tarih Filtreleri */}
+              <Box sx={{ display: 'flex', gap: 2, mb: 2, flexWrap: 'wrap', alignItems: 'center' }}>
+                <Button
+                  variant={showTodayOnly ? 'contained' : 'outlined'}
+                  startIcon={<CalendarToday />}
+                  onClick={handleTodayFilter}
+                  sx={{
+                    color: showTodayOnly ? '#fff' : '#2C3E82',
+                    borderColor: '#2C3E82',
+                    bgcolor: showTodayOnly ? '#2C3E82' : 'transparent',
+                    '&:hover': {
+                      borderColor: '#1a2850',
+                      bgcolor: showTodayOnly ? '#1a2850' : 'rgba(44, 62, 130, 0.04)',
+                    }
+                  }}
+                >
+                  Bugün Alınan İşler
+                </Button>
+                <TextField
+                  type="date"
+                  label="Tarih Seçin"
+                  value={dateFilter}
+                  onChange={handleDateFilterChange}
+                  InputLabelProps={{
+                    shrink: true,
+                  }}
+                  sx={{ minWidth: 200 }}
+                  size="small"
+                />
+                {(showTodayOnly || dateFilter) && (
+                  <>
+                    <Button
+                      variant="outlined"
+                      startIcon={<ClearIcon />}
+                      onClick={handleClearDateFilters}
+                      color="error"
+                      size="small"
+                    >
+                      Sıfırla
+                    </Button>
+                    <Typography variant="body2" color="text.secondary">
+                      {showTodayOnly ? 'Bugün alınan işlemler gösteriliyor' : `${dateFilter} tarihli işlemler gösteriliyor`}
+                    </Typography>
+                  </>
+                )}
+              </Box>
               
               <IslemFilters
                 islemler={islemler}
                 onFilterChange={setFilteredIslemler}
                 statusFilter={statusFilter}
+                dateFilter={dateFilter}
+                showTodayOnly={showTodayOnly}
               />
 
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>

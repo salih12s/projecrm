@@ -26,7 +26,7 @@ export interface Islem {
   urun: string;
   marka: string;
   sikayet: string;
-  is_durumu: 'acik' | 'tamamlandi';
+  is_durumu: 'acik' | 'parca_bekliyor' | 'tamamlandi';
   created_by?: string;
   updated_at: Date;
 }
@@ -71,7 +71,7 @@ export interface IslemUpdateDto {
   urun: string;
   marka: string;
   sikayet: string;
-  is_durumu: 'acik' | 'tamamlandi';
+  is_durumu: 'acik' | 'parca_bekliyor' | 'tamamlandi';
 }
 
 export interface AuthPayload {

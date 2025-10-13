@@ -19,6 +19,8 @@ interface IslemFiltersProps {
   islemler: Islem[];
   onFilterChange: (filtered: Islem[]) => void;
   statusFilter?: 'all' | 'acik' | 'tamamlandi';
+  dateFilter?: string;
+  showTodayOnly?: boolean;
 }
 
 const filterFields = [
@@ -40,7 +42,7 @@ const filterFields = [
   { value: 'yapilan_islem', label: 'Yapılan İşlem' },
 ];
 
-const IslemFilters: React.FC<IslemFiltersProps> = ({ islemler, onFilterChange, statusFilter = 'all' }) => {
+const IslemFilters: React.FC<IslemFiltersProps> = ({ islemler, onFilterChange, statusFilter = 'all', dateFilter = '', showTodayOnly = false }) => {
   const { user } = useAuth();
   const isAdmin = user?.role === 'admin';
   
@@ -79,10 +81,59 @@ const IslemFilters: React.FC<IslemFiltersProps> = ({ islemler, onFilterChange, s
   useEffect(() => {
     applyFilters();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchValue, isDurumuFilter, selectedMontajlar, selectedAksesuarlar, islemler, statusFilter]);
+  }, [searchValue, isDurumuFilter, selectedMontajlar, selectedAksesuarlar, islemler, statusFilter, dateFilter, showTodayOnly]);
 
   const applyFilters = () => {
     let filtered = [...islemler];
+
+    // Bugün alınan işler filtresi
+    if (showTodayOnly) {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      
+      console.log('🔍 Bugün filtresi aktif - Bugünün tarihi:', today);
+      console.log('📋 Toplam işlem sayısı:', islemler.length);
+      
+      filtered = filtered.filter((islem) => {
+        try {
+          // full_tarih formatı: ISO string (2025-10-13T11:44:07.595Z)
+          const islemDate = new Date(islem.full_tarih);
+          islemDate.setHours(0, 0, 0, 0);
+          
+          const match = islemDate.getTime() === today.getTime();
+          console.log('📅 İşlem:', islem.full_tarih, '➡️ Parse:', islemDate.toLocaleDateString(), 'Eşleşme:', match);
+          return match;
+        } catch (error) {
+          console.error('❌ Tarih parse hatası:', islem.full_tarih, error);
+          return false;
+        }
+      });
+      
+      console.log('✅ Filtrelenen işlem sayısı:', filtered.length);
+    }
+
+    // Tarih filtresi
+    if (dateFilter) {
+      const selectedDate = new Date(dateFilter);
+      selectedDate.setHours(0, 0, 0, 0);
+      
+      console.log('📅 Tarih filtresi aktif - Seçilen tarih:', selectedDate);
+      
+      filtered = filtered.filter((islem) => {
+        try {
+          // full_tarih formatı: ISO string (2025-10-13T11:44:07.595Z)
+          const islemDate = new Date(islem.full_tarih);
+          islemDate.setHours(0, 0, 0, 0);
+          
+          return islemDate.getTime() === selectedDate.getTime();
+        } catch (error) {
+          console.error('❌ Tarih parse hatası:', islem.full_tarih, error);
+          return false;
+        }
+      });
+      
+      console.log('✅ Tarih filtresinden geçen işlem sayısı:', filtered.length);
+    }
 
     // StatsCard'dan gelen durum filtresi
     if (statusFilter !== 'all') {
@@ -165,6 +216,7 @@ const IslemFilters: React.FC<IslemFiltersProps> = ({ islemler, onFilterChange, s
           >
             <MenuItem value="">Tümü</MenuItem>
             <MenuItem value="acik">Açık İşler</MenuItem>
+            <MenuItem value="parca_bekliyor">Parça Bekliyor</MenuItem>
             <MenuItem value="tamamlandi">Tamamlanan İşler</MenuItem>
           </TextField>
         </Grid>

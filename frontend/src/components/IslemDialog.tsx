@@ -164,8 +164,8 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
         teknisyen_ismi: islem.teknisyen_ismi || '',
         yapilan_islem: islem.yapilan_islem || '',
         tutar: islem.tutar || 0,
-        // Tamamla modalı için varsayılan "tamamlandı", normal düzenleme için mevcut durum
-        is_durumu: openTamamlaModal ? 'tamamlandi' : islem.is_durumu,
+        // İş durumunu o anki haliyle getir
+        is_durumu: islem.is_durumu,
       });
       
       // Yapılan işlem alanından checkbox'ları otomatik işaretle
@@ -205,7 +205,7 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
 
   // Tamamlama modalını otomatik aç
   useEffect(() => {
-    if (open && openTamamlaModal && islem && islem.is_durumu === 'acik') {
+    if (open && openTamamlaModal && islem) {
       setShowTamamlaConfirm(true);
     }
   }, [open, openTamamlaModal, islem]);
@@ -505,14 +505,14 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
     // Ürün kontrolü - tanımlı listede olmalı
     const urunExists = urunler.some(u => u.isim === formData.urun);
     if (!urunExists) {
-      showSnackbar('Lütfen sadece tanımlı ürünlerden seçim yapınız!', 'error');
+      showSnackbar('Lütfen listeden bir ürün seçiniz! Sadece tanımlı ürünler kabul edilir.', 'error');
       return;
     }
     
     // Marka kontrolü - tanımlı listede olmalı
     const markaExists = markalar.some(m => m.isim === formData.marka);
     if (!markaExists) {
-      showSnackbar('Lütfen sadece tanımlı markalardan seçim yapınız!', 'error');
+      showSnackbar('Lütfen listeden bir marka seçiniz! Sadece tanımlı markalar kabul edilir.', 'error');
       return;
     }
     
@@ -738,25 +738,15 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
               onChange={(_, newValue) => {
                 setFormData({ ...formData, urun: newValue || '' });
               }}
-              onInputChange={(event, _value, reason) => {
-                // Sadece dropdown seçimlerine izin ver, yazı yazmayı engelle
-                if (reason === 'input') {
-                  event?.preventDefault();
-                }
-              }}
               renderInput={(params) => (
                 <TextField
                   {...params}
                   fullWidth
                   required
                   label="Ürün"
-                  placeholder="Ürün seçiniz..."
-                  onKeyDown={(e) => {
-                    // Harf ve sayı tuşlarını engelle
-                    if (e.key.length === 1 && !e.ctrlKey && !e.metaKey) {
-                      e.preventDefault();
-                    }
-                  }}
+                  placeholder="Ürün ara ve seç..."
+                  error={!formData.urun}
+                  helperText={!formData.urun ? 'Listeden bir ürün seçmelisiniz' : ''}
                 />
               )}
             />
@@ -768,25 +758,15 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
               onChange={(_, newValue) => {
                 setFormData({ ...formData, marka: newValue || '' });
               }}
-              onInputChange={(event, _value, reason) => {
-                // Sadece dropdown seçimlerine izin ver, yazı yazmayı engelle
-                if (reason === 'input') {
-                  event?.preventDefault();
-                }
-              }}
               renderInput={(params) => (
                 <TextField
                   {...params}
                   fullWidth
                   required
                   label="Marka"
-                  placeholder="Marka seçiniz..."
-                  onKeyDown={(e) => {
-                    // Harf ve sayı tuşlarını engelle
-                    if (e.key.length === 1 && !e.ctrlKey && !e.metaKey) {
-                      e.preventDefault();
-                    }
-                  }}
+                  placeholder="Marka ara ve seç..."
+                  error={!formData.marka}
+                  helperText={!formData.marka ? 'Listeden bir marka seçmelisiniz' : ''}
                 />
               )}
             />
@@ -1033,6 +1013,7 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
                 onChange={handleChange('is_durumu')}
               >
                 <MenuItem value="acik">Açık</MenuItem>
+                <MenuItem value="parca_bekliyor">Parça Bekliyor</MenuItem>
                 <MenuItem value="tamamlandi">Tamamlandı</MenuItem>
               </TextField>
             </Grid>

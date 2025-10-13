@@ -156,7 +156,7 @@ const AtolyeDialog: React.FC<AtolyeDialogProps> = ({ open, onClose, atolyeId }) 
     if (hasBayi) {
       const bayiExists = bayiler.some(b => b.isim === formData.bayi_adi);
       if (!bayiExists) {
-        showSnackbar('Lütfen sadece tanımlı bayilerden seçim yapınız!', 'error');
+        showSnackbar('Lütfen listeden bir bayi seçiniz! Sadece tanımlı bayiler kabul edilir.', 'error');
         return;
       }
     }
@@ -170,7 +170,7 @@ const AtolyeDialog: React.FC<AtolyeDialogProps> = ({ open, onClose, atolyeId }) 
     // Marka kontrolü - tanımlı listede olmalı
     const markaExists = markalar.some(m => m.isim === formData.marka);
     if (!markaExists) {
-      showSnackbar('Lütfen sadece tanımlı markalardan seçim yapınız!', 'error');
+      showSnackbar('Lütfen listeden bir marka seçiniz! Sadece tanımlı markalar kabul edilir.', 'error');
       return;
     }
 
@@ -238,24 +238,12 @@ const AtolyeDialog: React.FC<AtolyeDialogProps> = ({ open, onClose, atolyeId }) 
               options={bayiler.map((b) => b.isim)}
               value={formData.bayi_adi || null}
               onChange={(_, newValue) => handleChange('bayi_adi', newValue || '')}
-              onInputChange={(event, _value, reason) => {
-                // Sadece dropdown seçimlerine izin ver, yazı yazmayı engelle
-                if (reason === 'input') {
-                  event?.preventDefault();
-                }
-              }}
               renderInput={(params) => (
                 <TextField 
                   {...params} 
                   label="Bayi Adı" 
                   fullWidth 
-                  placeholder="Bayi seçiniz..."
-                  onKeyDown={(e) => {
-                    // Harf ve sayı tuşlarını engelle
-                    if (e.key.length === 1 && !e.ctrlKey && !e.metaKey) {
-                      e.preventDefault();
-                    }
-                  }}
+                  placeholder="Bayi ara ve seç..."
                 />
               )}
             />
@@ -288,25 +276,15 @@ const AtolyeDialog: React.FC<AtolyeDialogProps> = ({ open, onClose, atolyeId }) 
               options={markalar.map((m) => m.isim)}
               value={formData.marka || null}
               onChange={(_, newValue) => handleChange('marka', newValue || '')}
-              onInputChange={(event, _value, reason) => {
-                // Sadece dropdown seçimlerine izin ver, yazı yazmayı engelle
-                if (reason === 'input') {
-                  event?.preventDefault();
-                }
-              }}
               renderInput={(params) => (
                 <TextField 
                   {...params}
                   required
                   label="Marka" 
                   fullWidth 
-                  placeholder="Marka seçiniz..."
-                  onKeyDown={(e) => {
-                    // Harf ve sayı tuşlarını engelle
-                    if (e.key.length === 1 && !e.ctrlKey && !e.metaKey) {
-                      e.preventDefault();
-                    }
-                  }}
+                  placeholder="Marka ara ve seç..."
+                  error={!formData.marka}
+                  helperText={!formData.marka ? 'Listeden bir marka seçmelisiniz' : ''}
                 />
               )}
             />
