@@ -6,6 +6,7 @@ import dotenv from 'dotenv';
 import path from 'path';
 
 import createTables from './createTables';
+import { initLocations } from './initLocations';
 import authRoutes from './routes/auth';
 import islemlerRoutes from './routes/islemler';
 import teknisyenlerRoutes from './routes/teknisyenler';
@@ -101,11 +102,17 @@ if (process.env.NODE_ENV === 'production') {
 
 const PORT = process.env.PORT || 5000;
 
-// Tabloları oluştur ve sunucuyu başlat
-createTables().then(() => {
-  server.listen(PORT, () => {
-    console.log(`Server ${PORT} portunda çalışıyor`);
+// Tabloları oluştur, location data'yı yükle ve sunucuyu başlat
+createTables()
+  .then(() => initLocations())
+  .then(() => {
+    server.listen(PORT, () => {
+      console.log(`Server ${PORT} portunda çalışıyor`);
+    });
+  })
+  .catch((error) => {
+    console.error('Başlatma hatası:', error);
+    process.exit(1);
   });
-});
 
 export { app, io };
