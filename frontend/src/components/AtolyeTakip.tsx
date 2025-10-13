@@ -13,6 +13,14 @@ import {
   Chip,
   TextField,
   Tooltip,
+  Card,
+  CardContent,
+  CardActions,
+  Grid,
+  Typography,
+  Divider,
+  useMediaQuery,
+  useTheme,
 } from '@mui/material';
 import { Edit, Delete, Add } from '@mui/icons-material';
 import { Atolye } from '../types';
@@ -23,7 +31,10 @@ import AtolyeDialog from './AtolyeDialog.tsx';
 import { io } from 'socket.io-client';
 
 const AtolyeTakip: React.FC = () => {
-  const [atolyeList, setAtolyeList] = useState<Atolye[]>([]);
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const [atolyeList, setAtolyeList] = useState<Atolye[]>([]); // Görüntülenen liste (bayi için filtrelenmiş)
+  const [allAtolyeList, setAllAtolyeList] = useState<Atolye[]>([]); // Tüm kayıtlar (global sıra için)
   const [filteredList, setFilteredList] = useState<Atolye[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedAtolyeId, setSelectedAtolyeId] = useState<number | null>(null);
@@ -79,14 +90,17 @@ const AtolyeTakip: React.FC = () => {
     // Yeni atölye kaydı eklendiğinde
     newSocket.on('yeni-atolye', (atolye: Atolye) => {
       if (atolye && atolye.id) {
-        // Bayi ise sadece kendi kayıtlarını ekle
+        // Tüm listeye ekle
+        setAllAtolyeList((prev) => [atolye, ...prev]);
+        
+        // Bayi ise sadece kendi kayıtlarını görüntülenen listeye ekle
         if (isBayi) {
           if (atolye.bayi_adi === bayiIsim) {
-            setAtolyeList((prev) => [...prev, atolye]);
+            setAtolyeList((prev) => [atolye, ...prev]);
             showSnackbar('Yeni atölye kaydı eklendi!', 'info');
           }
         } else {
-          setAtolyeList((prev) => [...prev, atolye]);
+          setAtolyeList((prev) => [atolye, ...prev]);
           showSnackbar('Yeni atölye kaydı eklendi!', 'info');
         }
       }
@@ -95,6 +109,11 @@ const AtolyeTakip: React.FC = () => {
     // Atölye kaydı güncellendiğinde
     newSocket.on('atolye-guncellendi', (updatedAtolyeRecord: Atolye) => {
       if (updatedAtolyeRecord && updatedAtolyeRecord.id) {
+        // Tüm listede güncelle
+        setAllAtolyeList((prev) =>
+          prev.map((atolye) => (atolye.id === updatedAtolyeRecord.id ? updatedAtolyeRecord : atolye))
+        );
+        // Görüntülenen listede güncelle
         setAtolyeList((prev) =>
           prev.map((atolye) => (atolye.id === updatedAtolyeRecord.id ? updatedAtolyeRecord : atolye))
         );
@@ -105,6 +124,9 @@ const AtolyeTakip: React.FC = () => {
     // Atölye kaydı silindiğinde
     newSocket.on('atolye-silindi', (deletedId: number) => {
       if (deletedId) {
+        // Tüm listeden sil
+        setAllAtolyeList((prev) => prev.filter((atolye) => atolye.id !== deletedId));
+        // Görüntülenen listeden sil
         setAtolyeList((prev) => prev.filter((atolye) => atolye.id !== deletedId));
         showSnackbar('Atölye kaydı silindi!', 'info');
       }
@@ -124,16 +146,21 @@ const AtolyeTakip: React.FC = () => {
   const fetchAtolyeList = async () => {
     try {
       const response = await api.get('/atolye');
-      let data = response.data;
+      const allData = response.data;
+      
+      // En yeni kayıtlar en üstte, en eski kayıtlar en altta (id'ye göre büyükten küçüğe)
+      const sortedAllData = allData.sort((a: Atolye, b: Atolye) => b.id - a.id);
+      
+      // Tüm kayıtları sakla (global sıra hesabı için)
+      setAllAtolyeList(sortedAllData);
       
       // Bayi ise sadece kendi kayıtlarını göster
       if (isBayi) {
-        data = data.filter((item: Atolye) => item.bayi_adi === bayiIsim);
+        const bayiData = sortedAllData.filter((item: Atolye) => item.bayi_adi === bayiIsim);
+        setAtolyeList(bayiData);
+      } else {
+        setAtolyeList(sortedAllData);
       }
-      
-      // En yeni kayıtlar en üstte, en eski kayıtlar en altta (id'ye göre büyükten küçüğe)
-      const sortedData = data.sort((a: Atolye, b: Atolye) => b.id - a.id);
-      setAtolyeList(sortedData);
     } catch (error) {
       showSnackbar('Atölye kayıtları yüklenirken hata oluştu', 'error');
     }
@@ -240,11 +267,14 @@ const AtolyeTakip: React.FC = () => {
       );
     }
 
-    // Filter by sira (son olarak, filtrelenmiş listeye göre)
+    // Filter by sira (GLOBAL listeye göre hesaplanmalı - tüm kayıtlar bazında)
     if (filters.sira) {
-      filtered = filtered.filter((_item, index) => {
-        const siraNo = (index + 1).toString();
-        return siraNo.includes(filters.sira);
+      filtered = filtered.filter((item) => {
+        // Global listedeki index'i bul
+        const originalIndex = allAtolyeList.findIndex(original => original.id === item.id);
+        // Sıra numarasını hesapla (en yeni en üstte en büyük numara)
+        const siraNo = allAtolyeList.length - originalIndex;
+        return siraNo.toString().includes(filters.sira);
       });
     }
 
@@ -531,8 +561,150 @@ const AtolyeTakip: React.FC = () => {
           )}
         </Box>
 
-        <TableContainer sx={{ maxHeight: 'calc(100vh - 250px)', overflow: 'auto' }}>
-          <Table size="small" stickyHeader>
+        {/* Mobil görünüm - Card layout */}
+        {isMobile ? (
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 2 }}>
+            {filteredList.map((atolye) => {
+              const originalIndex = allAtolyeList.findIndex(item => item.id === atolye.id);
+              const siraNo = allAtolyeList.length - originalIndex;
+
+              return (
+                <Card key={atolye.id} elevation={2}>
+                  <CardContent sx={{ pb: 1 }}>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                      <Chip 
+                        label={`Sıra: ${siraNo}`} 
+                        size="small" 
+                        color="primary"
+                        sx={{ fontWeight: 600 }}
+                      />
+                      <Chip 
+                        label={
+                          atolye.teslim_durumu === 'beklemede' ? 'Beklemede' :
+                          atolye.teslim_durumu === 'teslim_edildi' ? 'Teslim Edildi' :
+                          atolye.teslim_durumu === 'siparis_verildi' ? 'Sipariş Verildi' :
+                          atolye.teslim_durumu === 'yapildi' ? 'Yapıldı' :
+                          atolye.teslim_durumu === 'fabrika_gitti' ? 'Fabrika Gitti' :
+                          atolye.teslim_durumu === 'odeme_bekliyor' ? 'Ödeme Bekliyor' : '-'
+                        }
+                        size="small"
+                        color={
+                          atolye.teslim_durumu === 'beklemede' ? 'warning' :
+                          atolye.teslim_durumu === 'teslim_edildi' ? 'info' :
+                          atolye.teslim_durumu === 'siparis_verildi' ? 'secondary' :
+                          atolye.teslim_durumu === 'yapildi' ? 'success' :
+                          atolye.teslim_durumu === 'fabrika_gitti' ? 'default' :
+                          atolye.teslim_durumu === 'odeme_bekliyor' ? 'error' : 'default'
+                        }
+                      />
+                    </Box>
+                    
+                    <Grid container spacing={0.5} sx={{ fontSize: '0.75rem' }}>
+                      <Grid item xs={6}>
+                        <Typography variant="caption" color="text.secondary">Tarih:</Typography>
+                        <Typography variant="body2" sx={{ fontSize: '0.75rem' }}>
+                          {atolye.created_at ? new Date(atolye.created_at).toLocaleDateString('tr-TR') : '-'}
+                        </Typography>
+                      </Grid>
+                      {!isBayi && atolye.bayi_adi && (
+                        <Grid item xs={6}>
+                          <Typography variant="caption" color="text.secondary">Bayi:</Typography>
+                          <Typography variant="body2" sx={{ fontSize: '0.75rem' }}>{atolye.bayi_adi}</Typography>
+                        </Grid>
+                      )}
+                      {atolye.musteri_ad_soyad && (
+                        <Grid item xs={12}>
+                          <Typography variant="caption" color="text.secondary">Müşteri:</Typography>
+                          <Typography variant="body2" sx={{ fontSize: '0.75rem', fontWeight: 600 }}>
+                            {atolye.musteri_ad_soyad}
+                          </Typography>
+                        </Grid>
+                      )}
+                      {atolye.tel_no && (
+                        <Grid item xs={12}>
+                          <Typography variant="caption" color="text.secondary">Tel:</Typography>
+                          <Typography variant="body2" sx={{ fontSize: '0.75rem' }}>{atolye.tel_no}</Typography>
+                        </Grid>
+                      )}
+                      <Grid item xs={6}>
+                        <Typography variant="caption" color="text.secondary">Marka:</Typography>
+                        <Typography variant="body2" sx={{ fontSize: '0.75rem' }}>{atolye.marka || '-'}</Typography>
+                      </Grid>
+                      <Grid item xs={6}>
+                        <Typography variant="caption" color="text.secondary">Model:</Typography>
+                        <Typography variant="body2" sx={{ fontSize: '0.75rem' }}>{atolye.kod || '-'}</Typography>
+                      </Grid>
+                      {atolye.seri_no && (
+                        <Grid item xs={12}>
+                          <Typography variant="caption" color="text.secondary">Seri No:</Typography>
+                          <Typography variant="body2" sx={{ fontSize: '0.75rem' }}>{atolye.seri_no}</Typography>
+                        </Grid>
+                      )}
+                      <Grid item xs={12}>
+                        <Typography variant="caption" color="text.secondary">Şikayet:</Typography>
+                        <Typography variant="body2" sx={{ fontSize: '0.75rem' }}>{atolye.sikayet || '-'}</Typography>
+                      </Grid>
+                      {atolye.ozel_not && (
+                        <Grid item xs={12}>
+                          <Typography variant="caption" color="text.secondary">Özel Not:</Typography>
+                          <Typography variant="body2" sx={{ fontSize: '0.75rem' }}>{atolye.ozel_not}</Typography>
+                        </Grid>
+                      )}
+                      {atolye.yapilan_islem && (
+                        <Grid item xs={12}>
+                          <Typography variant="caption" color="text.secondary">Yapılan İşlem:</Typography>
+                          <Typography variant="body2" sx={{ fontSize: '0.75rem' }}>{atolye.yapilan_islem}</Typography>
+                        </Grid>
+                      )}
+                      {atolye.ucret && (
+                        <Grid item xs={6}>
+                          <Typography variant="caption" color="text.secondary">Ücret:</Typography>
+                          <Typography variant="body2" sx={{ fontSize: '0.75rem' }}>{atolye.ucret} ₺</Typography>
+                        </Grid>
+                      )}
+                      {atolye.yapilma_tarihi && (
+                        <Grid item xs={6}>
+                          <Typography variant="caption" color="text.secondary">Yapılma Tarihi:</Typography>
+                          <Typography variant="body2" sx={{ fontSize: '0.75rem' }}>
+                            {new Date(atolye.yapilma_tarihi).toLocaleDateString('tr-TR')}
+                          </Typography>
+                        </Grid>
+                      )}
+                    </Grid>
+                  </CardContent>
+                  
+                  <Divider />
+                  
+                  <CardActions sx={{ justifyContent: 'flex-end', py: 0.5 }}>
+                    <Tooltip title="Düzenle">
+                      <IconButton 
+                        size="small" 
+                        onClick={() => handleEdit(atolye.id)}
+                        sx={{ bgcolor: 'primary.light' }}
+                      >
+                        <Edit sx={{ fontSize: '1rem', color: 'white' }} />
+                      </IconButton>
+                    </Tooltip>
+                    {isAdmin && (
+                      <Tooltip title="Sil">
+                        <IconButton 
+                          size="small" 
+                          onClick={() => handleDelete(atolye.id)}
+                          sx={{ bgcolor: 'error.light' }}
+                        >
+                          <Delete sx={{ fontSize: '1rem', color: 'white' }} />
+                        </IconButton>
+                      </Tooltip>
+                    )}
+                  </CardActions>
+                </Card>
+              );
+            })}
+          </Box>
+        ) : (
+          /* Masaüstü görünüm - Table layout */
+          <TableContainer sx={{ maxHeight: 'calc(100vh - 250px)', overflow: 'auto' }}>
+            <Table size="small" stickyHeader>
             <TableHead>
               {/* Filter Row */}
               <TableRow>
@@ -741,9 +913,9 @@ const AtolyeTakip: React.FC = () => {
             </TableHead>
             <TableBody>
               {filteredList.map((atolye) => {
-                // Orijinal listedeki index'i bul ve tersine çevir (en yeni en üstte en büyük numara)
-                const originalIndex = atolyeList.findIndex(item => item.id === atolye.id);
-                const siraNo = atolyeList.length - originalIndex;
+                // GLOBAL sıra hesabı - tüm kayıtlara göre (bayi/admin fark etmeksizin)
+                const originalIndex = allAtolyeList.findIndex(item => item.id === atolye.id);
+                const siraNo = allAtolyeList.length - originalIndex;
                 
                 return (
                 <TableRow 
@@ -822,6 +994,7 @@ const AtolyeTakip: React.FC = () => {
             </TableBody>
           </Table>
         </TableContainer>
+        )}
       </Paper>
 
       <AtolyeDialog

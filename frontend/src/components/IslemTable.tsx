@@ -17,6 +17,13 @@ import {
   DialogTitle,
   DialogContent,
   Typography,
+  Card,
+  CardContent,
+  CardActions,
+  Grid,
+  useMediaQuery,
+  useTheme,
+  Divider,
 } from '@mui/material';
 import {
   Edit,
@@ -44,6 +51,7 @@ const formatPhoneNumber = (phone: string | undefined): string => {
 
 interface IslemTableProps {
   islemler: Islem[];
+  allIslemler?: Islem[]; // Tüm kayıtlar (global sıra hesabı için)
   loading: boolean;
   onEdit: (islem: Islem) => void;
   onDelete: (id: number) => void;
@@ -59,12 +67,17 @@ interface ColumnConfig {
 
 const IslemTable: React.FC<IslemTableProps> = ({
   islemler,
+  allIslemler,
   loading,
   onEdit,
   onDelete,
   onToggleDurum,
   isAdminMode = false,
 }) => {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  // Global sıra hesabı için kullanılacak liste
+  const siraReferenceList = allIslemler || islemler;
   const [filteredIslemler, setFilteredIslemler] = useState<Islem[]>(islemler);
   const [printEditorOpen, setPrintEditorOpen] = useState(false);
   const [selectedIslemForPrint, setSelectedIslemForPrint] = useState<Islem | null>(null);
@@ -104,11 +117,11 @@ const IslemTable: React.FC<IslemTableProps> = ({
   const applyFilters = () => {
     let filtered = [...islemler];
 
-    // Sıra filtresi varsa, önce orijinal listedeki pozisyonları işaretle (tersine çevrilmiş)
+    // Sıra filtresi varsa, önce GLOBAL listedeki pozisyonları işaretle (tersine çevrilmiş)
     const originalIndices = new Map<number, number>();
     if (filters.sira) {
-      islemler.forEach((item, index) => {
-        originalIndices.set(item.id, islemler.length - index);
+      siraReferenceList.forEach((item, index) => {
+        originalIndices.set(item.id, siraReferenceList.length - index);
       });
     }
 
@@ -226,11 +239,11 @@ const IslemTable: React.FC<IslemTableProps> = ({
       });
     }
 
-    // Filter by sira - ORİJİNAL listedeki sıraya göre filtrele
+    // Filter by sira - GLOBAL sıraya göre filtrele (tüm kayıtlar bazında)
     if (filters.sira) {
       filtered = filtered.filter((item) => {
-        const originalSira = originalIndices.get(item.id);
-        return originalSira?.toString() === filters.sira;
+        const globalSira = originalIndices.get(item.id);
+        return globalSira?.toString().includes(filters.sira);
       });
     }
 
@@ -239,6 +252,16 @@ const IslemTable: React.FC<IslemTableProps> = ({
 
   const handleFilterChange = (field: string, value: string) => {
     setFilters((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handlePrintClick = (islem: Islem) => {
+    setSelectedIslemForPrint(islem);
+    setPrintEditorOpen(true);
+  };
+
+  const handlePrintClose = () => {
+    setPrintEditorOpen(false);
+    setSelectedIslemForPrint(null);
   };
 
   const handleClosePrintEditor = () => {
@@ -308,7 +331,7 @@ const IslemTable: React.FC<IslemTableProps> = ({
       id: 'tarih',
       label: 'Tarih',
       render: (islem) => (
-        <TableCell sx={{ fontWeight: 500, fontSize: '0.8rem', py: 0.5, px: 1 }}>
+        <TableCell sx={{ fontWeight: 500, fontSize: '0.7rem', py: 0.2, px: 0.4 }}>
           {islem.full_tarih ? new Date(islem.full_tarih).toLocaleDateString('tr-TR', {
             year: 'numeric',
             month: '2-digit',
@@ -320,58 +343,58 @@ const IslemTable: React.FC<IslemTableProps> = ({
     ad_soyad: {
       id: 'ad_soyad',
       label: 'Ad Soyad',
-      render: (islem) => <TableCell sx={{ fontWeight: 500, fontSize: '0.8rem', py: 0.5, px: 1 }}>{islem.ad_soyad || '-'}</TableCell>,
+      render: (islem) => <TableCell sx={{ fontWeight: 500, fontSize: '0.7rem', py: 0.2, px: 0.4 }}>{islem.ad_soyad || '-'}</TableCell>,
     },
     ilce: {
       id: 'ilce',
       label: 'İlçe',
-      render: (islem) => <TableCell sx={{ fontSize: '0.8rem', py: 0.5, px: 1 }}>{islem.ilce || '-'}</TableCell>,
+      render: (islem) => <TableCell sx={{ fontSize: '0.7rem', py: 0.2, px: 0.4 }}>{islem.ilce || '-'}</TableCell>,
     },
     mahalle: {
       id: 'mahalle',
       label: 'Mahalle',
-      render: (islem) => <TableCell sx={{ fontSize: '0.8rem', py: 0.5, px: 1 }}>{islem.mahalle || '-'}</TableCell>,
+      render: (islem) => <TableCell sx={{ fontSize: '0.7rem', py: 0.2, px: 0.4 }}>{islem.mahalle || '-'}</TableCell>,
     },
     cadde: {
       id: 'cadde',
       label: 'Cadde',
-      render: (islem) => <TableCell sx={{ fontSize: '0.8rem', py: 0.5, px: 1 }}>{islem.cadde || '-'}</TableCell>,
+      render: (islem) => <TableCell sx={{ fontSize: '0.7rem', py: 0.2, px: 0.4 }}>{islem.cadde || '-'}</TableCell>,
     },
     sokak: {
       id: 'sokak',
       label: 'Sokak',
-      render: (islem) => <TableCell sx={{ fontSize: '0.8rem', py: 0.5, px: 1 }}>{islem.sokak || '-'}</TableCell>,
+      render: (islem) => <TableCell sx={{ fontSize: '0.7rem', py: 0.2, px: 0.4 }}>{islem.sokak || '-'}</TableCell>,
     },
     kapi_no: {
       id: 'kapi_no',
       label: 'Kapı No',
-      render: (islem) => <TableCell sx={{ fontSize: '0.8rem', py: 0.5, px: 1 }}>{islem.kapi_no || '-'}</TableCell>,
+      render: (islem) => <TableCell sx={{ fontSize: '0.7rem', py: 0.2, px: 0.4 }}>{islem.kapi_no || '-'}</TableCell>,
     },
     cep_tel: {
       id: 'cep_tel',
       label: 'Cep Tel',
-      render: (islem) => <TableCell sx={{ fontSize: '0.8rem', py: 0.5, px: 1 }}>{islem.cep_tel ? formatPhoneNumber(islem.cep_tel) : '-'}</TableCell>,
+      render: (islem) => <TableCell sx={{ fontSize: '0.7rem', py: 0.2, px: 0.4 }}>{islem.cep_tel ? formatPhoneNumber(islem.cep_tel) : '-'}</TableCell>,
     },
     yedek_tel: {
       id: 'yedek_tel',
       label: 'Yedek Tel',
-      render: (islem) => <TableCell sx={{ fontSize: '0.8rem', py: 0.5, px: 1 }}>{islem.yedek_tel ? formatPhoneNumber(islem.yedek_tel) : '-'}</TableCell>,
+      render: (islem) => <TableCell sx={{ fontSize: '0.7rem', py: 0.2, px: 0.4 }}>{islem.yedek_tel ? formatPhoneNumber(islem.yedek_tel) : '-'}</TableCell>,
     },
     urun: {
       id: 'urun',
       label: 'Ürün',
-      render: (islem) => <TableCell sx={{ fontSize: '0.8rem', py: 0.5, px: 1 }}>{islem.urun || '-'}</TableCell>,
+      render: (islem) => <TableCell sx={{ fontSize: '0.7rem', py: 0.2, px: 0.4 }}>{islem.urun || '-'}</TableCell>,
     },
     marka: {
       id: 'marka',
       label: 'Marka',
-      render: (islem) => <TableCell sx={{ fontWeight: 500, fontSize: '0.8rem', py: 0.5, px: 1 }}>{islem.marka || '-'}</TableCell>,
+      render: (islem) => <TableCell sx={{ fontWeight: 500, fontSize: '0.7rem', py: 0.2, px: 0.4 }}>{islem.marka || '-'}</TableCell>,
     },
     sikayet: {
       id: 'sikayet',
       label: 'Şikayet',
       render: (islem) => (
-        <TableCell sx={{ maxWidth: 150, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: '0.8rem', py: 0.5, px: 1 }}>
+        <TableCell sx={{ maxWidth: 150, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: '0.7rem', py: 0.2, px: 0.4 }}>
           <Tooltip title={islem.sikayet || '-'}>
             <span>{islem.sikayet || '-'}</span>
           </Tooltip>
@@ -382,7 +405,7 @@ const IslemTable: React.FC<IslemTableProps> = ({
       id: 'yapilan_islem',
       label: 'Yapılan İşlem',
       render: (islem) => (
-        <TableCell sx={{ maxWidth: 150, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: '0.8rem', py: 0.5, px: 1 }}>
+        <TableCell sx={{ maxWidth: 150, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: '0.7rem', py: 0.2, px: 0.4 }}>
           <Tooltip title={islem.yapilan_islem || '-'}>
             <span>{islem.yapilan_islem || '-'}</span>
           </Tooltip>
@@ -392,13 +415,13 @@ const IslemTable: React.FC<IslemTableProps> = ({
     teknisyen: {
       id: 'teknisyen',
       label: 'Teknisyen',
-      render: (islem) => <TableCell sx={{ fontSize: '0.8rem', py: 0.5, px: 1 }}>{islem.teknisyen_ismi || '-'}</TableCell>,
+      render: (islem) => <TableCell sx={{ fontSize: '0.7rem', py: 0.2, px: 0.4 }}>{islem.teknisyen_ismi || '-'}</TableCell>,
     },
     tutar: {
       id: 'tutar',
       label: 'Tutar',
       render: (islem) => (
-        <TableCell sx={{ fontWeight: 600, fontSize: '0.8rem', py: 0.5, px: 1 }}>
+        <TableCell sx={{ fontWeight: 600, fontSize: '0.7rem', py: 0.2, px: 0.4 }}>
           {islem.tutar ? `${Number(islem.tutar).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ₺` : '-'}
         </TableCell>
       ),
@@ -453,6 +476,229 @@ const IslemTable: React.FC<IslemTableProps> = ({
     );
   }
 
+  // Mobil görünüm - Card layout
+  if (isMobile) {
+    return (
+      <>
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+          {filteredIslemler.map((islem) => {
+            const originalIndex = siraReferenceList.findIndex(item => item.id === islem.id);
+            const siraNo = siraReferenceList.length - originalIndex;
+
+            return (
+              <Card key={islem.id} elevation={2}>
+                <CardContent sx={{ pb: 1 }}>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                    <Chip 
+                      label={`Sıra: ${siraNo}`} 
+                      size="small" 
+                      color="primary"
+                      sx={{ fontWeight: 600 }}
+                    />
+                    <Chip 
+                      label={islem.is_durumu === 'acik' ? 'Açık' : 'Tamamlandı'}
+                      size="small"
+                      color={islem.is_durumu === 'acik' ? 'warning' : 'success'}
+                    />
+                  </Box>
+                  
+                  <Typography variant="subtitle2" color="primary" sx={{ fontWeight: 600, mb: 0.5 }}>
+                    {islem.ad_soyad}
+                  </Typography>
+                  
+                  <Grid container spacing={0.5} sx={{ fontSize: '0.75rem' }}>
+                    <Grid item xs={6}>
+                      <Typography variant="caption" color="text.secondary">Tarih:</Typography>
+                      <Typography variant="body2" sx={{ fontSize: '0.75rem' }}>
+                        {islem.full_tarih ? new Date(islem.full_tarih).toLocaleDateString('tr-TR') : '-'}
+                      </Typography>
+                    </Grid>
+                    <Grid item xs={6}>
+                      <Typography variant="caption" color="text.secondary">İlçe:</Typography>
+                      <Typography variant="body2" sx={{ fontSize: '0.75rem' }}>{islem.ilce || '-'}</Typography>
+                    </Grid>
+                    <Grid item xs={12}>
+                      <Typography variant="caption" color="text.secondary">Adres:</Typography>
+                      <Typography variant="body2" sx={{ fontSize: '0.75rem' }}>
+                        {[islem.mahalle, islem.cadde, islem.sokak, islem.kapi_no].filter(Boolean).join(', ') || '-'}
+                      </Typography>
+                    </Grid>
+                    <Grid item xs={6}>
+                      <Typography variant="caption" color="text.secondary">Cep Tel:</Typography>
+                      <Typography variant="body2" sx={{ fontSize: '0.75rem' }}>
+                        {formatPhoneNumber(islem.cep_tel)}
+                      </Typography>
+                    </Grid>
+                    {islem.yedek_tel && (
+                      <Grid item xs={6}>
+                        <Typography variant="caption" color="text.secondary">Yedek Tel:</Typography>
+                        <Typography variant="body2" sx={{ fontSize: '0.75rem' }}>
+                          {formatPhoneNumber(islem.yedek_tel)}
+                        </Typography>
+                      </Grid>
+                    )}
+                    <Grid item xs={6}>
+                      <Typography variant="caption" color="text.secondary">Ürün:</Typography>
+                      <Typography variant="body2" sx={{ fontSize: '0.75rem' }}>{islem.urun || '-'}</Typography>
+                    </Grid>
+                    <Grid item xs={6}>
+                      <Typography variant="caption" color="text.secondary">Marka:</Typography>
+                      <Typography variant="body2" sx={{ fontSize: '0.75rem' }}>{islem.marka || '-'}</Typography>
+                    </Grid>
+                    <Grid item xs={12}>
+                      <Typography variant="caption" color="text.secondary">Şikayet:</Typography>
+                      <Typography variant="body2" sx={{ fontSize: '0.75rem' }}>{islem.sikayet || '-'}</Typography>
+                    </Grid>
+                    {islem.yapilan_islem && (
+                      <Grid item xs={12}>
+                        <Typography variant="caption" color="text.secondary">Yapılan İşlem:</Typography>
+                        <Typography variant="body2" sx={{ fontSize: '0.75rem' }}>{islem.yapilan_islem}</Typography>
+                      </Grid>
+                    )}
+                    {islem.teknisyen_ismi && (
+                      <Grid item xs={6}>
+                        <Typography variant="caption" color="text.secondary">Teknisyen:</Typography>
+                        <Typography variant="body2" sx={{ fontSize: '0.75rem' }}>{islem.teknisyen_ismi}</Typography>
+                      </Grid>
+                    )}
+                    {islem.tutar && (
+                      <Grid item xs={6}>
+                        <Typography variant="caption" color="text.secondary">Tutar:</Typography>
+                        <Typography variant="body2" sx={{ fontSize: '0.75rem' }}>{islem.tutar} ₺</Typography>
+                      </Grid>
+                    )}
+                  </Grid>
+                </CardContent>
+                
+                <Divider />
+                
+                <CardActions sx={{ justifyContent: 'space-around', py: 0.5 }}>
+                  <Tooltip title={islem.is_durumu === 'acik' ? 'Tamamla' : (isAdminMode ? 'Durumu Değiştir (Admin)' : 'Tamamlandı')}>
+                    <span>
+                      <IconButton 
+                        size="small" 
+                        onClick={() => onToggleDurum(islem)}
+                        disabled={!isAdminMode && islem.is_durumu === 'tamamlandi'}
+                        sx={{ 
+                          bgcolor: (islem.is_durumu === 'acik' || isAdminMode) ? 'success.light' : 'grey.300',
+                        }}
+                      >
+                        <CheckCircle sx={{ fontSize: '1rem' }} />
+                      </IconButton>
+                    </span>
+                  </Tooltip>
+                  <Tooltip title="Düzenle">
+                    <span>
+                      <IconButton 
+                        size="small" 
+                        onClick={() => onEdit(islem)}
+                        disabled={!isAdminMode && islem.is_durumu === 'tamamlandi'}
+                        sx={{ bgcolor: 'primary.light' }}
+                      >
+                        <Edit sx={{ fontSize: '1rem' }} />
+                      </IconButton>
+                    </span>
+                  </Tooltip>
+                  <Tooltip title="Müşteri Geçmişi">
+                    <IconButton 
+                      size="small" 
+                      onClick={() => handleOpenCustomerHistory(islem.ad_soyad || '')}
+                      disabled={!islem.ad_soyad}
+                      sx={{ bgcolor: 'secondary.light' }}
+                    >
+                      <History sx={{ fontSize: '1rem' }} />
+                    </IconButton>
+                  </Tooltip>
+                  <Tooltip title="Yazdır">
+                    <IconButton 
+                      size="small" 
+                      onClick={() => handlePrintClick(islem)}
+                      sx={{ bgcolor: 'info.light' }}
+                    >
+                      <Print sx={{ fontSize: '1rem' }} />
+                    </IconButton>
+                  </Tooltip>
+                  <Tooltip title="Sil">
+                    <IconButton 
+                      size="small" 
+                      onClick={() => onDelete(islem.id)}
+                      sx={{ bgcolor: 'error.light' }}
+                    >
+                      <Delete sx={{ fontSize: '1rem' }} />
+                    </IconButton>
+                  </Tooltip>
+                </CardActions>
+              </Card>
+            );
+          })}
+        </Box>
+
+        {/* Müşteri Geçmişi Dialog - Mobil için */}
+        <Dialog 
+          open={historyDialogOpen} 
+          onClose={handleCloseHistoryDialog}
+          maxWidth="sm"
+          fullWidth
+          fullScreen={isMobile}
+        >
+          <DialogTitle>
+            Müşteri Geçmişi: {selectedCustomerName}
+          </DialogTitle>
+          <DialogContent>
+            {historyLoading ? (
+              <Box display="flex" justifyContent="center" p={4}>
+                <CircularProgress />
+              </Box>
+            ) : customerHistory.length === 0 ? (
+              <Typography variant="body2" color="text.secondary" sx={{ py: 2 }}>
+                Bu müşteri için kayıt bulunamadı.
+              </Typography>
+            ) : (
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                {customerHistory.map((record) => (
+                  <Card key={record.id} variant="outlined">
+                    <CardContent sx={{ p: 1.5, '&:last-child': { pb: 1.5 } }}>
+                      <Typography variant="caption" color="primary">
+                        {record.full_tarih ? new Date(record.full_tarih).toLocaleDateString('tr-TR') : '-'}
+                      </Typography>
+                      <Typography variant="body2" sx={{ fontSize: '0.75rem', mt: 0.5 }}>
+                        <strong>Ürün:</strong> {record.urun} - {record.marka}
+                      </Typography>
+                      <Typography variant="body2" sx={{ fontSize: '0.75rem' }}>
+                        <strong>Şikayet:</strong> {record.sikayet}
+                      </Typography>
+                      {record.yapilan_islem && (
+                        <Typography variant="body2" sx={{ fontSize: '0.75rem' }}>
+                          <strong>Yapılan İşlem:</strong> {record.yapilan_islem}
+                        </Typography>
+                      )}
+                      <Chip 
+                        label={record.is_durumu === 'acik' ? 'Açık' : 'Tamamlandı'}
+                        size="small"
+                        color={record.is_durumu === 'acik' ? 'warning' : 'success'}
+                        sx={{ mt: 0.5 }}
+                      />
+                    </CardContent>
+                  </Card>
+                ))}
+              </Box>
+            )}
+          </DialogContent>
+        </Dialog>
+
+        {/* Print Editor Dialog */}
+        {selectedIslemForPrint && (
+          <PrintEditor
+            open={printEditorOpen}
+            onClose={handlePrintClose}
+            islem={selectedIslemForPrint}
+          />
+        )}
+      </>
+    );
+  }
+
+  // Masaüstü görünüm - Table layout
   return (
     <>
     <TableContainer component={Paper} elevation={3}>
@@ -467,7 +713,7 @@ const IslemTable: React.FC<IslemTableProps> = ({
                   {...provided.droppableProps}
                 >
                   {/* Sıra No başlığı (draggable değil) */}
-                  <TableCell sx={{ color: 'white', fontWeight: 600, fontSize: '0.75rem', py: 0.3, px: 0.5 }}>
+                  <TableCell sx={{ color: 'white', fontWeight: 600, fontSize: '0.68rem', py: 0.15, px: 0.3 }}>
                     Sıra
                   </TableCell>
                   {columnOrder.map((columnId, index) => {
@@ -482,19 +728,19 @@ const IslemTable: React.FC<IslemTableProps> = ({
                             sx={{
                               color: 'white',
                               fontWeight: 600,
-                              fontSize: '0.75rem',
+                              fontSize: '0.68rem',
                               cursor: 'move',
                               userSelect: 'none',
                               bgcolor: snapshot.isDragging ? 'primary.dark' : 'primary.main',
-                              py: 0.3,
-                              px: 0.5,
+                              py: 0.15,
+                              px: 0.3,
                               '&:hover': {
                                 bgcolor: 'primary.dark',
                               },
                             }}
                           >
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.3 }}>
-                              <DragIndicator sx={{ fontSize: '0.9rem', opacity: 0.7 }} />
+                              <DragIndicator sx={{ fontSize: '0.8rem', opacity: 0.7 }} />
                               {column.label}
                             </Box>
                           </TableCell>
@@ -503,34 +749,34 @@ const IslemTable: React.FC<IslemTableProps> = ({
                     );
                   })}
                   {provided.placeholder}
-                  <TableCell sx={{ color: 'white', fontWeight: 600, fontSize: '0.75rem', py: 0.3, px: 0.5 }}>İşlemler</TableCell>
+                  <TableCell sx={{ color: 'white', fontWeight: 600, fontSize: '0.68rem', py: 0.15, px: 0.3 }}>İşlemler</TableCell>
                 </TableRow>
               )}
             </Droppable>
           </DragDropContext>
           {/* Filter Row */}
           <TableRow sx={{ bgcolor: '#f5f5f5' }}>
-            <TableCell sx={{ py: 0.5, px: 0.5 }}>
+            <TableCell sx={{ py: 0.3, px: 0.3 }}>
               <TextField
                 size="small"
                 placeholder="Sıra..."
                 value={filters.sira}
                 onChange={(e) => handleFilterChange('sira', e.target.value)}
                 sx={{
-                  '& .MuiInputBase-input': { fontSize: '0.75rem', py: 0.5, px: 0.5 },
-                  width: '60px'
+                  '& .MuiInputBase-input': { fontSize: '0.68rem', py: 0.3, px: 0.3 },
+                  width: '50px'
                 }}
               />
             </TableCell>
             {columnOrder.map((columnId) => (
-              <TableCell key={columnId} sx={{ py: 0.5, px: 0.5 }}>
+              <TableCell key={columnId} sx={{ py: 0.3, px: 0.3 }}>
                 <TextField
                   size="small"
                   placeholder={`${columnConfigs[columnId].label}...`}
                   value={filters[columnId as keyof typeof filters] || ''}
                   onChange={(e) => handleFilterChange(columnId, e.target.value)}
                   sx={{
-                    '& .MuiInputBase-input': { fontSize: '0.75rem', py: 0.5, px: 0.5 },
+                    '& .MuiInputBase-input': { fontSize: '0.68rem', py: 0.3, px: 0.3 },
                     minWidth: columnId === 'tarih' ? '90px' : 
                              columnId === 'cep_tel' ? '100px' : 
                              columnId === 'yedek_tel' ? '100px' : 
@@ -540,14 +786,14 @@ const IslemTable: React.FC<IslemTableProps> = ({
                 />
               </TableCell>
             ))}
-            <TableCell sx={{ py: 0.5, px: 0.5 }}></TableCell>
+            <TableCell sx={{ py: 0.3, px: 0.3 }}></TableCell>
           </TableRow>
         </TableHead>
         <TableBody>
           {filteredIslemler.map((islem) => {
-            // Orijinal listedeki sırayı bul ve tersine çevir (en yeni en üstte en büyük numara)
-            const originalIndex = islemler.findIndex(item => item.id === islem.id);
-            const originalSira = islemler.length - originalIndex;
+            // Global sıra hesabı - tüm kayıtlara göre (bayi/admin fark etmeksizin)
+            const originalIndex = siraReferenceList.findIndex(item => item.id === islem.id);
+            const originalSira = siraReferenceList.length - originalIndex;
             
             return (
             <TableRow 
@@ -559,16 +805,16 @@ const IslemTable: React.FC<IslemTableProps> = ({
                 }
               }}
             >
-              {/* Sıra No - ORİJİNAL SIRA */}
-              <TableCell sx={{ fontWeight: 500, fontSize: '0.75rem', py: 0.3, px: 0.5 }}>
+              {/* Sıra No - GLOBAL SIRA (TÜM KAYITLARA GÖRE) */}
+              <TableCell sx={{ fontWeight: 500, fontSize: '0.68rem', py: 0.15, px: 0.3 }}>
                 {originalSira}
               </TableCell>
               {columnOrder.map((columnId) => {
                 const column = columnConfigs[columnId];
                 return <React.Fragment key={columnId}>{column.render(islem)}</React.Fragment>;
               })}
-              <TableCell sx={{ py: 0.5, px: 1 }}>
-                <Box sx={{ display: 'flex', gap: 0.3 }}>
+              <TableCell sx={{ py: 0.2, px: 0.4 }}>
+                <Box sx={{ display: 'flex', gap: 0.2 }}>
                   <Tooltip title={islem.is_durumu === 'acik' ? 'Tamamla' : (isAdminMode ? 'Tamamlandı' : 'Tamamlandı - Durum değiştirilemez')}>
                     <span>
                       <IconButton 
@@ -577,8 +823,8 @@ const IslemTable: React.FC<IslemTableProps> = ({
                         disabled={!isAdminMode && islem.is_durumu === 'tamamlandi'}
                         sx={{ 
                           bgcolor: islem.is_durumu === 'acik' ? 'warning.light' : (isAdminMode ? 'success.light' : 'grey.300'),
-                          width: 28,
-                          height: 28,
+                          width: 24,
+                          height: 24,
                           '&:hover': {
                             bgcolor: islem.is_durumu === 'acik' ? 'warning.main' : (isAdminMode ? 'success.main' : 'grey.300'),
                           },
@@ -588,7 +834,7 @@ const IslemTable: React.FC<IslemTableProps> = ({
                           }
                         }}
                       >
-                        <Check sx={{ color: islem.is_durumu === 'acik' ? 'white' : (isAdminMode ? 'white' : 'grey.500'), fontSize: '1rem' }} />
+                        <Check sx={{ color: islem.is_durumu === 'acik' ? 'white' : (isAdminMode ? 'white' : 'grey.500'), fontSize: '0.85rem' }} />
                       </IconButton>
                     </span>
                   </Tooltip>
@@ -600,8 +846,8 @@ const IslemTable: React.FC<IslemTableProps> = ({
                         disabled={!isAdminMode && islem.is_durumu === 'tamamlandi'}
                         sx={{ 
                           bgcolor: (islem.is_durumu === 'acik' || isAdminMode) ? 'primary.light' : 'grey.300',
-                          width: 28,
-                          height: 28,
+                          width: 24,
+                          height: 24,
                           '&:hover': {
                             bgcolor: (islem.is_durumu === 'acik' || isAdminMode) ? 'primary.main' : 'grey.300',
                           },
@@ -611,7 +857,7 @@ const IslemTable: React.FC<IslemTableProps> = ({
                           }
                         }}
                       >
-                        <Edit sx={{ color: (islem.is_durumu === 'acik' || isAdminMode) ? 'white' : 'grey.500', fontSize: '1rem' }} />
+                        <Edit sx={{ color: (islem.is_durumu === 'acik' || isAdminMode) ? 'white' : 'grey.500', fontSize: '0.85rem' }} />
                       </IconButton>
                     </span>
                   </Tooltip>
@@ -622,8 +868,8 @@ const IslemTable: React.FC<IslemTableProps> = ({
                       disabled={!islem.ad_soyad}
                       sx={{ 
                         bgcolor: 'secondary.light',
-                        width: 28,
-                        height: 28,
+                        width: 24,
+                        height: 24,
                         '&:hover': {
                           bgcolor: 'secondary.main',
                         },
@@ -633,7 +879,7 @@ const IslemTable: React.FC<IslemTableProps> = ({
                         }
                       }}
                     >
-                      <History sx={{ color: 'white', fontSize: '1rem' }} />
+                      <History sx={{ color: 'white', fontSize: '0.85rem' }} />
                     </IconButton>
                   </Tooltip>
                   <Tooltip title="Yazdır">
@@ -645,14 +891,14 @@ const IslemTable: React.FC<IslemTableProps> = ({
                       }}
                       sx={{ 
                         bgcolor: 'info.light',
-                        width: 28,
-                        height: 28,
+                        width: 24,
+                        height: 24,
                         '&:hover': {
                           bgcolor: 'info.main',
                         }
                       }}
                     >
-                      <Print sx={{ color: 'white', fontSize: '1rem' }} />
+                      <Print sx={{ color: 'white', fontSize: '0.85rem' }} />
                     </IconButton>
                   </Tooltip>
                   <Tooltip title="Sil">
@@ -661,14 +907,14 @@ const IslemTable: React.FC<IslemTableProps> = ({
                       onClick={() => onDelete(islem.id)}
                       sx={{ 
                         bgcolor: 'error.light',
-                        width: 28,
-                        height: 28,
+                        width: 24,
+                        height: 24,
                         '&:hover': {
                           bgcolor: 'error.main',
                         }
                       }}
                     >
-                      <Delete sx={{ color: 'white', fontSize: '1rem' }} />
+                      <Delete sx={{ color: 'white', fontSize: '0.85rem' }} />
                     </IconButton>
                   </Tooltip>
                 </Box>

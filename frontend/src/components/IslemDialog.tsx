@@ -15,6 +15,9 @@ import {
   Checkbox,
   Typography,
   FormGroup,
+  MenuItem,
+  useMediaQuery,
+  useTheme,
 } from '@mui/material';
 import { Islem, IslemCreateDto, IslemUpdateDto, Teknisyen, Marka, Montaj, Aksesuar, Urun } from '../types';
 import { islemService } from '../services/api';
@@ -46,6 +49,8 @@ interface IslemDialogProps {
 
 const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave, openTamamlaModal = false }) => {
   const { showSnackbar } = useSnackbar();
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const [teknisyenler, setTeknisyenler] = useState<Teknisyen[]>([]);
   const [markalar, setMarkalar] = useState<Marka[]>([]);
   const [montajlar, setMontajlar] = useState<Montaj[]>([]);
@@ -113,13 +118,6 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
     }
   }, [montajlar, aksesuarlar]);
 
-  // Tamamlama modalını otomatik aç
-  useEffect(() => {
-    if (open && openTamamlaModal && islem && islem.is_durumu === 'acik') {
-      setShowTamamlaConfirm(true);
-    }
-  }, [open, openTamamlaModal, islem]);
-
   useEffect(() => {
     if (islem) {
       // Düzenleme modu - formu direkt göster
@@ -144,7 +142,8 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
         teknisyen_ismi: islem.teknisyen_ismi || '',
         yapilan_islem: islem.yapilan_islem || '',
         tutar: islem.tutar || 0,
-        is_durumu: islem.is_durumu,
+        // Tamamla modalı için varsayılan "tamamlandı", normal düzenleme için mevcut durum
+        is_durumu: openTamamlaModal ? 'tamamlandi' : islem.is_durumu,
       });
       
       // Yapılan işlem alanından checkbox'ları otomatik işaretle
@@ -181,6 +180,13 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
       setExistingRecord(null);
     }
   }, [islem, open]);
+
+  // Tamamlama modalını otomatik aç
+  useEffect(() => {
+    if (open && openTamamlaModal && islem && islem.is_durumu === 'acik') {
+      setShowTamamlaConfirm(true);
+    }
+  }, [open, openTamamlaModal, islem]);
 
   // Yapılan işlem metninden montaj ve aksesuar ID'lerini çıkar
   const parseYapilanIslem = (yapilanIslem: string) => {
@@ -402,25 +408,40 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
   };
 
   const handleConfirmTamamla = async () => {
-    // Tamamlama modalındaki bilgileri kaydet ve işlemi tamamla
+    // Zorunlu alan kontrolü
+    if (!formData.teknisyen_ismi || formData.teknisyen_ismi.trim() === '') {
+      showSnackbar('Teknisyen İsmi alanı zorunludur!', 'error');
+      return;
+    }
+
     const yapilanIslemText = buildYapilanIslem();
+    
+    if (!yapilanIslemText || yapilanIslemText.trim() === '') {
+      showSnackbar('Yapılan İşlem alanı zorunludur!', 'error');
+      return;
+    }
+
+    // Tamamlama modalındaki bilgileri kaydet
     const updatedData = {
       ...formData,
       yapilan_islem: yapilanIslemText,
-      is_durumu: 'tamamlandi' as const,
+      // is_durumu formData'dan alınacak (kullanıcının seçtiği değer)
     };
     
     try {
       if (islem) {
         await islemService.update(islem.id, updatedData);
-        showSnackbar('İşlem başarıyla tamamlandı!', 'success');
+        const statusMessage = formData.is_durumu === 'tamamlandi' 
+          ? 'İşlem başarıyla tamamlandı!' 
+          : 'İşlem başarıyla güncellendi!';
+        showSnackbar(statusMessage, 'success');
       }
       setShowTamamlaConfirm(false);
       onSave();
       onClose();
     } catch (error) {
       console.error('İşlem tamamlama hatası:', error);
-      showSnackbar('İşlem tamamlanamadı!', 'error');
+      showSnackbar('İşlem güncellenemedi!', 'error');
     }
   };
 
@@ -431,24 +452,46 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
   };
 
   const handleSubmit = async () => {
-    // Form validasyonu - Ürün ve Marka kontrolü
-    
-    // Ürün kontrolü - eğer doldurulmuşsa tanımlı listede olmalı
-    if (formData.urun && formData.urun.trim() !== '') {
-      const urunExists = urunler.some(u => u.isim === formData.urun);
-      if (!urunExists) {
-        showSnackbar('Lütfen sadece tanımlı ürünlerden seçim yapınız!', 'error');
-        return;
-      }
+    // Zorunlu alan kontrolü
+    if (!formData.ad_soyad || formData.ad_soyad.trim() === '') {
+      showSnackbar('Ad Soyad alanı zorunludur!', 'error');
+      return;
     }
     
-    // Marka kontrolü - eğer doldurulmuşsa tanımlı listede olmalı
-    if (formData.marka && formData.marka.trim() !== '') {
-      const markaExists = markalar.some(m => m.isim === formData.marka);
-      if (!markaExists) {
-        showSnackbar('Lütfen sadece tanımlı markalardan seçim yapınız!', 'error');
-        return;
-      }
+    if (!formData.ilce || formData.ilce.trim() === '') {
+      showSnackbar('İlçe alanı zorunludur!', 'error');
+      return;
+    }
+    
+    if (!formData.urun || formData.urun.trim() === '') {
+      showSnackbar('Ürün alanı zorunludur!', 'error');
+      return;
+    }
+    
+    if (!formData.marka || formData.marka.trim() === '') {
+      showSnackbar('Marka alanı zorunludur!', 'error');
+      return;
+    }
+    
+    if (!formData.sikayet || formData.sikayet.trim() === '') {
+      showSnackbar('Şikayet alanı zorunludur!', 'error');
+      return;
+    }
+    
+    // Form validasyonu - Ürün ve Marka kontrolü
+    
+    // Ürün kontrolü - tanımlı listede olmalı
+    const urunExists = urunler.some(u => u.isim === formData.urun);
+    if (!urunExists) {
+      showSnackbar('Lütfen sadece tanımlı ürünlerden seçim yapınız!', 'error');
+      return;
+    }
+    
+    // Marka kontrolü - tanımlı listede olmalı
+    const markaExists = markalar.some(m => m.isim === formData.marka);
+    if (!markaExists) {
+      showSnackbar('Lütfen sadece tanımlı markalardan seçim yapınız!', 'error');
+      return;
     }
     
     // Direkt kaydet (tamamlama kontrolü kaldırıldı)
@@ -495,7 +538,7 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
 
   return (
     <>
-    <Dialog open={open && !showTamamlaConfirm} onClose={onClose} maxWidth="md" fullWidth>
+    <Dialog open={open && !showTamamlaConfirm} onClose={onClose} maxWidth="md" fullWidth fullScreen={isMobile}>
       <DialogTitle>{islem ? 'İşlem Düzenle' : 'Yeni İşlem Ekle'}</DialogTitle>
       <DialogContent>
         {/* Telefon Numarası Sorgusu (Sadece yeni kayıt için) */}
@@ -559,6 +602,7 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
           <Grid item xs={12} sm={6}>
             <TextField
               fullWidth
+              required
               label="Ad Soyad"
               value={formData.ad_soyad}
               onChange={handleChange('ad_soyad')}
@@ -567,6 +611,7 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
           <Grid item xs={12} sm={6}>
             <TextField
               fullWidth
+              required
               label="İlçe"
               value={formData.ilce}
               onChange={handleChange('ilce')}
@@ -596,14 +641,6 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
               onChange={handleChange('sokak')}
             />
           </Grid>
-          <Grid item xs={12} sm={6}>
-            <TextField
-              fullWidth
-              label="Apartman/Site"
-              value={formData.apartman_site}
-              onChange={handleChange('apartman_site')}
-            />
-          </Grid>
           
           <Grid item xs={12} sm={3}>
             <TextField
@@ -621,7 +658,7 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
               onChange={handleChange('daire_no')}
             />
           </Grid>
-          <Grid item xs={12} sm={3}>
+          <Grid item xs={12} sm={6}>
             <TextField
               fullWidth
               label="Blok No"
@@ -629,12 +666,17 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
               onChange={handleChange('blok_no')}
             />
           </Grid>
-          <Grid item xs={12} sm={3}>
-            {/* Boş alan - hizalama için */}
-          </Grid>
           <Grid item xs={12} sm={6}>
             <TextField
               fullWidth
+              label="Apartman/Site"
+              value={formData.apartman_site}
+              onChange={handleChange('apartman_site')}
+            />
+          </Grid>
+          <Grid item xs={12} sm={6}>
+            <TextField
+              fullWidth 
               label="Cep Telefonu"
               value={formatPhoneNumber(formData.cep_tel)}
               onChange={handleChange('cep_tel')}
@@ -667,6 +709,7 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
                 <TextField
                   {...params}
                   fullWidth
+                  required
                   label="Ürün"
                   placeholder="Ürün seçiniz..."
                   onKeyDown={(e) => {
@@ -696,6 +739,7 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
                 <TextField
                   {...params}
                   fullWidth
+                  required
                   label="Marka"
                   placeholder="Marka seçiniz..."
                   onKeyDown={(e) => {
@@ -780,6 +824,7 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
           <Grid item xs={12}>
             <TextField
               fullWidth
+              required
               multiline
               rows={3}
               label="Şikayet"
@@ -811,6 +856,7 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
         }}
         maxWidth="md"
         fullWidth
+        fullScreen={isMobile}
         disableEscapeKeyDown={false}
       >
         <DialogTitle sx={{ bgcolor: 'success.light', color: 'success.contrastText' }}>
@@ -819,68 +865,75 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
         <DialogContent sx={{ mt: 2 }}>
           <Grid container spacing={2}>
             {/* Montaj ve Aksesuar Checkboxları */}
-            {(montajlar.length > 0 || aksesuarlar.length > 0) && (
-              <Grid item xs={12}>
-                <Box sx={{ p: 2, border: '1px solid #e0e0e0', borderRadius: 1, bgcolor: '#f9f9f9' }}>
-                  <Grid container spacing={2}>
-                    {/* Montajlar */}
-                    {montajlar.length > 0 && (
-                      <Grid item xs={12} sm={6}>
-                        <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 'bold', color: '#0D3282' }}>
-                          Montaj
-                        </Typography>
-                        <FormGroup>
-                          {montajlar.map((montaj) => (
-                            <FormControlLabel
-                              key={montaj.id}
-                              control={
-                                <Checkbox
-                                  checked={selectedMontajlar.includes(montaj.id)}
-                                  onChange={() => handleMontajChange(montaj.id)}
-                                  sx={{
-                                    color: '#0D3282',
-                                    '&.Mui-checked': { color: '#0D3282' }
-                                  }}
-                                />
-                              }
-                              label={montaj.isim}
-                            />
-                          ))}
-                        </FormGroup>
-                      </Grid>
-                    )}
-
-                    {/* Aksesuarlar */}
-                    {aksesuarlar.length > 0 && (
-                      <Grid item xs={12} sm={6}>
-                        <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 'bold', color: '#0D8220' }}>
-                          Aksesuarlar
-                        </Typography>
-                        <FormGroup>
-                          {aksesuarlar.map((aksesuar) => (
-                            <FormControlLabel
-                              key={aksesuar.id}
-                              control={
-                                <Checkbox
-                                  checked={selectedAksesuarlar.includes(aksesuar.id)}
-                                  onChange={() => handleAksesuarChange(aksesuar.id)}
-                                  sx={{
-                                    color: '#0D8220',
-                                    '&.Mui-checked': { color: '#0D8220' }
-                                  }}
-                                />
-                              }
-                              label={aksesuar.isim}
-                            />
-                          ))}
-                        </FormGroup>
-                      </Grid>
+            <Grid item xs={12}>
+              <Box sx={{ p: 2, border: '1px solid #e0e0e0', borderRadius: 1, bgcolor: '#f9f9f9' }}>
+                <Grid container spacing={2}>
+                  {/* Montajlar */}
+                  <Grid item xs={12} sm={6}>
+                    <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 'bold', color: '#0D3282' }}>
+                      Montaj
+                    </Typography>
+                    {montajlar.length > 0 ? (
+                      <FormGroup>
+                        {montajlar.map((montaj) => (
+                          <FormControlLabel
+                            key={montaj.id}
+                            control={
+                              <Checkbox
+                                checked={selectedMontajlar.includes(montaj.id)}
+                                onChange={() => handleMontajChange(montaj.id)}
+                                sx={{
+                                  color: '#0D3282',
+                                  '&.Mui-checked': { color: '#0D3282' }
+                                }}
+                              />
+                            }
+                            label={montaj.isim}
+                          />
+                        ))}
+                      </FormGroup>
+                    ) : (
+                      <Typography variant="body2" color="text.secondary">
+                        Montaj listesi boş
+                      </Typography>
                     )}
                   </Grid>
-                </Box>
-              </Grid>
-            )}
 
+                  {/* Aksesuarlar */}
+                  <Grid item xs={12} sm={6}>
+                    <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 'bold', color: '#0D8220' }}>
+                      Aksesuarlar
+                    </Typography>
+                    {aksesuarlar.length > 0 ? (
+                      <FormGroup>
+                        {aksesuarlar.map((aksesuar) => (
+                          <FormControlLabel
+                            key={aksesuar.id}
+                            control={
+                              <Checkbox
+                                checked={selectedAksesuarlar.includes(aksesuar.id)}
+                                onChange={() => handleAksesuarChange(aksesuar.id)}
+                                sx={{
+                                  color: '#0D8220',
+                                  '&.Mui-checked': { color: '#0D8220' }
+                                }}
+                              />
+                            }
+                            label={aksesuar.isim}
+                          />
+                        ))}
+                      </FormGroup>
+                    ) : (
+                      <Typography variant="body2" color="text.secondary">
+                        Aksesuar listesi boş
+                      </Typography>
+                    )}
+                  </Grid>
+                </Grid>
+              </Box>
+            </Grid>
+
+            {/* Teknisyen İsmi - Zorunlu */}
             <Grid item xs={12} sm={6}>
               <Autocomplete
                 freeSolo
@@ -896,6 +949,7 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
                 renderInput={(params) => (
                   <TextField
                     {...params}
+                    required
                     fullWidth
                     label="Teknisyen İsmi"
                   />
@@ -903,6 +957,7 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
               />
             </Grid>
 
+            {/* Tutar */}
             <Grid item xs={12} sm={6}>
               <TextField
                 fullWidth
@@ -916,8 +971,10 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
               />
             </Grid>
 
+            {/* Yapılan İşlem - Zorunlu */}
             <Grid item xs={12}>
               <TextField
+                required
                 fullWidth
                 multiline
                 rows={3}
@@ -925,6 +982,20 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
                 value={formData.yapilan_islem}
                 onChange={handleChange('yapilan_islem')}
               />
+            </Grid>
+
+            {/* İş Durumu - En altta */}
+            <Grid item xs={12} sm={6}>
+              <TextField
+                select
+                fullWidth
+                label="İş Durumu"
+                value={formData.is_durumu}
+                onChange={handleChange('is_durumu')}
+              >
+                <MenuItem value="acik">Açık</MenuItem>
+                <MenuItem value="tamamlandi">Tamamlandı</MenuItem>
+              </TextField>
             </Grid>
           </Grid>
         </DialogContent>

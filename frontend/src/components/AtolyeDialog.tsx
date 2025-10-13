@@ -9,6 +9,8 @@ import {
   Grid,
   Autocomplete,
   MenuItem,
+  useMediaQuery,
+  useTheme,
 } from '@mui/material';
 import { Atolye, AtolyeCreateDto, AtolyeUpdateDto, Bayi, Marka } from '../types';
 import { api } from '../services/api';
@@ -32,6 +34,8 @@ const STATUS_OPTIONS = [
 const AtolyeDialog: React.FC<AtolyeDialogProps> = ({ open, onClose, atolyeId }) => {
   const isEdit = atolyeId !== null;
   const { showSnackbar } = useSnackbar();
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
   const [bayiler, setBayiler] = useState<Bayi[]>([]);
   const [markalar, setMarkalar] = useState<Marka[]>([]);
@@ -139,8 +143,17 @@ const AtolyeDialog: React.FC<AtolyeDialogProps> = ({ open, onClose, atolyeId }) 
   };
 
   const handleSubmit = async () => {
+    // Bayi Adı VEYA Müşteri Adı kontrolü - en az biri dolu olmalı
+    const hasBayi = formData.bayi_adi && formData.bayi_adi.trim() !== '';
+    const hasMusteri = formData.musteri_ad_soyad && formData.musteri_ad_soyad.trim() !== '';
+    
+    if (!hasBayi && !hasMusteri) {
+      showSnackbar('Bayi Adı veya Müşteri Ad Soyad alanlarından en az biri doldurulmalıdır!', 'error');
+      return;
+    }
+
     // Bayi kontrolü - eğer doldurulmuşsa tanımlı listede olmalı
-    if (formData.bayi_adi && formData.bayi_adi.trim() !== '') {
+    if (hasBayi) {
       const bayiExists = bayiler.some(b => b.isim === formData.bayi_adi);
       if (!bayiExists) {
         showSnackbar('Lütfen sadece tanımlı bayilerden seçim yapınız!', 'error');
@@ -148,13 +161,35 @@ const AtolyeDialog: React.FC<AtolyeDialogProps> = ({ open, onClose, atolyeId }) 
       }
     }
 
-    // Marka kontrolü - eğer doldurulmuşsa tanımlı listede olmalı
-    if (formData.marka && formData.marka.trim() !== '') {
-      const markaExists = markalar.some(m => m.isim === formData.marka);
-      if (!markaExists) {
-        showSnackbar('Lütfen sadece tanımlı markalardan seçim yapınız!', 'error');
-        return;
-      }
+    // Marka zorunlu kontrolü
+    if (!formData.marka || formData.marka.trim() === '') {
+      showSnackbar('Marka alanı zorunludur!', 'error');
+      return;
+    }
+
+    // Marka kontrolü - tanımlı listede olmalı
+    const markaExists = markalar.some(m => m.isim === formData.marka);
+    if (!markaExists) {
+      showSnackbar('Lütfen sadece tanımlı markalardan seçim yapınız!', 'error');
+      return;
+    }
+
+    // Model zorunlu kontrolü
+    if (!formData.kod || formData.kod.trim() === '') {
+      showSnackbar('Model alanı zorunludur!', 'error');
+      return;
+    }
+
+    // Şikayet zorunlu kontrolü
+    if (!formData.sikayet || formData.sikayet.trim() === '') {
+      showSnackbar('Şikayet alanı zorunludur!', 'error');
+      return;
+    }
+
+    // Özel Not zorunlu kontrolü
+    if (!formData.ozel_not || formData.ozel_not.trim() === '') {
+      showSnackbar('Özel Not alanı zorunludur!', 'error');
+      return;
     }
 
     // Telefon kontrolü - eğer doldurulmuşsa 11 haneli olmalı
@@ -193,7 +228,7 @@ const AtolyeDialog: React.FC<AtolyeDialogProps> = ({ open, onClose, atolyeId }) 
   };
 
   return (
-    <Dialog open={open} onClose={() => onClose()} maxWidth="md" fullWidth>
+    <Dialog open={open} onClose={() => onClose()} maxWidth="md" fullWidth fullScreen={isMobile}>
       <DialogTitle>{isEdit ? 'Kaydı Düzenle' : 'Yeni Kayıt Ekle'}</DialogTitle>
       <DialogContent>
         <Grid container spacing={2} sx={{ mt: 1 }}>
@@ -261,7 +296,8 @@ const AtolyeDialog: React.FC<AtolyeDialogProps> = ({ open, onClose, atolyeId }) 
               }}
               renderInput={(params) => (
                 <TextField 
-                  {...params} 
+                  {...params}
+                  required
                   label="Marka" 
                   fullWidth 
                   placeholder="Marka seçiniz..."
@@ -279,6 +315,7 @@ const AtolyeDialog: React.FC<AtolyeDialogProps> = ({ open, onClose, atolyeId }) 
           {/* Model */}
           <Grid item xs={12} md={6}>
             <TextField
+              required
               label="Model"
               fullWidth
               value={formData.kod}
@@ -299,6 +336,7 @@ const AtolyeDialog: React.FC<AtolyeDialogProps> = ({ open, onClose, atolyeId }) 
           {/* Şikayet */}
           <Grid item xs={12}>
             <TextField
+              required
               label="Şikayet"
               fullWidth
               multiline
@@ -311,6 +349,7 @@ const AtolyeDialog: React.FC<AtolyeDialogProps> = ({ open, onClose, atolyeId }) 
           {/* Özel Not */}
           <Grid item xs={12}>
             <TextField
+              required
               label="Özel Not"
               fullWidth
               multiline

@@ -74,14 +74,14 @@ const Login: React.FC = () => {
     <Container maxWidth="md">
       <Box
         sx={{
-          marginTop: 8,
+          marginTop: { xs: 4, sm: 8 },
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
         }}
       >
-        <Paper elevation={3} sx={{ p: 4, width: '100%' }}>
-          <Typography component="h1" variant="h4" align="center" gutterBottom sx={{ mb: 4 }}>
+        <Paper elevation={3} sx={{ p: { xs: 2, sm: 4 }, width: '100%' }}>
+          <Typography component="h1" variant="h4" align="center" gutterBottom sx={{ mb: 4, fontSize: { xs: '1.75rem', sm: '2.125rem' } }}>
             CRM Sistemi
           </Typography>
 

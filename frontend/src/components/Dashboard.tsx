@@ -18,6 +18,13 @@ import {
   DialogContent,
   DialogContentText,
   DialogActions,
+  Drawer,
+  List,
+  ListItem,
+  ListItemIcon,
+  ListItemText,
+  useMediaQuery,
+  useTheme,
 } from '@mui/material';
 import { 
   Logout as LogoutIcon, 
@@ -28,6 +35,8 @@ import {
   Home,
   Build,
   History,
+  Menu as MenuIcon,
+  AdminPanelSettings,
 } from '@mui/icons-material';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
@@ -51,6 +60,8 @@ const Dashboard: React.FC = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const { showSnackbar } = useSnackbar();
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const [islemler, setIslemler] = useState<Islem[]>([]);
   const [filteredIslemler, setFilteredIslemler] = useState<Islem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -59,6 +70,7 @@ const Dashboard: React.FC = () => {
   const [openTamamlaModal, setOpenTamamlaModal] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
   const [statusFilter, setStatusFilter] = useState<'all' | 'acik' | 'tamamlandi'>('all');
   // Bayi için tab değeri her zaman 0 (tek tab var)
   const [activeTab, setActiveTab] = useState(0);
@@ -182,22 +194,12 @@ const Dashboard: React.FC = () => {
   };
 
   const handleToggleDurum = async (islem: Islem) => {
-    // Eğer açıktan tamamlandıya geçiyorsa tamamlama dialogunu aç
-    if (islem.is_durumu === 'acik') {
-      setSelectedIslem(islem);
-      setOpenTamamlaModal(true); // Tamamlama modalını aktif et
-      setOpenDialog(true);
-      // Dialog içinde tamamlama modalı otomatik açılacak
-    } else {
-      // Tamamlandıdan açığa geçiş (geri alma) direkt yapılabilir
-      try {
-        await islemService.updateDurum(islem.id, 'acik');
-        showSnackbar('İş durumu açık olarak güncellendi!', 'success');
-      } catch (error) {
-        console.error('Durum güncellenirken hata:', error);
-        showSnackbar('Durum güncellenirken hata oluştu!', 'error');
-      }
-    }
+    // Her durumda tamamlama modalını aç (admin isterse durumu değiştirebilir)
+    setSelectedIslem(islem);
+    setOpenTamamlaModal(true); // Tamamlama modalını aktif et
+    setOpenDialog(true);
+    // Dialog içinde tamamlama modalı otomatik açılacak
+    // Admin isterse iş durumunu "açık" yapabilir, isterse "tamamlandı" bırakabilir
   };
 
   const handleConfirmTamamla = async () => {
@@ -240,16 +242,43 @@ const Dashboard: React.FC = () => {
     handleLogout();
   };
 
+  const handleDrawerToggle = () => {
+    setMobileDrawerOpen(!mobileDrawerOpen);
+  };
+
+  const handleDrawerNavigation = (tabIndex: number) => {
+    setActiveTab(tabIndex);
+    setMobileDrawerOpen(false);
+  };
+
+  const adminMenuItems = [
+    { label: 'Ana Sayfa', icon: <Home />, index: 0 },
+    { label: 'Atölye Takip', icon: <Build />, index: 1 },
+    { label: 'Müşteri Geçmişi', icon: <History />, index: 2 },
+    { label: 'Yönetim', icon: <AdminPanelSettings />, index: 3 },
+  ];
+
   return (
     <Box sx={{ flexGrow: 1 }}>
       <AppBar position="static" sx={{ bgcolor: '#2C3E82' }}>
         <Toolbar sx={{ minHeight: '48px !important', px: 2 }}>
+          {/* Mobilde hamburger menu (sadece admin için) */}
+          {isMobile && !isBayi && (
+            <IconButton
+              color="inherit"
+              edge="start"
+              onClick={handleDrawerToggle}
+              sx={{ mr: 1 }}
+            >
+              <MenuIcon />
+            </IconButton>
+          )}
           <Build sx={{ mr: 1, fontSize: '1.5rem' }} />
-          <Typography variant="h6" component="div" sx={{ fontWeight: 600, fontSize: '1.1rem' }}>
+          <Typography variant="h6" component="div" sx={{ fontWeight: 600, fontSize: { xs: '0.95rem', sm: '1.1rem' } }}>
             Teknik Servis - Ana Sayfa
           </Typography>
           <Box sx={{ flexGrow: 1 }} />
-          <Typography variant="body2" sx={{ mr: 2 }}>
+          <Typography variant="body2" sx={{ mr: 2, display: { xs: 'none', sm: 'block' } }}>
             {new Date().toLocaleDateString('tr-TR', { day: '2-digit', month: '2-digit', year: 'numeric' })}
           </Typography>
           <IconButton
@@ -281,8 +310,43 @@ const Dashboard: React.FC = () => {
         </Toolbar>
       </AppBar>
 
-      {/* Navigation Tabs */}
-      <Box sx={{ bgcolor: 'background.paper', borderBottom: 1, borderColor: 'divider' }}>
+      {/* Mobile Drawer - Sadece Admin için */}
+      {!isBayi && (
+        <Drawer
+          anchor="left"
+          open={mobileDrawerOpen}
+          onClose={handleDrawerToggle}
+          sx={{
+            '& .MuiDrawer-paper': {
+              width: 240,
+            },
+          }}
+        >
+          <List>
+            {adminMenuItems.map((item) => (
+              <ListItem
+                button
+                key={item.index}
+                selected={activeTab === item.index}
+                onClick={() => handleDrawerNavigation(item.index)}
+                sx={{
+                  '&.Mui-selected': {
+                    bgcolor: 'rgba(44, 62, 130, 0.1)',
+                  },
+                }}
+              >
+                <ListItemIcon sx={{ color: activeTab === item.index ? '#2C3E82' : 'inherit' }}>
+                  {item.icon}
+                </ListItemIcon>
+                <ListItemText primary={item.label} />
+              </ListItem>
+            ))}
+          </List>
+        </Drawer>
+      )}
+
+      {/* Navigation Tabs - Masaüstünde göster, mobilde gizle */}
+      <Box sx={{ bgcolor: 'background.paper', borderBottom: 1, borderColor: 'divider', display: { xs: 'none', sm: 'block' } }}>
         {isBayi ? (
           <Tabs 
             value={0}
@@ -349,7 +413,7 @@ const Dashboard: React.FC = () => {
         )}
       </Box>
 
-      <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
+      <Container maxWidth="xl" sx={{ mt: { xs: 2, sm: 4 }, mb: { xs: 2, sm: 4 }, px: { xs: 1, sm: 2 } }}>
         {isBayi ? (
           // Bayi sadece Atölye Takip görür (activeTab her zaman 0)
           <AtolyeTakip />
@@ -416,6 +480,7 @@ const Dashboard: React.FC = () => {
 
             <IslemTable
               islemler={filteredIslemler}
+              allIslemler={islemler}
               loading={loading}
               onEdit={handleOpenDialog}
               onDelete={handleDeleteIslem}

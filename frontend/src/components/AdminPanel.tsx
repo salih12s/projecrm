@@ -188,8 +188,8 @@ const AdminPanel: React.FC = () => {
         Sistemdeki tüm kullanıcıları görüntüleyebilir, aktif/pasif yapabilir ve kayıtlarını inceleyebilirsiniz.
       </Alert>
 
-      <TableContainer component={Paper}>
-        <Table>
+      <TableContainer component={Paper} sx={{ overflowX: 'auto' }}>
+        <Table sx={{ minWidth: { xs: 650, sm: 'auto' } }}>
           <TableHead>
             <TableRow sx={{ bgcolor: '#0D3282' }}>
               <TableCell sx={{ color: 'white', fontWeight: 600 }}>Kullanıcı Adı</TableCell>
@@ -263,7 +263,7 @@ const AdminPanel: React.FC = () => {
                           {user.username} - Ana Sayfa Kayıtları ({userRecords[user.username]?.length || 0} adet)
                         </Typography>
                         {userRecords[user.username] && userRecords[user.username].length > 0 ? (
-                          <TableContainer component={Paper} sx={{ mt: 2, mb: 3, maxHeight: 400, overflow: 'auto' }}>
+                          <TableContainer component={Paper} sx={{ mt: 2, mb: 3, maxHeight: 400, overflow: 'auto', overflowX: 'auto' }}>
                             <Table size="small" stickyHeader>
                               <TableHead>
                                 <TableRow sx={{ bgcolor: '#e0e0e0' }}>
@@ -336,7 +336,7 @@ const AdminPanel: React.FC = () => {
                           {user.username} - Atölye Takip Kayıtları ({userAtolyeRecords[user.username]?.length || 0} adet)
                         </Typography>
                         {userAtolyeRecords[user.username] && userAtolyeRecords[user.username].length > 0 ? (
-                          <TableContainer component={Paper} sx={{ mt: 2, maxHeight: 400, overflow: 'auto' }}>
+                          <TableContainer component={Paper} sx={{ mt: 2, maxHeight: 400, overflow: 'auto', overflowX: 'auto' }}>
                             <Table size="small" stickyHeader>
                               <TableHead>
                                 <TableRow sx={{ bgcolor: '#e0e0e0' }}>
