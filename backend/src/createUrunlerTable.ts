@@ -13,25 +13,8 @@ async function createUrunlerTable() {
     
     console.log('✅ Urunler tablosu başarıyla oluşturuldu');
 
-    // Örnek veriler ekle
-    const checkResult = await pool.query('SELECT COUNT(*) FROM urunler');
-    const count = parseInt(checkResult.rows[0].count);
-    
-    if (count === 0) {
-      await pool.query(`
-        INSERT INTO urunler (isim) VALUES 
-          ('Davlumbaz'),
-          ('Klima'),
-          ('Ocak'),
-          ('Fırın'),
-          ('Bulaşık Makinesi'),
-          ('Çamaşır Makinesi'),
-          ('Kurutma Makinesi')
-      `);
-      console.log('✅ Örnek ürünler eklendi');
-    } else {
-      console.log(`ℹ️  Veritabanında zaten ${count} ürün var`);
-    }
+    // Örnek verileri ekleme (kaldırıldı - kullanıcı istedi)
+    console.log('ℹ️  Tablo oluşturuldu, örnek veri eklenmedi');
 
     process.exit(0);
   } catch (error) {

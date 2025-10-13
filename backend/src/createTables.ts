@@ -108,6 +108,15 @@ const createTables = async (): Promise<void> => {
       )
     `);
 
+    // Ürünler tablosu
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS urunler (
+        id SERIAL PRIMARY KEY,
+        isim VARCHAR(255) NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
     console.log('Tablolar başarıyla oluşturuldu');
   } catch (error) {
     console.error('Tablo oluşturma hatası:', error);
