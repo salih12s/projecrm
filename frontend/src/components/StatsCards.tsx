@@ -5,14 +5,15 @@ import {
   CheckCircle,
   HourglassEmpty,
   AttachMoney,
+  Build,
 } from '@mui/icons-material';
 import { Islem } from '../types';
 import { useAuth } from '../context/AuthContext';
 
 interface StatsCardsProps {
   islemler: Islem[];
-  onFilterClick?: (filter: 'all' | 'acik' | 'tamamlandi') => void;
-  activeFilter?: 'all' | 'acik' | 'tamamlandi';
+  onFilterClick?: (filter: 'all' | 'acik' | 'parca_bekliyor' | 'tamamlandi') => void;
+  activeFilter?: 'all' | 'acik' | 'parca_bekliyor' | 'tamamlandi';
 }
 
 const StatsCards: React.FC<StatsCardsProps> = ({ islemler, onFilterClick, activeFilter = 'all' }) => {
@@ -20,6 +21,7 @@ const StatsCards: React.FC<StatsCardsProps> = ({ islemler, onFilterClick, active
   const isAdmin = user?.role === 'admin';
   
   const acikIsler = islemler.filter(i => i.is_durumu === 'acik').length;
+  const parcaBekliyor = islemler.filter(i => i.is_durumu === 'parca_bekliyor').length;
   const tamamlananIsler = islemler.filter(i => i.is_durumu === 'tamamlandi').length;
   const toplamTutar = islemler.reduce((sum, i) => {
     const tutar = typeof i.tutar === 'number' ? i.tutar : parseFloat(String(i.tutar || 0));
@@ -32,7 +34,7 @@ const StatsCards: React.FC<StatsCardsProps> = ({ islemler, onFilterClick, active
     icon: JSX.Element;
     color: string;
     bgColor: string;
-    filterValue: 'all' | 'acik' | 'tamamlandi';
+    filterValue: 'all' | 'acik' | 'parca_bekliyor' | 'tamamlandi';
   }> = [
     {
       title: 'Toplam İşlem',
@@ -49,6 +51,14 @@ const StatsCards: React.FC<StatsCardsProps> = ({ islemler, onFilterClick, active
       color: '#ed6c02',
       bgColor: '#fff4e5',
       filterValue: 'acik',
+    },
+    {
+      title: 'Parça Bekliyor',
+      value: parcaBekliyor,
+      icon: <Build />,
+      color: '#1976d2',
+      bgColor: '#e3f2fd',
+      filterValue: 'parca_bekliyor',
     },
     {
       title: 'Tamamlanan',
@@ -75,15 +85,15 @@ const StatsCards: React.FC<StatsCardsProps> = ({ islemler, onFilterClick, active
   return (
     <Grid container spacing={2} sx={{ mb: 2 }}>
       {stats.map((stat, index) => (
-        <Grid item xs={12} sm={6} md={isAdmin ? 3 : 4} key={index}>
+        <Grid item xs={12} sm={6} md={isAdmin ? 2.4 : 3} key={index}>
           <Paper
             elevation={1}
             onClick={() => onFilterClick && onFilterClick(stat.filterValue)}
             sx={{
-              p: 2,
+              p: 1.5,
               display: 'flex',
               alignItems: 'center',
-              gap: 1.5,
+              gap: 1,
               cursor: onFilterClick ? 'pointer' : 'default',
               transition: 'all 0.2s',
               border: activeFilter === stat.filterValue ? '2px solid' : '2px solid transparent',
@@ -98,20 +108,20 @@ const StatsCards: React.FC<StatsCardsProps> = ({ islemler, onFilterClick, active
               sx={{
                 backgroundColor: stat.bgColor,
                 color: stat.color,
-                borderRadius: '8px',
-                p: 1,
+                borderRadius: '6px',
+                p: 0.75,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
               }}
             >
-              {React.cloneElement(stat.icon, { fontSize: 'medium' })}
+              {React.cloneElement(stat.icon, { fontSize: 'small' })}
             </Box>
             <Box>
-              <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.75rem' }}>
+              <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
                 {stat.title}
               </Typography>
-              <Typography variant="h6" fontWeight="bold" sx={{ lineHeight: 1.2 }}>
+              <Typography variant="h6" fontWeight="bold" sx={{ lineHeight: 1.1, fontSize: '1.1rem' }}>
                 {stat.value}
               </Typography>
             </Box>

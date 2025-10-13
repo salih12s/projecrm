@@ -67,6 +67,7 @@ const Dashboard: React.FC = () => {
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const [islemler, setIslemler] = useState<Islem[]>([]);
   const [filteredIslemler, setFilteredIslemler] = useState<Islem[]>([]);
+  const [tableFilteredIslemler, setTableFilteredIslemler] = useState<Islem[]>([]); // IslemTable'dan gelen filtrelenmiş liste
   const [loading, setLoading] = useState(true);
   const [openDialog, setOpenDialog] = useState(false);
   const [selectedIslem, setSelectedIslem] = useState<Islem | null>(null);
@@ -74,7 +75,7 @@ const Dashboard: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
-  const [statusFilter, setStatusFilter] = useState<'all' | 'acik' | 'tamamlandi'>('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'acik' | 'parca_bekliyor' | 'tamamlandi'>('all');
   const [dateFilter, setDateFilter] = useState<string>(''); // Tarih filtresi
   const [showTodayOnly, setShowTodayOnly] = useState(false); // Bugün alınan işler
   // Bayi için tab değeri her zaman 0 (tek tab var)
@@ -207,16 +208,37 @@ const Dashboard: React.FC = () => {
     }
   };
 
+  const handleDelete = async (islem: Islem) => {
+    if (!window.confirm(`"${islem.ad_soyad}" müşterisine ait işlemi silmek istediğinize emin misiniz?`)) {
+      return;
+    }
+    
+    try {
+      await islemService.delete(islem.id);
+      showSnackbar('İşlem başarıyla silindi!', 'success');
+      loadIslemler(); // Listeyi yenile
+    } catch (error) {
+      console.error('İşlem silinirken hata:', error);
+      showSnackbar('İşlem silinirken hata oluştu!', 'error');
+    }
+  };
+
   const handleCancelTamamla = () => {
     setConfirmDialog({ open: false, islem: null });
   };
 
   const handleExport = () => {
-    exportListToPDF(filteredIslemler);
-    showSnackbar(`${filteredIslemler.length} kayıt PDF'e aktarıldı!`, 'success');
+    // IslemTable'dan gelen filtrelenmiş listeyi kullan (kolon filtreleri dahil)
+    const listToExport = tableFilteredIslemler.length > 0 ? tableFilteredIslemler : filteredIslemler;
+    exportListToPDF(listToExport);
+    showSnackbar(`${listToExport.length} kayıt PDF'e aktarıldı!`, 'success');
+  };
+  
+  const handleTableFilterChange = (filtered: Islem[]) => {
+    setTableFilteredIslemler(filtered);
   };
 
-  const handleStatusFilterClick = (filter: 'all' | 'acik' | 'tamamlandi') => {
+  const handleStatusFilterClick = (filter: 'all' | 'acik' | 'parca_bekliyor' | 'tamamlandi') => {
     setStatusFilter(filter);
     // IslemFilters useEffect'i otomatik olarak filtreyi uygulayacak
   };
@@ -544,7 +566,9 @@ const Dashboard: React.FC = () => {
               loading={loading}
               onEdit={handleOpenDialog}
               onToggleDurum={handleToggleDurum}
+              onDelete={handleDelete}
               isAdminMode={isAdmin}
+              onFilteredChange={handleTableFilterChange}
             />
           </>
         )) : activeTab === 1 ? (

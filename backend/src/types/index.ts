@@ -50,6 +50,7 @@ export interface IslemCreateDto {
   teknisyen_ismi?: string;
   yapilan_islem?: string;
   tutar?: number;
+  is_durumu?: 'acik' | 'parca_bekliyor' | 'tamamlandi';
 }
 
 export interface IslemUpdateDto {

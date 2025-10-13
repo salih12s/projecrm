@@ -18,7 +18,7 @@ import { useAuth } from '../context/AuthContext';
 interface IslemFiltersProps {
   islemler: Islem[];
   onFilterChange: (filtered: Islem[]) => void;
-  statusFilter?: 'all' | 'acik' | 'tamamlandi';
+  statusFilter?: 'all' | 'acik' | 'parca_bekliyor' | 'tamamlandi';
   dateFilter?: string;
   showTodayOnly?: boolean;
 }

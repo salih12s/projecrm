@@ -446,10 +446,14 @@ const PrintEditor: React.FC<PrintEditorProps> = ({ open, onClose, islem }) => {
                   padding: '2px 4px',
                   backgroundColor: selectedField === field.id ? 'rgba(25, 118, 210, 0.2)' : 'transparent',
                   border: selectedField === field.id ? '1px solid #1976d2' : '1px dashed transparent',
-                  fontSize: '12px',
-                  fontWeight: 'normal',
-                  fontFamily: 'Courier New, monospace',
-                  whiteSpace: 'nowrap',
+                  fontSize: ['adres', 'yapilan_islem', 'sikayet'].includes(field.id) ? '9px' : '11px',
+                  fontWeight: 900,
+                  fontFamily: 'Arial Black, Arial, sans-serif',
+                  whiteSpace: ['adres', 'yapilan_islem', 'sikayet'].includes(field.id) ? 'normal' : 'nowrap',
+                  wordWrap: ['adres', 'yapilan_islem', 'sikayet'].includes(field.id) ? 'break-word' : 'normal',
+                  maxWidth: ['adres', 'yapilan_islem', 'sikayet'].includes(field.id) ? mmToPx(170) : 'none',
+                  lineHeight: ['adres', 'yapilan_islem', 'sikayet'].includes(field.id) ? '1.2' : 'normal',
+                  overflow: 'visible',
                   '&:hover': {
                     border: '1px dashed #1976d2',
                     '& .delete-btn': {

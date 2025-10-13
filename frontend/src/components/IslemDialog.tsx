@@ -547,6 +547,7 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
           teknisyen_ismi: formData.teknisyen_ismi,
           yapilan_islem: formData.yapilan_islem,
           tutar: formData.tutar,
+          is_durumu: formData.is_durumu,
         };
         await islemService.create(createData);
         showSnackbar('Yeni işlem başarıyla eklendi!', 'success');

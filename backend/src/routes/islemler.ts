@@ -158,20 +158,21 @@ router.post('/', authMiddleware, async (req: Request, res: Response): Promise<vo
       sikayet,
       teknisyen_ismi,
       yapilan_islem,
-      tutar
+      tutar,
+      is_durumu
     }: IslemCreateDto = req.body;
 
     const result = await pool.query(
       `INSERT INTO islemler (
         ad_soyad, ilce, mahalle, cadde, sokak, kapi_no,
         apartman_site, blok_no, daire_no, sabit_tel, cep_tel, yedek_tel,
-        urun, marka, sikayet, teknisyen_ismi, yapilan_islem, tutar, created_by
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
+        urun, marka, sikayet, teknisyen_ismi, yapilan_islem, tutar, is_durumu, created_by
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)
       RETURNING *`,
       [
         ad_soyad, ilce, mahalle, cadde, sokak, kapi_no,
         apartman_site, blok_no, daire_no, sabit_tel, cep_tel, yedek_tel,
-        urun, marka, sikayet, teknisyen_ismi, yapilan_islem, tutar, req.user?.username
+        urun, marka, sikayet, teknisyen_ismi, yapilan_islem, tutar, is_durumu || 'acik', req.user?.username
       ]
     );
 

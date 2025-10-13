@@ -470,8 +470,11 @@ export const exportListToPDF = (islemler: Islem[]) => {
       .replace(/ç/g, 'c');
   };
   
-  const tableData = islemler.map((islem, index) => [
-    index + 1, // Sıra
+  // Liste en yeni en üstte olacak şekilde sıralansın (ID'ye göre azalan)
+  const sortedIslemler = [...islemler].sort((a, b) => b.id - a.id);
+  
+  const tableData = sortedIslemler.map((islem, index) => [
+    sortedIslemler.length - index, // Sıra (en yeni en üstte, büyük numara)
     islem.full_tarih ? new Date(islem.full_tarih).toLocaleDateString('tr-TR') : '-',
     turkishCharFix(islem.ad_soyad || ''),
     turkishCharFix(islem.ilce || ''),
@@ -479,10 +482,14 @@ export const exportListToPDF = (islemler: Islem[]) => {
     islem.cep_tel || '-',
     turkishCharFix(islem.urun || ''),
     turkishCharFix(islem.marka || ''),
-    turkishCharFix((islem.sikayet || '').substring(0, 35) + ((islem.sikayet || '').length > 35 ? '...' : '')),
+    turkishCharFix((islem.sikayet || '').substring(0, 30) + ((islem.sikayet || '').length > 30 ? '...' : '')),
     turkishCharFix(islem.teknisyen_ismi || ''),
     islem.tutar ? islem.tutar + ' TL' : '-',
-    islem.is_durumu === 'acik' ? 'Acik' : 'Tamamlandi'
+    islem.is_durumu === 'acik' ? 'Acik' : islem.is_durumu === 'parca_bekliyor' ? 'Parca Bekliyor' : 'Tamamlandi',
+    // Yeni alanlar
+    turkishCharFix(islem.apartman_site || '-'),
+    turkishCharFix(islem.blok_no || '-'),
+    turkishCharFix(islem.daire_no || '-')
   ]);
   
   // AutoTable ile tablo oluştur
@@ -500,12 +507,15 @@ export const exportListToPDF = (islemler: Islem[]) => {
       'Sikayet',
       'Teknisyen',
       'Tutar',
-      'Durum'
+      'Durum',
+      'Apart/Site',
+      'Blok',
+      'Daire'
     ]],
     body: tableData,
     styles: {
-      fontSize: 7,
-      cellPadding: 1.5,
+      fontSize: 6,
+      cellPadding: 1,
       halign: 'left',
       valign: 'middle',
       overflow: 'linebreak',
@@ -514,25 +524,28 @@ export const exportListToPDF = (islemler: Islem[]) => {
       fillColor: [13, 50, 130],
       textColor: [255, 255, 255],
       fontStyle: 'bold',
-      fontSize: 7,
+      fontSize: 6,
       halign: 'center',
     },
     alternateRowStyles: {
       fillColor: [245, 245, 245],
     },
     columnStyles: {
-      0: { cellWidth: 10, halign: 'center' }, // Sıra
-      1: { cellWidth: 20 }, // Tarih
-      2: { cellWidth: 28 }, // Müşteri
-      3: { cellWidth: 22 }, // İlçe
-      4: { cellWidth: 25 }, // Mahalle
-      5: { cellWidth: 24 }, // Telefon
-      6: { cellWidth: 18 }, // Ürün
-      7: { cellWidth: 18 }, // Marka
-      8: { cellWidth: 35 }, // Şikayet
-      9: { cellWidth: 22 }, // Teknisyen
-      10: { cellWidth: 18, halign: 'right' }, // Tutar
-      11: { cellWidth: 20, halign: 'center' }, // Durum
+      0: { cellWidth: 8, halign: 'center' }, // Sıra
+      1: { cellWidth: 18 }, // Tarih
+      2: { cellWidth: 24 }, // Müşteri
+      3: { cellWidth: 18 }, // İlçe
+      4: { cellWidth: 22 }, // Mahalle
+      5: { cellWidth: 20 }, // Telefon
+      6: { cellWidth: 16 }, // Ürün
+      7: { cellWidth: 16 }, // Marka
+      8: { cellWidth: 30 }, // Şikayet
+      9: { cellWidth: 18 }, // Teknisyen
+      10: { cellWidth: 15, halign: 'right' }, // Tutar
+      11: { cellWidth: 16, halign: 'center' }, // Durum
+      12: { cellWidth: 16 }, // Apart/Site
+      13: { cellWidth: 8, halign: 'center' }, // Blok
+      14: { cellWidth: 8, halign: 'center' }, // Daire
     },
     margin: { top: 35, left: 10, right: 10 },
     didDrawPage: function (data) {
