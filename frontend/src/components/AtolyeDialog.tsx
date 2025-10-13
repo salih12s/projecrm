@@ -139,14 +139,26 @@ const AtolyeDialog: React.FC<AtolyeDialogProps> = ({ open, onClose, atolyeId }) 
   };
 
   const handleSubmit = async () => {
-    // Validate required fields
-    if (!formData.bayi_adi || !formData.musteri_ad_soyad || !formData.tel_no || 
-        !formData.marka || !formData.sikayet) {
-      showSnackbar('Lütfen zorunlu alanları doldurun', 'error');
-      return;
+    // Bayi kontrolü - eğer doldurulmuşsa tanımlı listede olmalı
+    if (formData.bayi_adi && formData.bayi_adi.trim() !== '') {
+      const bayiExists = bayiler.some(b => b.isim === formData.bayi_adi);
+      if (!bayiExists) {
+        showSnackbar('Lütfen sadece tanımlı bayilerden seçim yapınız!', 'error');
+        return;
+      }
     }
 
-    if (formData.tel_no.length !== 11) {
+    // Marka kontrolü - eğer doldurulmuşsa tanımlı listede olmalı
+    if (formData.marka && formData.marka.trim() !== '') {
+      const markaExists = markalar.some(m => m.isim === formData.marka);
+      if (!markaExists) {
+        showSnackbar('Lütfen sadece tanımlı markalardan seçim yapınız!', 'error');
+        return;
+      }
+    }
+
+    // Telefon kontrolü - eğer doldurulmuşsa 11 haneli olmalı
+    if (formData.tel_no && formData.tel_no.length > 0 && formData.tel_no.length !== 11) {
       showSnackbar('Telefon numarası 11 haneli olmalıdır', 'error');
       return;
     }
@@ -188,13 +200,28 @@ const AtolyeDialog: React.FC<AtolyeDialogProps> = ({ open, onClose, atolyeId }) 
           {/* Bayi Adı - Autocomplete */}
           <Grid item xs={12} md={6}>
             <Autocomplete
-              freeSolo
               options={bayiler.map((b) => b.isim)}
-              value={formData.bayi_adi}
+              value={formData.bayi_adi || null}
               onChange={(_, newValue) => handleChange('bayi_adi', newValue || '')}
-              onInputChange={(_, newValue) => handleChange('bayi_adi', newValue)}
+              onInputChange={(event, _value, reason) => {
+                // Sadece dropdown seçimlerine izin ver, yazı yazmayı engelle
+                if (reason === 'input') {
+                  event?.preventDefault();
+                }
+              }}
               renderInput={(params) => (
-                <TextField {...params} label="Bayi Adı *" fullWidth />
+                <TextField 
+                  {...params} 
+                  label="Bayi Adı" 
+                  fullWidth 
+                  placeholder="Bayi seçiniz..."
+                  onKeyDown={(e) => {
+                    // Harf ve sayı tuşlarını engelle
+                    if (e.key.length === 1 && !e.ctrlKey && !e.metaKey) {
+                      e.preventDefault();
+                    }
+                  }}
+                />
               )}
             />
           </Grid>
@@ -202,7 +229,7 @@ const AtolyeDialog: React.FC<AtolyeDialogProps> = ({ open, onClose, atolyeId }) 
           {/* Müşteri Ad Soyad */}
           <Grid item xs={12} md={6}>
             <TextField
-              label="Müşteri Ad Soyad *"
+              label="Müşteri Ad Soyad"
               fullWidth
               value={formData.musteri_ad_soyad}
               onChange={(e) => handleChange('musteri_ad_soyad', e.target.value)}
@@ -212,7 +239,7 @@ const AtolyeDialog: React.FC<AtolyeDialogProps> = ({ open, onClose, atolyeId }) 
           {/* Telefon No */}
           <Grid item xs={12} md={6}>
             <TextField
-              label="Telefon No *"
+              label="Telefon No"
               fullWidth
               value={formatPhoneNumber(formData.tel_no)}
               onChange={handlePhoneChange}
@@ -223,13 +250,28 @@ const AtolyeDialog: React.FC<AtolyeDialogProps> = ({ open, onClose, atolyeId }) 
           {/* Marka */}
           <Grid item xs={12} md={6}>
             <Autocomplete
-              freeSolo
               options={markalar.map((m) => m.isim)}
-              value={formData.marka}
+              value={formData.marka || null}
               onChange={(_, newValue) => handleChange('marka', newValue || '')}
-              onInputChange={(_, newValue) => handleChange('marka', newValue)}
+              onInputChange={(event, _value, reason) => {
+                // Sadece dropdown seçimlerine izin ver, yazı yazmayı engelle
+                if (reason === 'input') {
+                  event?.preventDefault();
+                }
+              }}
               renderInput={(params) => (
-                <TextField {...params} label="Marka *" fullWidth />
+                <TextField 
+                  {...params} 
+                  label="Marka" 
+                  fullWidth 
+                  placeholder="Marka seçiniz..."
+                  onKeyDown={(e) => {
+                    // Harf ve sayı tuşlarını engelle
+                    if (e.key.length === 1 && !e.ctrlKey && !e.metaKey) {
+                      e.preventDefault();
+                    }
+                  }}
+                />
               )}
             />
           </Grid>
@@ -257,7 +299,7 @@ const AtolyeDialog: React.FC<AtolyeDialogProps> = ({ open, onClose, atolyeId }) 
           {/* Şikayet */}
           <Grid item xs={12}>
             <TextField
-              label="Şikayet *"
+              label="Şikayet"
               fullWidth
               multiline
               rows={2}

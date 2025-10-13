@@ -86,6 +86,7 @@ const IslemTable: React.FC<IslemTableProps> = ({
     sokak: '',
     kapi_no: '',
     cep_tel: '',
+    yedek_tel: '',
     urun: '',
     marka: '',
     sikayet: '',
@@ -164,6 +165,13 @@ const IslemTable: React.FC<IslemTableProps> = ({
     if (filters.cep_tel) {
       filtered = filtered.filter((item) =>
         (item.cep_tel || '').includes(filters.cep_tel.replace(/\D/g, ''))
+      );
+    }
+
+    // Filter by yedek_tel
+    if (filters.yedek_tel) {
+      filtered = filtered.filter((item) =>
+        (item.yedek_tel || '').includes(filters.yedek_tel.replace(/\D/g, ''))
       );
     }
 
@@ -279,7 +287,7 @@ const IslemTable: React.FC<IslemTableProps> = ({
     const saved = localStorage.getItem('islemTableColumnOrder');
     const defaultOrder = [
       'tarih', 'ad_soyad', 'ilce', 'mahalle', 'cadde', 'sokak', 'kapi_no',
-      'cep_tel', 'urun', 'marka', 'sikayet', 'yapilan_islem', 'teknisyen', 'tutar', 'durum'
+      'cep_tel', 'yedek_tel', 'urun', 'marka', 'sikayet', 'yapilan_islem', 'teknisyen', 'tutar', 'durum'
     ];
     
     if (saved) {
@@ -343,6 +351,11 @@ const IslemTable: React.FC<IslemTableProps> = ({
       id: 'cep_tel',
       label: 'Cep Tel',
       render: (islem) => <TableCell sx={{ fontSize: '0.8rem', py: 0.5, px: 1 }}>{islem.cep_tel ? formatPhoneNumber(islem.cep_tel) : '-'}</TableCell>,
+    },
+    yedek_tel: {
+      id: 'yedek_tel',
+      label: 'Yedek Tel',
+      render: (islem) => <TableCell sx={{ fontSize: '0.8rem', py: 0.5, px: 1 }}>{islem.yedek_tel ? formatPhoneNumber(islem.yedek_tel) : '-'}</TableCell>,
     },
     urun: {
       id: 'urun',
@@ -520,6 +533,7 @@ const IslemTable: React.FC<IslemTableProps> = ({
                     '& .MuiInputBase-input': { fontSize: '0.75rem', py: 0.5, px: 0.5 },
                     minWidth: columnId === 'tarih' ? '90px' : 
                              columnId === 'cep_tel' ? '100px' : 
+                             columnId === 'yedek_tel' ? '100px' : 
                              columnId === 'tutar' ? '70px' :
                              columnId === 'durum' ? '90px' : '100px'
                   }}

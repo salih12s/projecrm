@@ -431,7 +431,25 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
   };
 
   const handleSubmit = async () => {
-    // Form validasyonu - artık hiçbir alan zorunlu değil
+    // Form validasyonu - Ürün ve Marka kontrolü
+    
+    // Ürün kontrolü - eğer doldurulmuşsa tanımlı listede olmalı
+    if (formData.urun && formData.urun.trim() !== '') {
+      const urunExists = urunler.some(u => u.isim === formData.urun);
+      if (!urunExists) {
+        showSnackbar('Lütfen sadece tanımlı ürünlerden seçim yapınız!', 'error');
+        return;
+      }
+    }
+    
+    // Marka kontrolü - eğer doldurulmuşsa tanımlı listede olmalı
+    if (formData.marka && formData.marka.trim() !== '') {
+      const markaExists = markalar.some(m => m.isim === formData.marka);
+      if (!markaExists) {
+        showSnackbar('Lütfen sadece tanımlı markalardan seçim yapınız!', 'error');
+        return;
+      }
+    }
     
     // Direkt kaydet (tamamlama kontrolü kaldırıldı)
     await saveIslem();
@@ -634,42 +652,58 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
           </Grid>
           <Grid item xs={12} sm={6}>
             <Autocomplete
-              freeSolo
               options={urunler.map(u => u.isim)}
-              value={formData.urun || ''}
+              value={formData.urun || null}
               onChange={(_, newValue) => {
                 setFormData({ ...formData, urun: newValue || '' });
               }}
-              inputValue={formData.urun || ''}
-              onInputChange={(_, newInputValue) => {
-                setFormData({ ...formData, urun: newInputValue || '' });
+              onInputChange={(event, _value, reason) => {
+                // Sadece dropdown seçimlerine izin ver, yazı yazmayı engelle
+                if (reason === 'input') {
+                  event?.preventDefault();
+                }
               }}
               renderInput={(params) => (
                 <TextField
                   {...params}
                   fullWidth
                   label="Ürün"
+                  placeholder="Ürün seçiniz..."
+                  onKeyDown={(e) => {
+                    // Harf ve sayı tuşlarını engelle
+                    if (e.key.length === 1 && !e.ctrlKey && !e.metaKey) {
+                      e.preventDefault();
+                    }
+                  }}
                 />
               )}
             />
           </Grid>
           <Grid item xs={12} sm={6}>
             <Autocomplete
-              freeSolo
               options={markalar.map(m => m.isim)}
-              value={formData.marka || ''}
+              value={formData.marka || null}
               onChange={(_, newValue) => {
                 setFormData({ ...formData, marka: newValue || '' });
               }}
-              inputValue={formData.marka || ''}
-              onInputChange={(_, newInputValue) => {
-                setFormData({ ...formData, marka: newInputValue || '' });
+              onInputChange={(event, _value, reason) => {
+                // Sadece dropdown seçimlerine izin ver, yazı yazmayı engelle
+                if (reason === 'input') {
+                  event?.preventDefault();
+                }
               }}
               renderInput={(params) => (
                 <TextField
                   {...params}
                   fullWidth
                   label="Marka"
+                  placeholder="Marka seçiniz..."
+                  onKeyDown={(e) => {
+                    // Harf ve sayı tuşlarını engelle
+                    if (e.key.length === 1 && !e.ctrlKey && !e.metaKey) {
+                      e.preventDefault();
+                    }
+                  }}
                 />
               )}
             />

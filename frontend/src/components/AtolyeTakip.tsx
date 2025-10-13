@@ -20,6 +20,7 @@ import { api } from '../services/api';
 import { useSnackbar } from '../context/SnackbarContext';
 import { useAuth } from '../context/AuthContext';
 import AtolyeDialog from './AtolyeDialog.tsx';
+import { io } from 'socket.io-client';
 
 const AtolyeTakip: React.FC = () => {
   const [atolyeList, setAtolyeList] = useState<Atolye[]>([]);
@@ -53,7 +54,66 @@ const AtolyeTakip: React.FC = () => {
 
   useEffect(() => {
     fetchAtolyeList();
-  }, []);
+
+    // Socket.IO bağlantısı - Gerçek zamanlı güncellemeler için
+    const SOCKET_URL = import.meta.env.MODE === 'production' 
+      ? 'https://projecrm-production.up.railway.app' 
+      : 'http://localhost:5000';
+    
+    const newSocket = io(SOCKET_URL, {
+      reconnection: true,
+      reconnectionDelay: 1000,
+      reconnectionAttempts: 10,
+      transports: ['websocket', 'polling'],
+    });
+
+    newSocket.on('connect', () => {
+      console.log('AtolyeTakip: Socket.IO bağlantısı kuruldu');
+    });
+
+    newSocket.on('connect_error', (error) => {
+      console.error('AtolyeTakip: Socket.IO bağlantı hatası:', error);
+    });
+
+    // Yeni atölye kaydı eklendiğinde
+    newSocket.on('yeni-atolye', (atolye: Atolye) => {
+      if (atolye && atolye.id) {
+        // Bayi ise sadece kendi kayıtlarını ekle
+        if (isBayi) {
+          if (atolye.bayi_adi === bayiIsim) {
+            setAtolyeList((prev) => [...prev, atolye]);
+            showSnackbar('Yeni atölye kaydı eklendi!', 'info');
+          }
+        } else {
+          setAtolyeList((prev) => [...prev, atolye]);
+          showSnackbar('Yeni atölye kaydı eklendi!', 'info');
+        }
+      }
+    });
+
+    // Atölye kaydı güncellendiğinde
+    newSocket.on('atolye-guncellendi', (updatedAtolyeRecord: Atolye) => {
+      if (updatedAtolyeRecord && updatedAtolyeRecord.id) {
+        setAtolyeList((prev) =>
+          prev.map((atolye) => (atolye.id === updatedAtolyeRecord.id ? updatedAtolyeRecord : atolye))
+        );
+        showSnackbar('Atölye kaydı güncellendi!', 'info');
+      }
+    });
+
+    // Atölye kaydı silindiğinde
+    newSocket.on('atolye-silindi', (deletedId: number) => {
+      if (deletedId) {
+        setAtolyeList((prev) => prev.filter((atolye) => atolye.id !== deletedId));
+        showSnackbar('Atölye kaydı silindi!', 'info');
+      }
+    });
+
+    // Cleanup - component unmount olduğunda bağlantıyı kapat
+    return () => {
+      newSocket.disconnect();
+    };
+  }, [isBayi, bayiIsim]);
 
   // Apply filters whenever atolyeList or filters change
   useEffect(() => {
