@@ -11,9 +11,11 @@ import { useAuth } from '../context/AuthContext';
 
 interface StatsCardsProps {
   islemler: Islem[];
+  onFilterClick?: (filter: 'all' | 'acik' | 'tamamlandi') => void;
+  activeFilter?: 'all' | 'acik' | 'tamamlandi';
 }
 
-const StatsCards: React.FC<StatsCardsProps> = ({ islemler }) => {
+const StatsCards: React.FC<StatsCardsProps> = ({ islemler, onFilterClick, activeFilter = 'all' }) => {
   const { user } = useAuth();
   const isAdmin = user?.role === 'admin';
   
@@ -30,6 +32,7 @@ const StatsCards: React.FC<StatsCardsProps> = ({ islemler }) => {
     icon: JSX.Element;
     color: string;
     bgColor: string;
+    filterValue: 'all' | 'acik' | 'tamamlandi';
   }> = [
     {
       title: 'Toplam İşlem',
@@ -37,6 +40,7 @@ const StatsCards: React.FC<StatsCardsProps> = ({ islemler }) => {
       icon: <Assignment />,
       color: '#0D3282',
       bgColor: '#E8EDF7',
+      filterValue: 'all',
     },
     {
       title: 'Açık İşler',
@@ -44,6 +48,7 @@ const StatsCards: React.FC<StatsCardsProps> = ({ islemler }) => {
       icon: <HourglassEmpty />,
       color: '#ed6c02',
       bgColor: '#fff4e5',
+      filterValue: 'acik',
     },
     {
       title: 'Tamamlanan',
@@ -51,6 +56,7 @@ const StatsCards: React.FC<StatsCardsProps> = ({ islemler }) => {
       icon: <CheckCircle />,
       color: '#2e7d32',
       bgColor: '#e8f5e9',
+      filterValue: 'tamamlandi',
     },
   ];
 
@@ -62,6 +68,7 @@ const StatsCards: React.FC<StatsCardsProps> = ({ islemler }) => {
       icon: <AttachMoney />,
       color: '#0D3282',
       bgColor: '#E8EDF7',
+      filterValue: 'all',
     });
   }
 
@@ -71,12 +78,16 @@ const StatsCards: React.FC<StatsCardsProps> = ({ islemler }) => {
         <Grid item xs={12} sm={6} md={isAdmin ? 3 : 4} key={index}>
           <Paper
             elevation={1}
+            onClick={() => onFilterClick && onFilterClick(stat.filterValue)}
             sx={{
               p: 2,
               display: 'flex',
               alignItems: 'center',
               gap: 1.5,
-              transition: 'transform 0.2s',
+              cursor: onFilterClick ? 'pointer' : 'default',
+              transition: 'all 0.2s',
+              border: activeFilter === stat.filterValue ? '2px solid' : '2px solid transparent',
+              borderColor: activeFilter === stat.filterValue ? stat.color : 'transparent',
               '&:hover': {
                 transform: 'translateY(-2px)',
                 boxShadow: 2,

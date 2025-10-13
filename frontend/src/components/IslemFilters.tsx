@@ -18,6 +18,7 @@ import { useAuth } from '../context/AuthContext';
 interface IslemFiltersProps {
   islemler: Islem[];
   onFilterChange: (filtered: Islem[]) => void;
+  statusFilter?: 'all' | 'acik' | 'tamamlandi';
 }
 
 const filterFields = [
@@ -39,7 +40,7 @@ const filterFields = [
   { value: 'yapilan_islem', label: 'Yapılan İşlem' },
 ];
 
-const IslemFilters: React.FC<IslemFiltersProps> = ({ islemler, onFilterChange }) => {
+const IslemFilters: React.FC<IslemFiltersProps> = ({ islemler, onFilterChange, statusFilter = 'all' }) => {
   const { user } = useAuth();
   const isAdmin = user?.role === 'admin';
   
@@ -78,12 +79,17 @@ const IslemFilters: React.FC<IslemFiltersProps> = ({ islemler, onFilterChange })
   useEffect(() => {
     applyFilters();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchValue, isDurumuFilter, selectedMontajlar, selectedAksesuarlar, islemler]);
+  }, [searchValue, isDurumuFilter, selectedMontajlar, selectedAksesuarlar, islemler, statusFilter]);
 
   const applyFilters = () => {
     let filtered = [...islemler];
 
-    // İş durumu filtresi
+    // StatsCard'dan gelen durum filtresi
+    if (statusFilter !== 'all') {
+      filtered = filtered.filter((islem) => islem.is_durumu === statusFilter);
+    }
+
+    // İş durumu filtresi (dropdown'dan)
     if (isDurumuFilter) {
       filtered = filtered.filter((islem) => islem.is_durumu === isDurumuFilter);
     }

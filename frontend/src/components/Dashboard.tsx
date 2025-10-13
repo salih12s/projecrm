@@ -56,8 +56,10 @@ const Dashboard: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [openDialog, setOpenDialog] = useState(false);
   const [selectedIslem, setSelectedIslem] = useState<Islem | null>(null);
+  const [openTamamlaModal, setOpenTamamlaModal] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const [statusFilter, setStatusFilter] = useState<'all' | 'acik' | 'tamamlandi'>('all');
   // Bayi için tab değeri her zaman 0 (tek tab var)
   const [activeTab, setActiveTab] = useState(0);
   const [confirmDialog, setConfirmDialog] = useState<{ open: boolean; islem: Islem | null }>({ open: false, islem: null });
@@ -66,15 +68,16 @@ const Dashboard: React.FC = () => {
   const isAdmin = user?.role === 'admin';
 
   useEffect(() => {
-    // Socket.IO bağlantısı - Production'da aynı domain, development'da localhost
+    // Socket.IO bağlantısı - Backend Railway'de, frontend Hostinger'da
     const SOCKET_URL = import.meta.env.MODE === 'production' 
-      ? window.location.origin 
+      ? 'https://projecrm-production.up.railway.app' 
       : 'http://localhost:5000';
     
     const newSocket = io(SOCKET_URL, {
       reconnection: true,
       reconnectionDelay: 1000,
-      reconnectionAttempts: 5,
+      reconnectionAttempts: 10,
+      transports: ['websocket', 'polling'], // WebSocket önce, polling fallback
     });
 
     newSocket.on('connect', () => {
@@ -155,6 +158,7 @@ const Dashboard: React.FC = () => {
   const handleCloseDialog = () => {
     setOpenDialog(false);
     setSelectedIslem(null);
+    setOpenTamamlaModal(false); // Tamamlama modalını kapat
   };
 
   const handleSaveIslem = async () => {
@@ -176,9 +180,12 @@ const Dashboard: React.FC = () => {
   };
 
   const handleToggleDurum = async (islem: Islem) => {
-    // Eğer açıktan tamamlandıya geçiyorsa onay iste
+    // Eğer açıktan tamamlandıya geçiyorsa tamamlama dialogunu aç
     if (islem.is_durumu === 'acik') {
-      setConfirmDialog({ open: true, islem });
+      setSelectedIslem(islem);
+      setOpenTamamlaModal(true); // Tamamlama modalını aktif et
+      setOpenDialog(true);
+      // Dialog içinde tamamlama modalı otomatik açılacak
     } else {
       // Tamamlandıdan açığa geçiş (geri alma) direkt yapılabilir
       try {
@@ -211,6 +218,11 @@ const Dashboard: React.FC = () => {
   const handleExport = () => {
     exportListToPDF(filteredIslemler);
     showSnackbar(`${filteredIslemler.length} kayıt PDF'e aktarıldı!`, 'success');
+  };
+
+  const handleStatusFilterClick = (filter: 'all' | 'acik' | 'tamamlandi') => {
+    setStatusFilter(filter);
+    // IslemFilters useEffect'i otomatik olarak filtreyi uygulayacak
   };
 
   const handleMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
@@ -350,11 +362,16 @@ const Dashboard: React.FC = () => {
             <Loading message="İşlemler yükleniyor..." />
           ) : (
             <>
-              <StatsCards islemler={islemler} />
+              <StatsCards 
+                islemler={islemler} 
+                onFilterClick={handleStatusFilterClick}
+                activeFilter={statusFilter}
+              />
               
               <IslemFilters
                 islemler={islemler}
                 onFilterChange={setFilteredIslemler}
+                statusFilter={statusFilter}
               />
 
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
@@ -428,6 +445,7 @@ const Dashboard: React.FC = () => {
           islem={selectedIslem}
           onClose={handleCloseDialog}
           onSave={handleSaveIslem}
+          openTamamlaModal={openTamamlaModal}
         />
 
         {/* Tamamlama Onay Dialog */}

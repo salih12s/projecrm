@@ -204,6 +204,13 @@ const MusteriGecmisi: React.FC = () => {
         return cleanIslemName.includes(cleanSearchName);
       });
 
+      // En eski kayıt en üstte, en yeni kayıt en altta (tarihe göre sıralama)
+      filtered.sort((a, b) => {
+        const dateA = new Date(a.full_tarih).getTime();
+        const dateB = new Date(b.full_tarih).getTime();
+        return dateA - dateB; // Eski tarih önce, yeni tarih altta
+      });
+
       if (filtered.length === 0) {
         showSnackbar('Bu isimle kayıt bulunamadı!', 'info');
       } else {

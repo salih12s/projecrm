@@ -13,6 +13,10 @@ import {
   Box,
   Tooltip,
   TextField,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  Typography,
 } from '@mui/material';
 import {
   Edit,
@@ -21,10 +25,12 @@ import {
   Check,
   Print,
   DragIndicator,
+  History,
 } from '@mui/icons-material';
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
 import { Islem } from '../types';
 import PrintEditor from './PrintEditor';
+import { islemService } from '../services/api';
 
 // Telefon numarasını formatla: 0544 448 88 88
 const formatPhoneNumber = (phone: string | undefined): string => {
@@ -62,6 +68,12 @@ const IslemTable: React.FC<IslemTableProps> = ({
   const [filteredIslemler, setFilteredIslemler] = useState<Islem[]>(islemler);
   const [printEditorOpen, setPrintEditorOpen] = useState(false);
   const [selectedIslemForPrint, setSelectedIslemForPrint] = useState<Islem | null>(null);
+  
+  // Müşteri Geçmişi Dialog states
+  const [historyDialogOpen, setHistoryDialogOpen] = useState(false);
+  const [customerHistory, setCustomerHistory] = useState<Islem[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [selectedCustomerName, setSelectedCustomerName] = useState('');
   
   // Filter states
   const [filters, setFilters] = useState({
@@ -224,6 +236,42 @@ const IslemTable: React.FC<IslemTableProps> = ({
   const handleClosePrintEditor = () => {
     setPrintEditorOpen(false);
     setSelectedIslemForPrint(null);
+  };
+
+  // Müşteri Geçmişi fonksiyonları
+  const handleOpenCustomerHistory = async (customerName: string) => {
+    if (!customerName || customerName.trim() === '') {
+      return;
+    }
+
+    setSelectedCustomerName(customerName);
+    setHistoryDialogOpen(true);
+    setHistoryLoading(true);
+
+    try {
+      const allIslemler = await islemService.getAll();
+      // Müşteri adına göre filtrele ve tarihe göre sırala (en eski en üstte)
+      const customerIslemler = allIslemler
+        .filter(i => i.ad_soyad && i.ad_soyad.toLowerCase().includes(customerName.toLowerCase()))
+        .sort((a, b) => {
+          const dateA = a.full_tarih ? new Date(a.full_tarih).getTime() : 0;
+          const dateB = b.full_tarih ? new Date(b.full_tarih).getTime() : 0;
+          return dateA - dateB; // ASC - en eski en üstte, en yeni en altta
+        });
+      
+      setCustomerHistory(customerIslemler);
+    } catch (error) {
+      console.error('Müşteri geçmişi yüklenirken hata:', error);
+      setCustomerHistory([]);
+    } finally {
+      setHistoryLoading(false);
+    }
+  };
+
+  const handleCloseHistoryDialog = () => {
+    setHistoryDialogOpen(false);
+    setCustomerHistory([]);
+    setSelectedCustomerName('');
   };
 
   // Sütun sırasını localStorage'dan yükle
@@ -553,6 +601,27 @@ const IslemTable: React.FC<IslemTableProps> = ({
                       </IconButton>
                     </span>
                   </Tooltip>
+                  <Tooltip title="Müşteri Geçmişi">
+                    <IconButton 
+                      size="small" 
+                      onClick={() => handleOpenCustomerHistory(islem.ad_soyad || '')}
+                      disabled={!islem.ad_soyad}
+                      sx={{ 
+                        bgcolor: 'secondary.light',
+                        width: 28,
+                        height: 28,
+                        '&:hover': {
+                          bgcolor: 'secondary.main',
+                        },
+                        '&.Mui-disabled': {
+                          bgcolor: 'grey.300',
+                          opacity: 0.6,
+                        }
+                      }}
+                    >
+                      <History sx={{ color: 'white', fontSize: '1rem' }} />
+                    </IconButton>
+                  </Tooltip>
                   <Tooltip title="Yazdır">
                     <IconButton 
                       size="small" 
@@ -596,6 +665,96 @@ const IslemTable: React.FC<IslemTableProps> = ({
         </TableBody>
       </Table>
     </TableContainer>
+
+    {/* Müşteri Geçmişi Dialog */}
+    <Dialog 
+      open={historyDialogOpen} 
+      onClose={handleCloseHistoryDialog}
+      maxWidth="xl"
+      fullWidth
+    >
+      <DialogTitle>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Typography variant="h6">
+            Müşteri Geçmişi: {selectedCustomerName}
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            Toplam {customerHistory.length} kayıt
+          </Typography>
+        </Box>
+      </DialogTitle>
+      <DialogContent>
+        {historyLoading ? (
+          <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
+            <CircularProgress />
+          </Box>
+        ) : customerHistory.length === 0 ? (
+          <Typography variant="body1" color="text.secondary" sx={{ p: 2, textAlign: 'center' }}>
+            Bu müşteri için kayıt bulunamadı.
+          </Typography>
+        ) : (
+          <TableContainer component={Paper} elevation={0}>
+            <Table size="small" sx={{ '& .MuiTableCell-root': { py: 0.5, px: 1, fontSize: '0.75rem' } }}>
+              <TableHead>
+                <TableRow sx={{ bgcolor: 'primary.main' }}>
+                  <TableCell sx={{ color: 'white', fontWeight: 600 }}>Sıra</TableCell>
+                  <TableCell sx={{ color: 'white', fontWeight: 600 }}>Tarih</TableCell>
+                  <TableCell sx={{ color: 'white', fontWeight: 600 }}>İlçe</TableCell>
+                  <TableCell sx={{ color: 'white', fontWeight: 600 }}>Mahalle</TableCell>
+                  <TableCell sx={{ color: 'white', fontWeight: 600 }}>Cadde</TableCell>
+                  <TableCell sx={{ color: 'white', fontWeight: 600 }}>Sokak</TableCell>
+                  <TableCell sx={{ color: 'white', fontWeight: 600 }}>Kapı No</TableCell>
+                  <TableCell sx={{ color: 'white', fontWeight: 600 }}>Cep Tel</TableCell>
+                  <TableCell sx={{ color: 'white', fontWeight: 600 }}>Ürün</TableCell>
+                  <TableCell sx={{ color: 'white', fontWeight: 600 }}>Marka</TableCell>
+                  <TableCell sx={{ color: 'white', fontWeight: 600 }}>Şikayet</TableCell>
+                  <TableCell sx={{ color: 'white', fontWeight: 600 }}>Yapılan İşlem</TableCell>
+                  <TableCell sx={{ color: 'white', fontWeight: 600 }}>Teknisyen</TableCell>
+                  <TableCell sx={{ color: 'white', fontWeight: 600 }}>Tutar</TableCell>
+                  <TableCell sx={{ color: 'white', fontWeight: 600 }}>Durum</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {customerHistory.map((islem, index) => (
+                  <TableRow key={islem.id} hover>
+                    <TableCell>{index + 1}</TableCell>
+                    <TableCell>
+                      {islem.full_tarih ? new Date(islem.full_tarih).toLocaleDateString('tr-TR') : '-'}
+                    </TableCell>
+                    <TableCell>{islem.ilce || '-'}</TableCell>
+                    <TableCell>{islem.mahalle || '-'}</TableCell>
+                    <TableCell>{islem.cadde || '-'}</TableCell>
+                    <TableCell>{islem.sokak || '-'}</TableCell>
+                    <TableCell>{islem.kapi_no || '-'}</TableCell>
+                    <TableCell>{formatPhoneNumber(islem.cep_tel)}</TableCell>
+                    <TableCell>{islem.urun || '-'}</TableCell>
+                    <TableCell>{islem.marka || '-'}</TableCell>
+                    <TableCell sx={{ maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {islem.sikayet || '-'}
+                    </TableCell>
+                    <TableCell sx={{ maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {islem.yapilan_islem || '-'}
+                    </TableCell>
+                    <TableCell>{islem.teknisyen_ismi || '-'}</TableCell>
+                    <TableCell>
+                      {islem.tutar ? `${Number(islem.tutar).toLocaleString('tr-TR')} ₺` : '-'}
+                    </TableCell>
+                    <TableCell>
+                      <Chip 
+                        label={islem.is_durumu === 'acik' ? 'Açık' : 'Tamamlandı'}
+                        color={islem.is_durumu === 'acik' ? 'warning' : 'success'}
+                        size="small"
+                        sx={{ fontSize: '0.65rem', height: '20px' }}
+                      />
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        )}
+      </DialogContent>
+    </Dialog>
 
     {/* Yazdırma Düzenleyici */}
     {selectedIslemForPrint && (

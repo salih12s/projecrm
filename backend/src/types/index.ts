@@ -111,6 +111,12 @@ export interface Aksesuar {
   created_at: Date;
 }
 
+export interface Urun {
+  id: number;
+  isim: string;
+  created_at: Date;
+}
+
 export interface Atolye {
   id: number;
   teslim_durumu: 'beklemede' | 'siparis_verildi' | 'yapildi' | 'fabrika_gitti' | 'odeme_bekliyor' | 'teslim_edildi';

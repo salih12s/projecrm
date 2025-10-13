@@ -19,7 +19,7 @@ import {
   Typography,
 } from '@mui/material';
 import { Edit, Delete, Add } from '@mui/icons-material';
-import { Teknisyen, Marka, Bayi, Montaj, Aksesuar } from '../types';
+import { Teknisyen, Marka, Bayi, Montaj, Aksesuar, Urun } from '../types';
 import { api } from '../services/api';
 import { useSnackbar } from '../context/SnackbarContext';
 
@@ -30,6 +30,7 @@ const Settings: React.FC = () => {
   const [bayiler, setBayiler] = useState<Bayi[]>([]);
   const [montajlar, setMontajlar] = useState<Montaj[]>([]);
   const [aksesuarlar, setAksesuarlar] = useState<Aksesuar[]>([]);
+  const [urunler, setUrunler] = useState<Urun[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [currentId, setCurrentId] = useState<number | null>(null);
@@ -54,6 +55,9 @@ const Settings: React.FC = () => {
         const response = await api.get('/bayiler');
         setBayiler(response.data);
       } else if (tabValue === 3) {
+        const response = await api.get('/urunler');
+        setUrunler(response.data);
+      } else if (tabValue === 4) {
         // Montaj ve Aksesuarlar - iki tablo yan yana
         const montajResponse = await api.get('/montajlar');
         const aksesuarResponse = await api.get('/aksesuarlar');
@@ -92,7 +96,8 @@ const Settings: React.FC = () => {
       if (tabValue === 0) endpoint = '/teknisyenler';
       else if (tabValue === 1) endpoint = '/markalar';
       else if (tabValue === 2) endpoint = '/bayiler';
-      else if (tabValue === 3) {
+      else if (tabValue === 3) endpoint = '/urunler';
+      else if (tabValue === 4) {
         endpoint = editType === 'aksesuar' ? '/aksesuarlar' : '/montajlar';
       }
       
@@ -122,7 +127,8 @@ const Settings: React.FC = () => {
       if (tabValue === 0) endpoint = '/teknisyenler';
       else if (tabValue === 1) endpoint = '/markalar';
       else if (tabValue === 2) endpoint = '/bayiler';
-      else if (tabValue === 3) {
+      else if (tabValue === 3) endpoint = '/urunler';
+      else if (tabValue === 4) {
         endpoint = type === 'aksesuar' ? '/aksesuarlar' : '/montajlar';
       }
       
@@ -146,11 +152,12 @@ const Settings: React.FC = () => {
           <Tab label="Teknisyenler" />
           <Tab label="Markalar" />
           <Tab label="Bayiler" />
+          <Tab label="Ürünler" />
           <Tab label="Montaj & Aksesuarlar" />
         </Tabs>
 
         <Box sx={{ mb: 2 }}>
-          {tabValue === 3 ? (
+          {tabValue === 4 ? (
             <Box sx={{ display: 'flex', gap: 2 }}>
               <Button
                 variant="contained"
@@ -190,7 +197,11 @@ const Settings: React.FC = () => {
               onClick={handleAdd}
               sx={{ backgroundColor: '#0D3282', '&:hover': { backgroundColor: '#082052' } }}
             >
-              {tabValue === 0 ? 'Yeni Teknisyen Ekle' : tabValue === 1 ? 'Yeni Marka Ekle' : 'Yeni Bayi Ekle'}
+              {tabValue === 0 ? 'Yeni Teknisyen Ekle' : 
+               tabValue === 1 ? 'Yeni Marka Ekle' : 
+               tabValue === 2 ? 'Yeni Bayi Ekle' : 
+               tabValue === 3 ? 'Yeni Ürün Ekle' : 
+               'Yeni Ekle'}
             </Button>
           )}
         </Box>
@@ -251,6 +262,24 @@ const Settings: React.FC = () => {
               ))
             )
           ) : tabValue === 3 ? (
+            urunler.length === 0 ? (
+              <Alert severity="info">Henüz ürün eklenmedi</Alert>
+            ) : (
+              urunler.map((urun) => (
+                <ListItem key={urun.id} sx={{ border: '1px solid #e0e0e0', mb: 1, borderRadius: 1 }}>
+                  <ListItemText primary={urun.isim} />
+                  <ListItemSecondaryAction>
+                    <IconButton edge="end" onClick={() => handleEdit(urun.id, urun.isim)} sx={{ mr: 1 }}>
+                      <Edit />
+                    </IconButton>
+                    <IconButton edge="end" onClick={() => handleDelete(urun.id)} color="error">
+                      <Delete />
+                    </IconButton>
+                  </ListItemSecondaryAction>
+                </ListItem>
+              ))
+            )
+          ) : tabValue === 4 ? (
             <Box sx={{ display: 'flex', gap: 3 }}>
               {/* Montaj Listesi */}
               <Box sx={{ flex: 1 }}>
@@ -332,6 +361,7 @@ const Settings: React.FC = () => {
             tabValue === 0 ? 'Teknisyen' : 
             tabValue === 1 ? 'Marka' : 
             tabValue === 2 ? 'Bayi' : 
+            tabValue === 3 ? 'Ürün' :
             editType === 'aksesuar' ? 'Aksesuar' : 'Montaj'
           }
         </DialogTitle>
