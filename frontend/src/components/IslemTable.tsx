@@ -312,47 +312,47 @@ const IslemTable: React.FC<IslemTableProps> = ({
     ad_soyad: {
       id: 'ad_soyad',
       label: 'Ad Soyad',
-      render: (islem) => <TableCell sx={{ fontWeight: 500, fontSize: '0.8rem', py: 0.5, px: 1 }}>{islem.ad_soyad}</TableCell>,
+      render: (islem) => <TableCell sx={{ fontWeight: 500, fontSize: '0.8rem', py: 0.5, px: 1 }}>{islem.ad_soyad || '-'}</TableCell>,
     },
     ilce: {
       id: 'ilce',
       label: 'İlçe',
-      render: (islem) => <TableCell sx={{ fontSize: '0.8rem', py: 0.5, px: 1 }}>{islem.ilce}</TableCell>,
+      render: (islem) => <TableCell sx={{ fontSize: '0.8rem', py: 0.5, px: 1 }}>{islem.ilce || '-'}</TableCell>,
     },
     mahalle: {
       id: 'mahalle',
       label: 'Mahalle',
-      render: (islem) => <TableCell sx={{ fontSize: '0.8rem', py: 0.5, px: 1 }}>{islem.mahalle}</TableCell>,
+      render: (islem) => <TableCell sx={{ fontSize: '0.8rem', py: 0.5, px: 1 }}>{islem.mahalle || '-'}</TableCell>,
     },
     cadde: {
       id: 'cadde',
       label: 'Cadde',
-      render: (islem) => <TableCell sx={{ fontSize: '0.8rem', py: 0.5, px: 1 }}>{islem.cadde}</TableCell>,
+      render: (islem) => <TableCell sx={{ fontSize: '0.8rem', py: 0.5, px: 1 }}>{islem.cadde || '-'}</TableCell>,
     },
     sokak: {
       id: 'sokak',
       label: 'Sokak',
-      render: (islem) => <TableCell sx={{ fontSize: '0.8rem', py: 0.5, px: 1 }}>{islem.sokak}</TableCell>,
+      render: (islem) => <TableCell sx={{ fontSize: '0.8rem', py: 0.5, px: 1 }}>{islem.sokak || '-'}</TableCell>,
     },
     kapi_no: {
       id: 'kapi_no',
       label: 'Kapı No',
-      render: (islem) => <TableCell sx={{ fontSize: '0.8rem', py: 0.5, px: 1 }}>{islem.kapi_no}</TableCell>,
+      render: (islem) => <TableCell sx={{ fontSize: '0.8rem', py: 0.5, px: 1 }}>{islem.kapi_no || '-'}</TableCell>,
     },
     cep_tel: {
       id: 'cep_tel',
       label: 'Cep Tel',
-      render: (islem) => <TableCell sx={{ fontSize: '0.8rem', py: 0.5, px: 1 }}>{formatPhoneNumber(islem.cep_tel)}</TableCell>,
+      render: (islem) => <TableCell sx={{ fontSize: '0.8rem', py: 0.5, px: 1 }}>{islem.cep_tel ? formatPhoneNumber(islem.cep_tel) : '-'}</TableCell>,
     },
     urun: {
       id: 'urun',
       label: 'Ürün',
-      render: (islem) => <TableCell sx={{ fontSize: '0.8rem', py: 0.5, px: 1 }}>{islem.urun}</TableCell>,
+      render: (islem) => <TableCell sx={{ fontSize: '0.8rem', py: 0.5, px: 1 }}>{islem.urun || '-'}</TableCell>,
     },
     marka: {
       id: 'marka',
       label: 'Marka',
-      render: (islem) => <TableCell sx={{ fontWeight: 500, fontSize: '0.8rem', py: 0.5, px: 1 }}>{islem.marka}</TableCell>,
+      render: (islem) => <TableCell sx={{ fontWeight: 500, fontSize: '0.8rem', py: 0.5, px: 1 }}>{islem.marka || '-'}</TableCell>,
     },
     sikayet: {
       id: 'sikayet',
