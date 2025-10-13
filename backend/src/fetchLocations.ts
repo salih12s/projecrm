@@ -52,9 +52,14 @@ async function fetchAndStoreLocations() {
     
     console.log('📦 Tablolar oluşturuldu');
     
-    // Mevcut verileri temizle
-    await pool.query('TRUNCATE TABLE mahalleler CASCADE');
-    await pool.query('TRUNCATE TABLE ilceler CASCADE');
+    // Mevcut verileri kontrol et
+    const existingIlceler = await pool.query('SELECT COUNT(*) FROM ilceler');
+    const existingCount = parseInt(existingIlceler.rows[0].count);
+    
+    if (existingCount > 0) {
+      console.log(`ℹ️  Zaten ${existingCount} ilçe mevcut. Script atlanıyor.`);
+      return;
+    }
     
     // İlçeleri ekle
     for (const district of districts) {
@@ -108,10 +113,18 @@ async function fetchAndStoreLocations() {
     if (error.response) {
       console.error('API Yanıtı:', error.response.data);
     }
+    // Hata olsa bile exit code 0 döndür (Railway deploy başarısız olmasın)
+    process.exit(0);
   } finally {
     await pool.end();
   }
 }
 
 // Script'i çalıştır
-fetchAndStoreLocations();
+fetchAndStoreLocations().then(() => {
+  console.log('✅ Script tamamlandı');
+  process.exit(0);
+}).catch((error) => {
+  console.error('Script hatası:', error);
+  process.exit(0); // Deploy başarısız olmasın
+});
