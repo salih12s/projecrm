@@ -26,6 +26,7 @@ const MusteriGecmisi: React.FC = () => {
   const [searchName, setSearchName] = useState('');
   const [searchResults, setSearchResults] = useState<Islem[]>([]);
   const [filteredResults, setFilteredResults] = useState<Islem[]>([]);
+  const [allIslemler, setAllIslemler] = useState<Islem[]>([]); // Global sıra için
   const [loading, setLoading] = useState(false);
 
   // Filter states
@@ -56,11 +57,12 @@ const MusteriGecmisi: React.FC = () => {
   const applyFilters = () => {
     let filtered = [...searchResults];
 
-    // Sıra filtresi varsa, önce orijinal listedeki pozisyonları işaretle
-    const originalIndices = new Map<number, number>();
-    if (filters.sira) {
-      searchResults.forEach((item, index) => {
-        originalIndices.set(item.id, index + 1);
+    // Global sıra filtresi için
+    if (filters.sira && allIslemler.length > 0) {
+      filtered = filtered.filter((item) => {
+        const originalIndex = allIslemler.findIndex(i => i.id === item.id);
+        const globalSira = allIslemler.length - originalIndex;
+        return globalSira.toString().includes(filters.sira);
       });
     }
 
@@ -171,14 +173,6 @@ const MusteriGecmisi: React.FC = () => {
       });
     }
 
-    // Filter by sira - ORİJİNAL listedeki sıraya göre filtrele
-    if (filters.sira) {
-      filtered = filtered.filter((item) => {
-        const originalSira = originalIndices.get(item.id);
-        return originalSira?.toString() === filters.sira;
-      });
-    }
-
     setFilteredResults(filtered);
   };
 
@@ -194,21 +188,24 @@ const MusteriGecmisi: React.FC = () => {
 
     setLoading(true);
     try {
-      const allIslemler = await islemService.getAll();
+      const fetchedIslemler = await islemService.getAll();
+      setAllIslemler(fetchedIslemler); // Global sıra için sakla
       
       // Arama metnini ve kayıt adını temizle (boşluksuz, küçük harf)
       const cleanSearchName = searchName.toLowerCase().replace(/\s+/g, '');
       
-      const filtered = allIslemler.filter((islem) => {
+      const filtered = fetchedIslemler.filter((islem) => {
         const cleanIslemName = islem.ad_soyad.toLowerCase().replace(/\s+/g, '');
         return cleanIslemName.includes(cleanSearchName);
       });
 
-      // En eski kayıt en üstte, en yeni kayıt en altta (tarihe göre sıralama)
+      // Global sıra numarasına göre sırala (büyük sıra en üstte - en yeni)
       filtered.sort((a, b) => {
-        const dateA = new Date(a.full_tarih).getTime();
-        const dateB = new Date(b.full_tarih).getTime();
-        return dateA - dateB; // Eski tarih önce, yeni tarih altta
+        const indexA = fetchedIslemler.findIndex(item => item.id === a.id);
+        const indexB = fetchedIslemler.findIndex(item => item.id === b.id);
+        const siraA = fetchedIslemler.length - indexA;
+        const siraB = fetchedIslemler.length - indexB;
+        return siraB - siraA; // Büyük sıra en üstte (en yeni)
       });
 
       if (filtered.length === 0) {
@@ -586,13 +583,13 @@ const MusteriGecmisi: React.FC = () => {
               </TableHead>
               <TableBody>
                 {filteredResults.map((islem) => {
-                  // Orijinal listedeki sırayı bul
-                  const originalIndex = searchResults.findIndex(item => item.id === islem.id);
-                  const originalSira = originalIndex + 1;
+                  // Global sıra hesabı (ana tablo ile aynı)
+                  const originalIndex = allIslemler.findIndex(item => item.id === islem.id);
+                  const globalSira = allIslemler.length - originalIndex;
                   
                   return (
                   <TableRow key={islem.id} hover>
-                    <TableCell sx={{ fontSize: '0.75rem', py: 0.3, px: 0.5 }}>{originalSira}</TableCell>
+                    <TableCell sx={{ fontSize: '0.75rem', py: 0.3, px: 0.5 }}>{globalSira}</TableCell>
                     <TableCell sx={{ fontSize: '0.75rem', py: 0.3, px: 0.5 }}>
                       {islem.full_tarih
                         ? new Date(islem.full_tarih).toLocaleDateString('tr-TR')

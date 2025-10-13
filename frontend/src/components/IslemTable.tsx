@@ -82,8 +82,26 @@ const IslemTable: React.FC<IslemTableProps> = ({
   // Müşteri Geçmişi Dialog states
   const [historyDialogOpen, setHistoryDialogOpen] = useState(false);
   const [customerHistory, setCustomerHistory] = useState<Islem[]>([]);
+  const [filteredHistory, setFilteredHistory] = useState<Islem[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [selectedCustomerName, setSelectedCustomerName] = useState('');
+  const [historyFilters, setHistoryFilters] = useState({
+    sira: '',
+    tarih: '',
+    ilce: '',
+    mahalle: '',
+    cadde: '',
+    sokak: '',
+    kapi_no: '',
+    cep_tel: '',
+    urun: '',
+    marka: '',
+    sikayet: '',
+    yapilan_islem: '',
+    teknisyen: '',
+    tutar: '',
+    durum: '',
+  });
   
   // Filter states
   const [filters, setFilters] = useState({
@@ -278,16 +296,20 @@ const IslemTable: React.FC<IslemTableProps> = ({
 
     try {
       const allIslemler = await islemService.getAll();
-      // Müşteri adına göre filtrele ve tarihe göre sırala (en eski en üstte)
+      // Müşteri adına göre filtrele
       const customerIslemler = allIslemler
         .filter(i => i.ad_soyad && i.ad_soyad.toLowerCase().includes(customerName.toLowerCase()))
         .sort((a, b) => {
-          const dateA = a.full_tarih ? new Date(a.full_tarih).getTime() : 0;
-          const dateB = b.full_tarih ? new Date(b.full_tarih).getTime() : 0;
-          return dateA - dateB; // ASC - en eski en üstte, en yeni en altta
+          // Global sıra numarasına göre sırala (ana tablo ile aynı düzen)
+          const indexA = allIslemler.findIndex(item => item.id === a.id);
+          const indexB = allIslemler.findIndex(item => item.id === b.id);
+          const siraA = allIslemler.length - indexA;
+          const siraB = allIslemler.length - indexB;
+          return siraB - siraA; // Büyük sıra en üstte (en yeni)
         });
       
       setCustomerHistory(customerIslemler);
+      setFilteredHistory(customerIslemler);
     } catch (error) {
       console.error('Müşteri geçmişi yüklenirken hata:', error);
       setCustomerHistory([]);
@@ -299,7 +321,62 @@ const IslemTable: React.FC<IslemTableProps> = ({
   const handleCloseHistoryDialog = () => {
     setHistoryDialogOpen(false);
     setCustomerHistory([]);
+    setFilteredHistory([]);
     setSelectedCustomerName('');
+    setHistoryFilters({
+      sira: '',
+      tarih: '',
+      ilce: '',
+      mahalle: '',
+      cadde: '',
+      sokak: '',
+      kapi_no: '',
+      cep_tel: '',
+      urun: '',
+      marka: '',
+      sikayet: '',
+      yapilan_islem: '',
+      teknisyen: '',
+      tutar: '',
+      durum: '',
+    });
+  };
+
+  // Müşteri geçmişi filtreleme fonksiyonu
+  const handleHistoryFilterChange = (field: string, value: string) => {
+    const newFilters = { ...historyFilters, [field]: value };
+    setHistoryFilters(newFilters);
+
+    const filtered = customerHistory.filter((islem) => {
+      // Global sıra hesabı
+      const originalIndex = siraReferenceList.findIndex(item => item.id === islem.id);
+      const originalSira = siraReferenceList.length - originalIndex;
+
+      return (
+        (!newFilters.sira || originalSira.toString().includes(newFilters.sira)) &&
+        (!newFilters.tarih || (islem.full_tarih && new Date(islem.full_tarih).toLocaleDateString('tr-TR').includes(newFilters.tarih))) &&
+        (!newFilters.ilce || (islem.ilce && islem.ilce.toLowerCase().includes(newFilters.ilce.toLowerCase()))) &&
+        (!newFilters.mahalle || (islem.mahalle && islem.mahalle.toLowerCase().includes(newFilters.mahalle.toLowerCase()))) &&
+        (!newFilters.cadde || (islem.cadde && islem.cadde.toLowerCase().includes(newFilters.cadde.toLowerCase()))) &&
+        (!newFilters.sokak || (islem.sokak && islem.sokak.toLowerCase().includes(newFilters.sokak.toLowerCase()))) &&
+        (!newFilters.kapi_no || (islem.kapi_no && islem.kapi_no.toLowerCase().includes(newFilters.kapi_no.toLowerCase()))) &&
+        (!newFilters.cep_tel || (islem.cep_tel && islem.cep_tel.includes(newFilters.cep_tel))) &&
+        (!newFilters.urun || (islem.urun && islem.urun.toLowerCase().includes(newFilters.urun.toLowerCase()))) &&
+        (!newFilters.marka || (islem.marka && islem.marka.toLowerCase().includes(newFilters.marka.toLowerCase()))) &&
+        (!newFilters.sikayet || (islem.sikayet && islem.sikayet.toLowerCase().includes(newFilters.sikayet.toLowerCase()))) &&
+        (!newFilters.yapilan_islem || (islem.yapilan_islem && islem.yapilan_islem.toLowerCase().includes(newFilters.yapilan_islem.toLowerCase()))) &&
+        (!newFilters.teknisyen || (islem.teknisyen_ismi && islem.teknisyen_ismi.toLowerCase().includes(newFilters.teknisyen.toLowerCase()))) &&
+        (!newFilters.tutar || (islem.tutar && islem.tutar.toString().includes(newFilters.tutar))) &&
+        (!newFilters.durum || (islem.is_durumu && (
+          (newFilters.durum.toLowerCase() === 'açık' && islem.is_durumu === 'acik') ||
+          (newFilters.durum.toLowerCase() === 'tamamlandı' && islem.is_durumu === 'tamamlandi') ||
+          (newFilters.durum.toLowerCase() === 'acik' && islem.is_durumu === 'acik') ||
+          (newFilters.durum.toLowerCase() === 'tamamlandi' && islem.is_durumu === 'tamamlandi')
+        )))
+      );
+    });
+
+    setFilteredHistory(filtered);
   };
 
   // Sütun sırasını localStorage'dan yükle
@@ -328,7 +405,7 @@ const IslemTable: React.FC<IslemTableProps> = ({
       id: 'tarih',
       label: 'Tarih',
       render: (islem) => (
-        <TableCell sx={{ fontWeight: 500, fontSize: '0.7rem', py: 0.2, px: 0.4 }}>
+        <TableCell sx={{ fontWeight: 500, fontSize: '0.65rem', py: 0.1, px: 0.2 }}>
           {islem.full_tarih ? new Date(islem.full_tarih).toLocaleDateString('tr-TR', {
             year: 'numeric',
             month: '2-digit',
@@ -340,58 +417,58 @@ const IslemTable: React.FC<IslemTableProps> = ({
     ad_soyad: {
       id: 'ad_soyad',
       label: 'Ad Soyad',
-      render: (islem) => <TableCell sx={{ fontWeight: 500, fontSize: '0.7rem', py: 0.2, px: 0.4 }}>{islem.ad_soyad || '-'}</TableCell>,
+      render: (islem) => <TableCell sx={{ fontWeight: 500, fontSize: '0.65rem', py: 0.1, px: 0.2 }}>{islem.ad_soyad || '-'}</TableCell>,
     },
     ilce: {
       id: 'ilce',
       label: 'İlçe',
-      render: (islem) => <TableCell sx={{ fontSize: '0.7rem', py: 0.2, px: 0.4 }}>{islem.ilce || '-'}</TableCell>,
+      render: (islem) => <TableCell sx={{ fontSize: '0.65rem', py: 0.1, px: 0.2 }}>{islem.ilce || '-'}</TableCell>,
     },
     mahalle: {
       id: 'mahalle',
       label: 'Mahalle',
-      render: (islem) => <TableCell sx={{ fontSize: '0.7rem', py: 0.2, px: 0.4 }}>{islem.mahalle || '-'}</TableCell>,
+      render: (islem) => <TableCell sx={{ fontSize: '0.65rem', py: 0.1, px: 0.2 }}>{islem.mahalle || '-'}</TableCell>,
     },
     cadde: {
       id: 'cadde',
       label: 'Cadde',
-      render: (islem) => <TableCell sx={{ fontSize: '0.7rem', py: 0.2, px: 0.4 }}>{islem.cadde || '-'}</TableCell>,
+      render: (islem) => <TableCell sx={{ fontSize: '0.65rem', py: 0.1, px: 0.2 }}>{islem.cadde || '-'}</TableCell>,
     },
     sokak: {
       id: 'sokak',
       label: 'Sokak',
-      render: (islem) => <TableCell sx={{ fontSize: '0.7rem', py: 0.2, px: 0.4 }}>{islem.sokak || '-'}</TableCell>,
+      render: (islem) => <TableCell sx={{ fontSize: '0.65rem', py: 0.1, px: 0.2 }}>{islem.sokak || '-'}</TableCell>,
     },
     kapi_no: {
       id: 'kapi_no',
       label: 'Kapı No',
-      render: (islem) => <TableCell sx={{ fontSize: '0.7rem', py: 0.2, px: 0.4 }}>{islem.kapi_no || '-'}</TableCell>,
+      render: (islem) => <TableCell sx={{ fontSize: '0.65rem', py: 0.1, px: 0.2 }}>{islem.kapi_no || '-'}</TableCell>,
     },
     cep_tel: {
       id: 'cep_tel',
       label: 'Cep Tel',
-      render: (islem) => <TableCell sx={{ fontSize: '0.7rem', py: 0.2, px: 0.4 }}>{islem.cep_tel ? formatPhoneNumber(islem.cep_tel) : '-'}</TableCell>,
+      render: (islem) => <TableCell sx={{ fontSize: '0.65rem', py: 0.1, px: 0.2 }}>{islem.cep_tel ? formatPhoneNumber(islem.cep_tel) : '-'}</TableCell>,
     },
     yedek_tel: {
       id: 'yedek_tel',
       label: 'Yedek Tel',
-      render: (islem) => <TableCell sx={{ fontSize: '0.7rem', py: 0.2, px: 0.4 }}>{islem.yedek_tel ? formatPhoneNumber(islem.yedek_tel) : '-'}</TableCell>,
+      render: (islem) => <TableCell sx={{ fontSize: '0.65rem', py: 0.1, px: 0.2 }}>{islem.yedek_tel ? formatPhoneNumber(islem.yedek_tel) : '-'}</TableCell>,
     },
     urun: {
       id: 'urun',
       label: 'Ürün',
-      render: (islem) => <TableCell sx={{ fontSize: '0.7rem', py: 0.2, px: 0.4 }}>{islem.urun || '-'}</TableCell>,
+      render: (islem) => <TableCell sx={{ fontSize: '0.65rem', py: 0.1, px: 0.2 }}>{islem.urun || '-'}</TableCell>,
     },
     marka: {
       id: 'marka',
       label: 'Marka',
-      render: (islem) => <TableCell sx={{ fontWeight: 500, fontSize: '0.7rem', py: 0.2, px: 0.4 }}>{islem.marka || '-'}</TableCell>,
+      render: (islem) => <TableCell sx={{ fontWeight: 500, fontSize: '0.65rem', py: 0.1, px: 0.2 }}>{islem.marka || '-'}</TableCell>,
     },
     sikayet: {
       id: 'sikayet',
       label: 'Şikayet',
       render: (islem) => (
-        <TableCell sx={{ maxWidth: 150, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: '0.7rem', py: 0.2, px: 0.4 }}>
+        <TableCell sx={{ maxWidth: 120, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: '0.65rem', py: 0.1, px: 0.2 }}>
           <Tooltip title={islem.sikayet || '-'}>
             <span>{islem.sikayet || '-'}</span>
           </Tooltip>
@@ -402,7 +479,7 @@ const IslemTable: React.FC<IslemTableProps> = ({
       id: 'yapilan_islem',
       label: 'Yapılan İşlem',
       render: (islem) => (
-        <TableCell sx={{ maxWidth: 150, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: '0.7rem', py: 0.2, px: 0.4 }}>
+        <TableCell sx={{ maxWidth: 120, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: '0.65rem', py: 0.1, px: 0.2 }}>
           <Tooltip title={islem.yapilan_islem || '-'}>
             <span>{islem.yapilan_islem || '-'}</span>
           </Tooltip>
@@ -412,13 +489,13 @@ const IslemTable: React.FC<IslemTableProps> = ({
     teknisyen: {
       id: 'teknisyen',
       label: 'Teknisyen',
-      render: (islem) => <TableCell sx={{ fontSize: '0.7rem', py: 0.2, px: 0.4 }}>{islem.teknisyen_ismi || '-'}</TableCell>,
+      render: (islem) => <TableCell sx={{ fontSize: '0.65rem', py: 0.1, px: 0.2 }}>{islem.teknisyen_ismi || '-'}</TableCell>,
     },
     tutar: {
       id: 'tutar',
       label: 'Tutar',
       render: (islem) => (
-        <TableCell sx={{ fontWeight: 600, fontSize: '0.7rem', py: 0.2, px: 0.4 }}>
+        <TableCell sx={{ fontWeight: 600, fontSize: '0.65rem', py: 0.1, px: 0.2 }}>
           {islem.tutar ? `${Number(islem.tutar).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ₺` : '-'}
         </TableCell>
       ),
@@ -427,21 +504,21 @@ const IslemTable: React.FC<IslemTableProps> = ({
       id: 'durum',
       label: 'Durum',
       render: (islem) => (
-        <TableCell sx={{ py: 0.5, px: 1 }}>
+        <TableCell sx={{ py: 0.1, px: 0.2 }}>
           {islem.is_durumu === 'acik' ? (
             <Chip
               label="Açık"
               color="warning"
               size="small"
-              sx={{ fontWeight: 600, fontSize: '0.7rem', height: '22px' }}
+              sx={{ fontWeight: 600, fontSize: '0.6rem', height: '18px', '& .MuiChip-label': { px: 0.5 } }}
             />
           ) : (
             <Chip
-              icon={<CheckCircle sx={{ fontSize: '0.8rem' }} />}
+              icon={<CheckCircle sx={{ fontSize: '0.65rem' }} />}
               label="Tamamlandı"
               color="success"
               size="small"
-              sx={{ fontWeight: 600, fontSize: '0.7rem', height: '22px' }}
+              sx={{ fontWeight: 600, fontSize: '0.6rem', height: '18px', '& .MuiChip-label': { px: 0.5 } }}
             />
           )}
         </TableCell>
@@ -642,12 +719,29 @@ const IslemTable: React.FC<IslemTableProps> = ({
                 Bu müşteri için kayıt bulunamadı.
               </Typography>
             ) : (
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                {customerHistory.map((record) => (
-                  <Card key={record.id} variant="outlined">
+              <>
+                {/* Filtreleme Alanı - Mobil */}
+                <Box sx={{ mb: 2, display: 'flex', flexDirection: 'column', gap: 1 }}>
+                  <TextField
+                    size="small"
+                    placeholder="Ara... (Tarih, Ürün, Marka, Şikayet, vb.)"
+                    value={historyFilters.sikayet}
+                    onChange={(e) => handleHistoryFilterChange('sikayet', e.target.value)}
+                    fullWidth
+                    sx={{ '& .MuiInputBase-input': { fontSize: '0.85rem' } }}
+                  />
+                </Box>
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                  {filteredHistory.map((record) => {
+                    // Global sıra hesabı
+                    const originalIndex = siraReferenceList.findIndex(item => item.id === record.id);
+                    const originalSira = siraReferenceList.length - originalIndex;
+                    
+                    return (
+                    <Card key={record.id} variant="outlined">
                     <CardContent sx={{ p: 1.5, '&:last-child': { pb: 1.5 } }}>
-                      <Typography variant="caption" color="primary">
-                        {record.full_tarih ? new Date(record.full_tarih).toLocaleDateString('tr-TR') : '-'}
+                      <Typography variant="caption" color="primary" sx={{ fontWeight: 600 }}>
+                        Sıra #{originalSira} - {record.full_tarih ? new Date(record.full_tarih).toLocaleDateString('tr-TR') : '-'}
                       </Typography>
                       <Typography variant="body2" sx={{ fontSize: '0.75rem', mt: 0.5 }}>
                         <strong>Ürün:</strong> {record.urun} - {record.marka}
@@ -668,8 +762,10 @@ const IslemTable: React.FC<IslemTableProps> = ({
                       />
                     </CardContent>
                   </Card>
-                ))}
-              </Box>
+                  );
+                })}
+                </Box>
+              </>
             )}
           </DialogContent>
         </Dialog>
@@ -689,8 +785,16 @@ const IslemTable: React.FC<IslemTableProps> = ({
   // Masaüstü görünüm - Table layout
   return (
     <>
-    <TableContainer component={Paper} elevation={3}>
-      <Table size="small" sx={{ '& .MuiTableCell-root': { py: 0.3, px: 0.5, fontSize: '0.75rem' } }}>
+    <TableContainer component={Paper} elevation={3} sx={{ maxWidth: '100vw', overflowX: 'auto' }}>
+      <Table size="small" sx={{ 
+        '& .MuiTableCell-root': { 
+          py: 0.2, 
+          px: 0.3, 
+          fontSize: '0.7rem',
+          whiteSpace: 'nowrap',
+          lineHeight: 1.2
+        } 
+      }}>
         <TableHead>
           <DragDropContext onDragEnd={handleDragEnd}>
             <Droppable droppableId="columns" direction="horizontal">
@@ -701,7 +805,7 @@ const IslemTable: React.FC<IslemTableProps> = ({
                   {...provided.droppableProps}
                 >
                   {/* Sıra No başlığı (draggable değil) */}
-                  <TableCell sx={{ color: 'white', fontWeight: 600, fontSize: '0.68rem', py: 0.15, px: 0.3 }}>
+                  <TableCell sx={{ color: 'white', fontWeight: 600, fontSize: '0.65rem', py: 0.1, px: 0.2, minWidth: '35px', maxWidth: '35px' }}>
                     Sıra
                   </TableCell>
                   {columnOrder.map((columnId, index) => {
@@ -716,20 +820,22 @@ const IslemTable: React.FC<IslemTableProps> = ({
                             sx={{
                               color: 'white',
                               fontWeight: 600,
-                              fontSize: '0.68rem',
+                              fontSize: '0.65rem',
                               cursor: 'move',
                               userSelect: 'none',
                               bgcolor: snapshot.isDragging ? 'primary.dark' : 'primary.main',
-                              py: 0.15,
-                              px: 0.3,
+                              py: 0.1,
+                              px: 0.2,
+                              minWidth: '60px',
+                              maxWidth: '120px',
                               '&:hover': {
                                 bgcolor: 'primary.dark',
                               },
                             }}
                           >
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.3 }}>
-                              <DragIndicator sx={{ fontSize: '0.8rem', opacity: 0.7 }} />
-                              {column.label}
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.2 }}>
+                              <DragIndicator sx={{ fontSize: '0.7rem', opacity: 0.7 }} />
+                              <span style={{ fontSize: '0.65rem' }}>{column.label}</span>
                             </Box>
                           </TableCell>
                         )}
@@ -737,39 +843,39 @@ const IslemTable: React.FC<IslemTableProps> = ({
                     );
                   })}
                   {provided.placeholder}
-                  <TableCell sx={{ color: 'white', fontWeight: 600, fontSize: '0.68rem', py: 0.15, px: 0.3 }}>İşlemler</TableCell>
+                  <TableCell sx={{ color: 'white', fontWeight: 600, fontSize: '0.65rem', py: 0.1, px: 0.2, minWidth: '90px', maxWidth: '90px' }}>İşlemler</TableCell>
                 </TableRow>
               )}
             </Droppable>
           </DragDropContext>
           {/* Filter Row */}
           <TableRow sx={{ bgcolor: '#f5f5f5' }}>
-            <TableCell sx={{ py: 0.3, px: 0.3 }}>
+            <TableCell sx={{ py: 0.2, px: 0.2 }}>
               <TextField
                 size="small"
-                placeholder="Sıra..."
+                placeholder="Sıra"
                 value={filters.sira}
                 onChange={(e) => handleFilterChange('sira', e.target.value)}
                 sx={{
-                  '& .MuiInputBase-input': { fontSize: '0.68rem', py: 0.3, px: 0.3 },
-                  width: '50px'
+                  '& .MuiInputBase-input': { fontSize: '0.65rem', py: 0.2, px: 0.2 },
+                  width: '35px'
                 }}
               />
             </TableCell>
             {columnOrder.map((columnId) => (
-              <TableCell key={columnId} sx={{ py: 0.3, px: 0.3 }}>
+              <TableCell key={columnId} sx={{ py: 0.2, px: 0.2 }}>
                 <TextField
                   size="small"
                   placeholder={`${columnConfigs[columnId].label}...`}
                   value={filters[columnId as keyof typeof filters] || ''}
                   onChange={(e) => handleFilterChange(columnId, e.target.value)}
                   sx={{
-                    '& .MuiInputBase-input': { fontSize: '0.68rem', py: 0.3, px: 0.3 },
-                    minWidth: columnId === 'tarih' ? '90px' : 
-                             columnId === 'cep_tel' ? '100px' : 
-                             columnId === 'yedek_tel' ? '100px' : 
-                             columnId === 'tutar' ? '70px' :
-                             columnId === 'durum' ? '90px' : '100px'
+                    '& .MuiInputBase-input': { fontSize: '0.65rem', py: 0.2, px: 0.2 },
+                    minWidth: columnId === 'tarih' ? '75px' : 
+                             columnId === 'cep_tel' ? '85px' : 
+                             columnId === 'yedek_tel' ? '85px' : 
+                             columnId === 'tutar' ? '55px' :
+                             columnId === 'durum' ? '75px' : '80px'
                   }}
                 />
               </TableCell>
@@ -794,15 +900,15 @@ const IslemTable: React.FC<IslemTableProps> = ({
               }}
             >
               {/* Sıra No - GLOBAL SIRA (TÜM KAYITLARA GÖRE) */}
-              <TableCell sx={{ fontWeight: 500, fontSize: '0.68rem', py: 0.15, px: 0.3 }}>
+              <TableCell sx={{ fontWeight: 500, fontSize: '0.65rem', py: 0.1, px: 0.2, textAlign: 'center' }}>
                 {originalSira}
               </TableCell>
               {columnOrder.map((columnId) => {
                 const column = columnConfigs[columnId];
                 return <React.Fragment key={columnId}>{column.render(islem)}</React.Fragment>;
               })}
-              <TableCell sx={{ py: 0.2, px: 0.4 }}>
-                <Box sx={{ display: 'flex', gap: 0.2 }}>
+              <TableCell sx={{ py: 0.1, px: 0.2 }}>
+                <Box sx={{ display: 'flex', gap: 0.15 }}>
                   <Tooltip title={islem.is_durumu === 'acik' ? 'Tamamla' : (isAdminMode ? 'Tamamlandı' : 'Tamamlandı - Durum değiştirilemez')}>
                     <span>
                       <IconButton 
@@ -811,8 +917,8 @@ const IslemTable: React.FC<IslemTableProps> = ({
                         disabled={!isAdminMode && islem.is_durumu === 'tamamlandi'}
                         sx={{ 
                           bgcolor: islem.is_durumu === 'acik' ? 'warning.light' : (isAdminMode ? 'success.light' : 'grey.300'),
-                          width: 24,
-                          height: 24,
+                          width: 20,
+                          height: 20,
                           '&:hover': {
                             bgcolor: islem.is_durumu === 'acik' ? 'warning.main' : (isAdminMode ? 'success.main' : 'grey.300'),
                           },
@@ -822,7 +928,7 @@ const IslemTable: React.FC<IslemTableProps> = ({
                           }
                         }}
                       >
-                        <Check sx={{ color: islem.is_durumu === 'acik' ? 'white' : (isAdminMode ? 'white' : 'grey.500'), fontSize: '0.85rem' }} />
+                        <Check sx={{ color: islem.is_durumu === 'acik' ? 'white' : (isAdminMode ? 'white' : 'grey.500'), fontSize: '0.7rem' }} />
                       </IconButton>
                     </span>
                   </Tooltip>
@@ -834,8 +940,8 @@ const IslemTable: React.FC<IslemTableProps> = ({
                         disabled={!isAdminMode && islem.is_durumu === 'tamamlandi'}
                         sx={{ 
                           bgcolor: (islem.is_durumu === 'acik' || isAdminMode) ? 'primary.light' : 'grey.300',
-                          width: 24,
-                          height: 24,
+                          width: 20,
+                          height: 20,
                           '&:hover': {
                             bgcolor: (islem.is_durumu === 'acik' || isAdminMode) ? 'primary.main' : 'grey.300',
                           },
@@ -845,7 +951,7 @@ const IslemTable: React.FC<IslemTableProps> = ({
                           }
                         }}
                       >
-                        <Edit sx={{ color: (islem.is_durumu === 'acik' || isAdminMode) ? 'white' : 'grey.500', fontSize: '0.85rem' }} />
+                        <Edit sx={{ color: (islem.is_durumu === 'acik' || isAdminMode) ? 'white' : 'grey.500', fontSize: '0.7rem' }} />
                       </IconButton>
                     </span>
                   </Tooltip>
@@ -856,8 +962,8 @@ const IslemTable: React.FC<IslemTableProps> = ({
                       disabled={!islem.ad_soyad}
                       sx={{ 
                         bgcolor: 'secondary.light',
-                        width: 24,
-                        height: 24,
+                        width: 20,
+                        height: 20,
                         '&:hover': {
                           bgcolor: 'secondary.main',
                         },
@@ -867,7 +973,7 @@ const IslemTable: React.FC<IslemTableProps> = ({
                         }
                       }}
                     >
-                      <History sx={{ color: 'white', fontSize: '0.85rem' }} />
+                      <History sx={{ color: 'white', fontSize: '0.7rem' }} />
                     </IconButton>
                   </Tooltip>
                   <Tooltip title="Yazdır">
@@ -879,14 +985,14 @@ const IslemTable: React.FC<IslemTableProps> = ({
                       }}
                       sx={{ 
                         bgcolor: 'info.light',
-                        width: 24,
-                        height: 24,
+                        width: 20,
+                        height: 20,
                         '&:hover': {
                           bgcolor: 'info.main',
                         }
                       }}
                     >
-                      <Print sx={{ color: 'white', fontSize: '0.85rem' }} />
+                      <Print sx={{ color: 'white', fontSize: '0.7rem' }} />
                     </IconButton>
                   </Tooltip>
                 </Box>
@@ -929,27 +1035,170 @@ const IslemTable: React.FC<IslemTableProps> = ({
             <Table size="small" sx={{ '& .MuiTableCell-root': { py: 0.5, px: 1, fontSize: '0.75rem' } }}>
               <TableHead>
                 <TableRow sx={{ bgcolor: 'primary.main' }}>
-                  <TableCell sx={{ color: 'white', fontWeight: 600 }}>Sıra</TableCell>
-                  <TableCell sx={{ color: 'white', fontWeight: 600 }}>Tarih</TableCell>
-                  <TableCell sx={{ color: 'white', fontWeight: 600 }}>İlçe</TableCell>
-                  <TableCell sx={{ color: 'white', fontWeight: 600 }}>Mahalle</TableCell>
-                  <TableCell sx={{ color: 'white', fontWeight: 600 }}>Cadde</TableCell>
-                  <TableCell sx={{ color: 'white', fontWeight: 600 }}>Sokak</TableCell>
-                  <TableCell sx={{ color: 'white', fontWeight: 600 }}>Kapı No</TableCell>
-                  <TableCell sx={{ color: 'white', fontWeight: 600 }}>Cep Tel</TableCell>
-                  <TableCell sx={{ color: 'white', fontWeight: 600 }}>Ürün</TableCell>
-                  <TableCell sx={{ color: 'white', fontWeight: 600 }}>Marka</TableCell>
-                  <TableCell sx={{ color: 'white', fontWeight: 600 }}>Şikayet</TableCell>
-                  <TableCell sx={{ color: 'white', fontWeight: 600 }}>Yapılan İşlem</TableCell>
-                  <TableCell sx={{ color: 'white', fontWeight: 600 }}>Teknisyen</TableCell>
-                  <TableCell sx={{ color: 'white', fontWeight: 600 }}>Tutar</TableCell>
-                  <TableCell sx={{ color: 'white', fontWeight: 600 }}>Durum</TableCell>
+                  <TableCell sx={{ color: 'white', fontWeight: 600, fontSize: '0.7rem' }}>Sıra</TableCell>
+                  <TableCell sx={{ color: 'white', fontWeight: 600, fontSize: '0.7rem' }}>Tarih</TableCell>
+                  <TableCell sx={{ color: 'white', fontWeight: 600, fontSize: '0.7rem' }}>İlçe</TableCell>
+                  <TableCell sx={{ color: 'white', fontWeight: 600, fontSize: '0.7rem' }}>Mahalle</TableCell>
+                  <TableCell sx={{ color: 'white', fontWeight: 600, fontSize: '0.7rem' }}>Cadde</TableCell>
+                  <TableCell sx={{ color: 'white', fontWeight: 600, fontSize: '0.7rem' }}>Sokak</TableCell>
+                  <TableCell sx={{ color: 'white', fontWeight: 600, fontSize: '0.7rem' }}>Kapı No</TableCell>
+                  <TableCell sx={{ color: 'white', fontWeight: 600, fontSize: '0.7rem' }}>Cep Tel</TableCell>
+                  <TableCell sx={{ color: 'white', fontWeight: 600, fontSize: '0.7rem' }}>Ürün</TableCell>
+                  <TableCell sx={{ color: 'white', fontWeight: 600, fontSize: '0.7rem' }}>Marka</TableCell>
+                  <TableCell sx={{ color: 'white', fontWeight: 600, fontSize: '0.7rem' }}>Şikayet</TableCell>
+                  <TableCell sx={{ color: 'white', fontWeight: 600, fontSize: '0.7rem' }}>Yapılan İşlem</TableCell>
+                  <TableCell sx={{ color: 'white', fontWeight: 600, fontSize: '0.7rem' }}>Teknisyen</TableCell>
+                  <TableCell sx={{ color: 'white', fontWeight: 600, fontSize: '0.7rem' }}>Tutar</TableCell>
+                  <TableCell sx={{ color: 'white', fontWeight: 600, fontSize: '0.7rem' }}>Durum</TableCell>
+                </TableRow>
+                {/* Filter Row */}
+                <TableRow sx={{ bgcolor: '#f5f5f5' }}>
+                  <TableCell sx={{ py: 0.2, px: 0.5 }}>
+                    <TextField
+                      size="small"
+                      placeholder="Sıra"
+                      value={historyFilters.sira}
+                      onChange={(e) => handleHistoryFilterChange('sira', e.target.value)}
+                      sx={{ '& .MuiInputBase-input': { fontSize: '0.65rem', py: 0.3, px: 0.3 }, width: '50px' }}
+                    />
+                  </TableCell>
+                  <TableCell sx={{ py: 0.2, px: 0.5 }}>
+                    <TextField
+                      size="small"
+                      placeholder="Tarih"
+                      value={historyFilters.tarih}
+                      onChange={(e) => handleHistoryFilterChange('tarih', e.target.value)}
+                      sx={{ '& .MuiInputBase-input': { fontSize: '0.65rem', py: 0.3, px: 0.3 }, minWidth: '80px' }}
+                    />
+                  </TableCell>
+                  <TableCell sx={{ py: 0.2, px: 0.5 }}>
+                    <TextField
+                      size="small"
+                      placeholder="İlçe"
+                      value={historyFilters.ilce}
+                      onChange={(e) => handleHistoryFilterChange('ilce', e.target.value)}
+                      sx={{ '& .MuiInputBase-input': { fontSize: '0.65rem', py: 0.3, px: 0.3 }, minWidth: '80px' }}
+                    />
+                  </TableCell>
+                  <TableCell sx={{ py: 0.2, px: 0.5 }}>
+                    <TextField
+                      size="small"
+                      placeholder="Mahalle"
+                      value={historyFilters.mahalle}
+                      onChange={(e) => handleHistoryFilterChange('mahalle', e.target.value)}
+                      sx={{ '& .MuiInputBase-input': { fontSize: '0.65rem', py: 0.3, px: 0.3 }, minWidth: '80px' }}
+                    />
+                  </TableCell>
+                  <TableCell sx={{ py: 0.2, px: 0.5 }}>
+                    <TextField
+                      size="small"
+                      placeholder="Cadde"
+                      value={historyFilters.cadde}
+                      onChange={(e) => handleHistoryFilterChange('cadde', e.target.value)}
+                      sx={{ '& .MuiInputBase-input': { fontSize: '0.65rem', py: 0.3, px: 0.3 }, minWidth: '80px' }}
+                    />
+                  </TableCell>
+                  <TableCell sx={{ py: 0.2, px: 0.5 }}>
+                    <TextField
+                      size="small"
+                      placeholder="Sokak"
+                      value={historyFilters.sokak}
+                      onChange={(e) => handleHistoryFilterChange('sokak', e.target.value)}
+                      sx={{ '& .MuiInputBase-input': { fontSize: '0.65rem', py: 0.3, px: 0.3 }, minWidth: '80px' }}
+                    />
+                  </TableCell>
+                  <TableCell sx={{ py: 0.2, px: 0.5 }}>
+                    <TextField
+                      size="small"
+                      placeholder="Kapı"
+                      value={historyFilters.kapi_no}
+                      onChange={(e) => handleHistoryFilterChange('kapi_no', e.target.value)}
+                      sx={{ '& .MuiInputBase-input': { fontSize: '0.65rem', py: 0.3, px: 0.3 }, width: '50px' }}
+                    />
+                  </TableCell>
+                  <TableCell sx={{ py: 0.2, px: 0.5 }}>
+                    <TextField
+                      size="small"
+                      placeholder="Cep Tel"
+                      value={historyFilters.cep_tel}
+                      onChange={(e) => handleHistoryFilterChange('cep_tel', e.target.value)}
+                      sx={{ '& .MuiInputBase-input': { fontSize: '0.65rem', py: 0.3, px: 0.3 }, minWidth: '90px' }}
+                    />
+                  </TableCell>
+                  <TableCell sx={{ py: 0.2, px: 0.5 }}>
+                    <TextField
+                      size="small"
+                      placeholder="Ürün"
+                      value={historyFilters.urun}
+                      onChange={(e) => handleHistoryFilterChange('urun', e.target.value)}
+                      sx={{ '& .MuiInputBase-input': { fontSize: '0.65rem', py: 0.3, px: 0.3 }, minWidth: '80px' }}
+                    />
+                  </TableCell>
+                  <TableCell sx={{ py: 0.2, px: 0.5 }}>
+                    <TextField
+                      size="small"
+                      placeholder="Marka"
+                      value={historyFilters.marka}
+                      onChange={(e) => handleHistoryFilterChange('marka', e.target.value)}
+                      sx={{ '& .MuiInputBase-input': { fontSize: '0.65rem', py: 0.3, px: 0.3 }, minWidth: '80px' }}
+                    />
+                  </TableCell>
+                  <TableCell sx={{ py: 0.2, px: 0.5 }}>
+                    <TextField
+                      size="small"
+                      placeholder="Şikayet"
+                      value={historyFilters.sikayet}
+                      onChange={(e) => handleHistoryFilterChange('sikayet', e.target.value)}
+                      sx={{ '& .MuiInputBase-input': { fontSize: '0.65rem', py: 0.3, px: 0.3 }, minWidth: '100px' }}
+                    />
+                  </TableCell>
+                  <TableCell sx={{ py: 0.2, px: 0.5 }}>
+                    <TextField
+                      size="small"
+                      placeholder="Yapılan"
+                      value={historyFilters.yapilan_islem}
+                      onChange={(e) => handleHistoryFilterChange('yapilan_islem', e.target.value)}
+                      sx={{ '& .MuiInputBase-input': { fontSize: '0.65rem', py: 0.3, px: 0.3 }, minWidth: '100px' }}
+                    />
+                  </TableCell>
+                  <TableCell sx={{ py: 0.2, px: 0.5 }}>
+                    <TextField
+                      size="small"
+                      placeholder="Teknisyen"
+                      value={historyFilters.teknisyen}
+                      onChange={(e) => handleHistoryFilterChange('teknisyen', e.target.value)}
+                      sx={{ '& .MuiInputBase-input': { fontSize: '0.65rem', py: 0.3, px: 0.3 }, minWidth: '80px' }}
+                    />
+                  </TableCell>
+                  <TableCell sx={{ py: 0.2, px: 0.5 }}>
+                    <TextField
+                      size="small"
+                      placeholder="Tutar"
+                      value={historyFilters.tutar}
+                      onChange={(e) => handleHistoryFilterChange('tutar', e.target.value)}
+                      sx={{ '& .MuiInputBase-input': { fontSize: '0.65rem', py: 0.3, px: 0.3 }, width: '60px' }}
+                    />
+                  </TableCell>
+                  <TableCell sx={{ py: 0.2, px: 0.5 }}>
+                    <TextField
+                      size="small"
+                      placeholder="Durum"
+                      value={historyFilters.durum}
+                      onChange={(e) => handleHistoryFilterChange('durum', e.target.value)}
+                      sx={{ '& .MuiInputBase-input': { fontSize: '0.65rem', py: 0.3, px: 0.3 }, minWidth: '80px' }}
+                    />
+                  </TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
-                {customerHistory.map((islem, index) => (
+                {filteredHistory.map((islem) => {
+                  // Global sıra hesabı
+                  const originalIndex = siraReferenceList.findIndex(item => item.id === islem.id);
+                  const originalSira = siraReferenceList.length - originalIndex;
+                  
+                  return (
                   <TableRow key={islem.id} hover>
-                    <TableCell>{index + 1}</TableCell>
+                    <TableCell>{originalSira}</TableCell>
                     <TableCell>
                       {islem.full_tarih ? new Date(islem.full_tarih).toLocaleDateString('tr-TR') : '-'}
                     </TableCell>
@@ -962,10 +1211,14 @@ const IslemTable: React.FC<IslemTableProps> = ({
                     <TableCell>{islem.urun || '-'}</TableCell>
                     <TableCell>{islem.marka || '-'}</TableCell>
                     <TableCell sx={{ maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {islem.sikayet || '-'}
+                      <Tooltip title={islem.sikayet || '-'} placement="top">
+                        <span>{islem.sikayet || '-'}</span>
+                      </Tooltip>
                     </TableCell>
                     <TableCell sx={{ maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {islem.yapilan_islem || '-'}
+                      <Tooltip title={islem.yapilan_islem || '-'} placement="top">
+                        <span>{islem.yapilan_islem || '-'}</span>
+                      </Tooltip>
                     </TableCell>
                     <TableCell>{islem.teknisyen_ismi || '-'}</TableCell>
                     <TableCell>
@@ -980,7 +1233,8 @@ const IslemTable: React.FC<IslemTableProps> = ({
                       />
                     </TableCell>
                   </TableRow>
-                ))}
+                  );
+                })}
               </TableBody>
             </Table>
           </TableContainer>
