@@ -118,6 +118,9 @@ const IslemTable: React.FC<IslemTableProps> = ({
     cadde: '',
     sokak: '',
     kapi_no: '',
+    apartman_site: '',
+    blok_no: '',
+    daire_no: '',
     cep_tel: '',
     yedek_tel: '',
     urun: '',
@@ -137,11 +140,12 @@ const IslemTable: React.FC<IslemTableProps> = ({
   const applyFilters = () => {
     let filtered = [...islemler];
 
-    // Sıra filtresi varsa, önce GLOBAL listedeki pozisyonları işaretle (en yeni en üstte, index+1)
+    // Sıra filtresi varsa, önce GLOBAL listedeki pozisyonları işaretle (en yeni en üstte - azalan sıra: 8,7,6,5...)
     const originalIndices = new Map<number, number>();
     if (filters.sira) {
       siraReferenceList.forEach((item, index) => {
-        originalIndices.set(item.id, index + 1);
+        // Sıra = Toplam - Index (örnek: 8 kayıt varsa: 8-0=8, 8-1=7, 8-2=6...)
+        originalIndices.set(item.id, siraReferenceList.length - index);
       });
     }
 
@@ -191,6 +195,27 @@ const IslemTable: React.FC<IslemTableProps> = ({
     if (filters.kapi_no) {
       filtered = filtered.filter((item) =>
         (item.kapi_no || '').toLowerCase().includes(filters.kapi_no.toLowerCase())
+      );
+    }
+
+    // Filter by apartman_site
+    if (filters.apartman_site) {
+      filtered = filtered.filter((item) =>
+        (item.apartman_site || '').toLowerCase().includes(filters.apartman_site.toLowerCase())
+      );
+    }
+
+    // Filter by blok_no
+    if (filters.blok_no) {
+      filtered = filtered.filter((item) =>
+        (item.blok_no || '').toLowerCase().includes(filters.blok_no.toLowerCase())
+      );
+    }
+
+    // Filter by daire_no
+    if (filters.daire_no) {
+      filtered = filtered.filter((item) =>
+        (item.daire_no || '').toLowerCase().includes(filters.daire_no.toLowerCase())
       );
     }
 

@@ -39,6 +39,9 @@ const MusteriGecmisi: React.FC = () => {
     cadde: '',
     sokak: '',
     kapi_no: '',
+    apartman_site: '',
+    blok_no: '',
+    daire_no: '',
     cep_tel: '',
     urun: '',
     marka: '',
@@ -112,6 +115,27 @@ const MusteriGecmisi: React.FC = () => {
     if (filters.kapi_no) {
       filtered = filtered.filter((item) =>
         (item.kapi_no || '').toLowerCase().includes(filters.kapi_no.toLowerCase())
+      );
+    }
+
+    // Filter by apartman_site
+    if (filters.apartman_site) {
+      filtered = filtered.filter((item) =>
+        (item.apartman_site || '').toLowerCase().includes(filters.apartman_site.toLowerCase())
+      );
+    }
+
+    // Filter by blok_no
+    if (filters.blok_no) {
+      filtered = filtered.filter((item) =>
+        (item.blok_no || '').toLowerCase().includes(filters.blok_no.toLowerCase())
+      );
+    }
+
+    // Filter by daire_no
+    if (filters.daire_no) {
+      filtered = filtered.filter((item) =>
+        (item.daire_no || '').toLowerCase().includes(filters.daire_no.toLowerCase())
       );
     }
 
@@ -371,14 +395,19 @@ const MusteriGecmisi: React.FC = () => {
   };
 
   return (
-    <Box sx={{ p: 3 }}>
-      <Typography variant="h5" sx={{ mb: 3, fontWeight: 600 }}>
+    <Box sx={{ p: { xs: 2, sm: 3 } }}>
+      <Typography variant="h5" sx={{ mb: 3, fontWeight: 600, fontSize: { xs: '1.25rem', sm: '1.5rem' } }}>
         Müşteri Geçmişi
       </Typography>
 
       {/* Arama Alanı */}
-      <Paper sx={{ p: 3, mb: 3 }}>
-        <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+      <Paper sx={{ p: { xs: 2, sm: 3 }, mb: 3 }}>
+        <Box sx={{ 
+          display: 'flex', 
+          flexDirection: { xs: 'column', sm: 'row' },
+          gap: 2, 
+          alignItems: { xs: 'stretch', sm: 'center' } 
+        }}>
           <TextField
             fullWidth
             label="Müşteri Adı Soyad"
@@ -398,16 +427,18 @@ const MusteriGecmisi: React.FC = () => {
             variant="contained"
             onClick={handleSearch}
             disabled={loading}
-            sx={{ minWidth: 120, height: 56 }}
+            fullWidth
+            sx={{ minWidth: { sm: 120 }, height: 56, maxWidth: { sm: 120 } }}
           >
             {loading ? 'Aranıyor...' : 'Ara'}
           </Button>
           <Button
             variant="outlined"
-            startIcon={<PictureAsPdf />}
+            startIcon={<PictureAsPdf sx={{ display: { xs: 'none', sm: 'block' } }} />}
             onClick={handleExportPDF}
             disabled={searchResults.length === 0}
-            sx={{ minWidth: 140, height: 56 }}
+            fullWidth
+            sx={{ minWidth: { sm: 140 }, height: 56, maxWidth: { sm: 140 } }}
           >
             PDF İndir
           </Button>
@@ -418,12 +449,12 @@ const MusteriGecmisi: React.FC = () => {
       {searchResults.length > 0 && (
         <Paper>
           <Box sx={{ p: 2, borderBottom: '1px solid #e0e0e0' }}>
-            <Typography variant="h6">
+            <Typography variant="h6" sx={{ fontSize: { xs: '1rem', sm: '1.25rem' } }}>
               Bulunan Kayıtlar ({filteredResults.length} / {searchResults.length})
             </Typography>
           </Box>
-          <TableContainer sx={{ maxHeight: 600 }}>
-            <Table stickyHeader size="small">
+          <TableContainer sx={{ maxHeight: 600, overflowX: 'auto' }}>
+            <Table stickyHeader size="small" sx={{ minWidth: 650 }}>
               <TableHead>
                 <TableRow>
                   <TableCell sx={{ fontWeight: 600, bgcolor: '#0D3282', color: 'white', fontSize: '0.75rem', py: 0.3, px: 0.5 }}>Sıra</TableCell>
@@ -633,9 +664,9 @@ const MusteriGecmisi: React.FC = () => {
 
       {/* Arama yapılmadıysa */}
       {searchResults.length === 0 && !loading && (
-        <Paper sx={{ p: 5, textAlign: 'center' }}>
-          <Search sx={{ fontSize: 80, color: '#ccc', mb: 2 }} />
-          <Typography variant="h6" color="text.secondary">
+        <Paper sx={{ p: { xs: 3, sm: 5 }, textAlign: 'center' }}>
+          <Search sx={{ fontSize: { xs: 60, sm: 80 }, color: '#ccc', mb: 2 }} />
+          <Typography variant="h6" color="text.secondary" sx={{ fontSize: { xs: '1rem', sm: '1.25rem' } }}>
             Müşteri geçmişini görmek için ad soyad ile arama yapın
           </Typography>
         </Paper>

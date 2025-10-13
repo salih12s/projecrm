@@ -176,6 +176,9 @@ const IslemFilters: React.FC<IslemFiltersProps> = ({ islemler, onFilterChange, s
       });
     }
 
+    // Filtrelenmiş kayıtları sırala (en yeni en üstte - id'ye göre büyükten küçüğe)
+    filtered.sort((a, b) => b.id - a.id);
+
     // Filtrelenmiş kayıtların toplam tutarını hesapla (sadece admin için)
     if (isAdmin) {
       const tutar = filtered.reduce((sum, i) => {

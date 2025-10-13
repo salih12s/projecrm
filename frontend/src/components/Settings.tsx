@@ -147,11 +147,22 @@ const Settings: React.FC = () => {
 
   return (
     <Box sx={{ mt: 2 }}>
-      <Paper elevation={3} sx={{ p: 3 }}>
+      <Paper elevation={3} sx={{ p: { xs: 2, sm: 3 } }}>
         <Tabs
           value={tabValue}
           onChange={(_, newValue) => setTabValue(newValue)}
-          sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}
+          variant="scrollable"
+          scrollButtons="auto"
+          sx={{ 
+            borderBottom: 1, 
+            borderColor: 'divider', 
+            mb: 3,
+            '& .MuiTab-root': {
+              minWidth: { xs: 'auto', sm: 120 },
+              fontSize: { xs: '0.75rem', sm: '0.875rem' },
+              px: { xs: 1, sm: 2 },
+            }
+          }}
         >
           <Tab label="Teknisyenler" />
           <Tab label="Markalar" />
@@ -162,7 +173,7 @@ const Settings: React.FC = () => {
 
         <Box sx={{ mb: 2 }}>
           {tabValue === 4 ? (
-            <Box sx={{ display: 'flex', gap: 2 }}>
+            <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, gap: 2 }}>
               <Button
                 variant="contained"
                 startIcon={<Add />}
@@ -174,7 +185,12 @@ const Settings: React.FC = () => {
                   setEditType('montaj');
                   setDialogOpen(true);
                 }}
-                sx={{ backgroundColor: '#0D3282', '&:hover': { backgroundColor: '#082052' } }}
+                fullWidth
+                sx={{ 
+                  backgroundColor: '#0D3282', 
+                  '&:hover': { backgroundColor: '#082052' },
+                  maxWidth: { sm: 'auto' }
+                }}
               >
                 Yeni Montaj Ekle
               </Button>
@@ -189,7 +205,12 @@ const Settings: React.FC = () => {
                   setEditType('aksesuar');
                   setDialogOpen(true);
                 }}
-                sx={{ backgroundColor: '#0D8220', '&:hover': { backgroundColor: '#085210' } }}
+                fullWidth
+                sx={{ 
+                  backgroundColor: '#0D8220', 
+                  '&:hover': { backgroundColor: '#085210' },
+                  maxWidth: { sm: 'auto' }
+                }}
               >
                 Yeni Aksesuar Ekle
               </Button>
@@ -199,7 +220,12 @@ const Settings: React.FC = () => {
               variant="contained"
               startIcon={<Add />}
               onClick={handleAdd}
-              sx={{ backgroundColor: '#0D3282', '&:hover': { backgroundColor: '#082052' } }}
+              fullWidth
+              sx={{ 
+                backgroundColor: '#0D3282', 
+                '&:hover': { backgroundColor: '#082052' },
+                maxWidth: { sm: 300 }
+              }}
             >
               {tabValue === 0 ? 'Yeni Teknisyen Ekle' : 
                tabValue === 1 ? 'Yeni Marka Ekle' : 
@@ -304,11 +330,11 @@ const Settings: React.FC = () => {
               ))
             )
           ) : tabValue === 4 ? (
-            <Box sx={{ display: 'flex', gap: 3 }}>
+            <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 3 }}>
               {/* Montaj Listesi */}
               <Box sx={{ flex: 1 }}>
                 <Paper elevation={2} sx={{ p: 2, bgcolor: '#f5f5f5' }}>
-                  <Typography variant="h6" sx={{ mb: 2, color: '#0D3282', fontWeight: 'bold' }}>
+                  <Typography variant="h6" sx={{ mb: 2, color: '#0D3282', fontWeight: 'bold', fontSize: { xs: '1.1rem', sm: '1.25rem' } }}>
                     Montaj
                   </Typography>
                   <List>
@@ -346,7 +372,7 @@ const Settings: React.FC = () => {
               {/* Aksesuarlar Listesi */}
               <Box sx={{ flex: 1 }}>
                 <Paper elevation={2} sx={{ p: 2, bgcolor: '#f5f5f5' }}>
-                  <Typography variant="h6" sx={{ mb: 2, color: '#0D8220', fontWeight: 'bold' }}>
+                  <Typography variant="h6" sx={{ mb: 2, color: '#0D8220', fontWeight: 'bold', fontSize: { xs: '1.1rem', sm: '1.25rem' } }}>
                     Aksesuarlar
                   </Typography>
                   <List>
