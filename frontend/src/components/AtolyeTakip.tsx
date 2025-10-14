@@ -576,7 +576,7 @@ const AtolyeTakip: React.FC = () => {
                         label={`Sıra: ${siraNo}`} 
                         size="small" 
                         color="primary"
-                        sx={{ fontWeight: 600 }}
+                        sx={{ fontWeight: 700, fontSize: '0.875rem' }}
                       />
                       <Chip 
                         label={
@@ -609,13 +609,13 @@ const AtolyeTakip: React.FC = () => {
                       {!isBayi && atolye.bayi_adi && (
                         <Grid item xs={6}>
                           <Typography variant="caption" color="text.secondary">Bayi:</Typography>
-                          <Typography variant="body2" sx={{ fontSize: '0.75rem' }}>{atolye.bayi_adi}</Typography>
+                          <Typography variant="body2" sx={{ fontSize: '0.75rem', textTransform: 'uppercase' }}>{atolye.bayi_adi}</Typography>
                         </Grid>
                       )}
                       {atolye.musteri_ad_soyad && (
                         <Grid item xs={12}>
                           <Typography variant="caption" color="text.secondary">Müşteri:</Typography>
-                          <Typography variant="body2" sx={{ fontSize: '0.75rem', fontWeight: 600 }}>
+                          <Typography variant="body2" sx={{ fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase' }}>
                             {atolye.musteri_ad_soyad}
                           </Typography>
                         </Grid>
@@ -628,32 +628,32 @@ const AtolyeTakip: React.FC = () => {
                       )}
                       <Grid item xs={6}>
                         <Typography variant="caption" color="text.secondary">Marka:</Typography>
-                        <Typography variant="body2" sx={{ fontSize: '0.75rem' }}>{atolye.marka || '-'}</Typography>
+                        <Typography variant="body2" sx={{ fontSize: '0.75rem', textTransform: 'uppercase' }}>{atolye.marka || '-'}</Typography>
                       </Grid>
                       <Grid item xs={6}>
                         <Typography variant="caption" color="text.secondary">Model:</Typography>
-                        <Typography variant="body2" sx={{ fontSize: '0.75rem' }}>{atolye.kod || '-'}</Typography>
+                        <Typography variant="body2" sx={{ fontSize: '0.75rem', textTransform: 'uppercase' }}>{atolye.kod || '-'}</Typography>
                       </Grid>
                       {atolye.seri_no && (
                         <Grid item xs={12}>
                           <Typography variant="caption" color="text.secondary">Seri No:</Typography>
-                          <Typography variant="body2" sx={{ fontSize: '0.75rem' }}>{atolye.seri_no}</Typography>
+                          <Typography variant="body2" sx={{ fontSize: '0.75rem', textTransform: 'uppercase' }}>{atolye.seri_no}</Typography>
                         </Grid>
                       )}
                       <Grid item xs={12}>
                         <Typography variant="caption" color="text.secondary">Şikayet:</Typography>
-                        <Typography variant="body2" sx={{ fontSize: '0.75rem' }}>{atolye.sikayet || '-'}</Typography>
+                        <Typography variant="body2" sx={{ fontSize: '0.75rem', textTransform: 'uppercase' }}>{atolye.sikayet || '-'}</Typography>
                       </Grid>
                       {atolye.ozel_not && (
                         <Grid item xs={12}>
                           <Typography variant="caption" color="text.secondary">Özel Not:</Typography>
-                          <Typography variant="body2" sx={{ fontSize: '0.75rem' }}>{atolye.ozel_not}</Typography>
+                          <Typography variant="body2" sx={{ fontSize: '0.75rem', textTransform: 'uppercase' }}>{atolye.ozel_not}</Typography>
                         </Grid>
                       )}
                       {atolye.yapilan_islem && (
                         <Grid item xs={12}>
                           <Typography variant="caption" color="text.secondary">Yapılan İşlem:</Typography>
-                          <Typography variant="body2" sx={{ fontSize: '0.75rem' }}>{atolye.yapilan_islem}</Typography>
+                          <Typography variant="body2" sx={{ fontSize: '0.75rem', textTransform: 'uppercase' }}>{atolye.yapilan_islem}</Typography>
                         </Grid>
                       )}
                       {atolye.ucret && (
@@ -894,7 +894,7 @@ const AtolyeTakip: React.FC = () => {
               </TableRow>
               {/* Header Row */}
               <TableRow sx={{ backgroundColor: '#0D3282' }}>
-                <TableCell sx={{ color: 'white', fontWeight: 'bold', padding: '6px', fontSize: '0.75rem', position: 'sticky', top: 30, backgroundColor: '#0D3282', zIndex: 9 }}>Sıra</TableCell>
+                <TableCell sx={{ color: 'white', fontWeight: 'bold', padding: '6px', fontSize: '0.875rem', position: 'sticky', top: 30, backgroundColor: '#0D3282', zIndex: 9, textAlign: 'center' }}>Sıra</TableCell>
                 <TableCell sx={{ color: 'white', fontWeight: 'bold', padding: '6px', fontSize: '0.75rem', position: 'sticky', top: 30, backgroundColor: '#0D3282', zIndex: 9 }}>Teslim Durumu</TableCell>
                 <TableCell sx={{ color: 'white', fontWeight: 'bold', padding: '6px', fontSize: '0.75rem', position: 'sticky', top: 30, backgroundColor: '#0D3282', zIndex: 9 }}>Tarih</TableCell>
                 <TableCell sx={{ color: 'white', fontWeight: 'bold', padding: '6px', fontSize: '0.75rem', position: 'sticky', top: 30, backgroundColor: '#0D3282', zIndex: 9 }}>Bayi Adı</TableCell>
@@ -929,7 +929,7 @@ const AtolyeTakip: React.FC = () => {
                     }
                   }}
                 >
-                  <TableCell sx={{ padding: '3px', fontSize: '0.75rem' }}>#{siraNo}</TableCell>
+                  <TableCell sx={{ padding: '3px', fontSize: '1rem', fontWeight: 'bold', textAlign: 'center' }}>{siraNo}</TableCell>
                   <TableCell sx={{ padding: '3px' }}>
                     <Chip
                       label={getStatusLabel(atolye.teslim_durumu)}
@@ -946,23 +946,23 @@ const AtolyeTakip: React.FC = () => {
                     />
                   </TableCell>
                   <TableCell sx={{ padding: '3px', fontSize: '0.75rem' }}>{formatDate(atolye.created_at)}</TableCell>
-                  <TableCell sx={{ padding: '3px', fontSize: '0.75rem' }}>{atolye.bayi_adi}</TableCell>
-                  <TableCell sx={{ padding: '3px', fontSize: '0.75rem' }}>{atolye.musteri_ad_soyad}</TableCell>
+                  <TableCell sx={{ padding: '3px', fontSize: '0.75rem', textTransform: 'uppercase' }}>{atolye.bayi_adi}</TableCell>
+                  <TableCell sx={{ padding: '3px', fontSize: '0.75rem', textTransform: 'uppercase' }}>{atolye.musteri_ad_soyad}</TableCell>
                   <TableCell sx={{ padding: '3px', fontSize: '0.75rem' }}>{formatPhoneNumber(atolye.tel_no)}</TableCell>
-                  <TableCell sx={{ padding: '3px', fontSize: '0.75rem' }}>{atolye.marka}</TableCell>
-                  <TableCell sx={{ padding: '3px', fontSize: '0.75rem' }}>{atolye.kod || '-'}</TableCell>
-                  <TableCell sx={{ padding: '3px', fontSize: '0.75rem' }}>{atolye.seri_no || '-'}</TableCell>
-                  <TableCell sx={{ padding: '3px', fontSize: '0.75rem', maxWidth: '120px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  <TableCell sx={{ padding: '3px', fontSize: '0.75rem', textTransform: 'uppercase' }}>{atolye.marka}</TableCell>
+                  <TableCell sx={{ padding: '3px', fontSize: '0.75rem', textTransform: 'uppercase' }}>{atolye.kod || '-'}</TableCell>
+                  <TableCell sx={{ padding: '3px', fontSize: '0.75rem', textTransform: 'uppercase' }}>{atolye.seri_no || '-'}</TableCell>
+                  <TableCell sx={{ padding: '3px', fontSize: '0.75rem', maxWidth: '120px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textTransform: 'uppercase' }}>
                     <Tooltip title={atolye.sikayet} placement="top" arrow>
                       <span>{atolye.sikayet}</span>
                     </Tooltip>
                   </TableCell>
-                  <TableCell sx={{ padding: '3px', fontSize: '0.75rem', maxWidth: '100px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  <TableCell sx={{ padding: '3px', fontSize: '0.75rem', maxWidth: '100px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textTransform: 'uppercase' }}>
                     <Tooltip title={atolye.ozel_not || '-'} placement="top" arrow>
                       <span>{atolye.ozel_not || '-'}</span>
                     </Tooltip>
                   </TableCell>
-                  <TableCell sx={{ padding: '3px', fontSize: '0.75rem', maxWidth: '120px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  <TableCell sx={{ padding: '3px', fontSize: '0.75rem', maxWidth: '120px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textTransform: 'uppercase' }}>
                     <Tooltip title={atolye.yapilan_islem || '-'} placement="top" arrow>
                       <span>{atolye.yapilan_islem || '-'}</span>
                     </Tooltip>

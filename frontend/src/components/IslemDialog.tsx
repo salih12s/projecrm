@@ -646,8 +646,49 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
                 setFormData({ ...formData, ilce: newValue?.isim || '', mahalle: '' });
                 setSelectedIlceId(newValue?.ilce_id || null);
               }}
+              onInputChange={(_, value, reason) => {
+                // Kullanıcı yazarken filtrelenen seçenekleri kontrol et
+                if (reason === 'input') {
+                  const filtered = ilceler.filter(ilce => 
+                    ilce.isim.toLowerCase().includes(value.toLowerCase())
+                  );
+                  // Eğer tek bir seçenek kaldıysa otomatik seç
+                  if (filtered.length === 1 && value.length > 0) {
+                    setFormData({ ...formData, ilce: filtered[0].isim, mahalle: '' });
+                    setSelectedIlceId(filtered[0].ilce_id);
+                  }
+                }
+              }}
+              autoHighlight
+              selectOnFocus
+              clearOnBlur={false}
+              handleHomeEndKeys={false}
               renderInput={(params) => (
-                <TextField {...params} required label="İlçe" />
+                <TextField 
+                  {...params} 
+                  required 
+                  label="İlçe"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Tab') {
+                      const popup = document.querySelector('[role="listbox"]');
+                      if (popup) {
+                        const highlighted = popup.querySelector('[data-focus="true"]') as HTMLElement;
+                        if (highlighted) {
+                          e.preventDefault();
+                          const text = highlighted.textContent;
+                          const found = ilceler.find(i => i.isim === text);
+                          if (found) {
+                            setFormData({ ...formData, ilce: found.isim, mahalle: '' });
+                            setSelectedIlceId(found.ilce_id);
+                            setTimeout(() => {
+                              (e.target as HTMLElement).blur();
+                            }, 10);
+                          }
+                        }
+                      }
+                    }
+                  }}
+                />
               )}
             />
           </Grid>
@@ -659,9 +700,47 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
               onChange={(_, newValue) => {
                 setFormData({ ...formData, mahalle: newValue?.isim || '' });
               }}
-              disabled={!selectedIlceId}
+              onInputChange={(_, value, reason) => {
+                // Kullanıcı yazarken filtrelenen seçenekleri kontrol et
+                if (reason === 'input') {
+                  const filtered = mahalleler.filter(mahalle => 
+                    mahalle.isim.toLowerCase().includes(value.toLowerCase())
+                  );
+                  // Eğer tek bir seçenek kaldıysa otomatik seç
+                  if (filtered.length === 1 && value.length > 0) {
+                    setFormData({ ...formData, mahalle: filtered[0].isim });
+                  }
+                }
+              }}
+              autoHighlight
+              selectOnFocus
+              clearOnBlur={false}
+              handleHomeEndKeys={false}
+              disabled={!formData.ilce}
               renderInput={(params) => (
-                <TextField {...params} label="Mahalle" />
+                <TextField 
+                  {...params} 
+                  label="Mahalle"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Tab') {
+                      const popup = document.querySelector('[role="listbox"]');
+                      if (popup) {
+                        const highlighted = popup.querySelector('[data-focus="true"]') as HTMLElement;
+                        if (highlighted) {
+                          e.preventDefault();
+                          const text = highlighted.textContent;
+                          const found = mahalleler.find(m => m.isim === text);
+                          if (found) {
+                            setFormData({ ...formData, mahalle: found.isim });
+                            setTimeout(() => {
+                              (e.target as HTMLElement).blur();
+                            }, 10);
+                          }
+                        }
+                      }
+                    }
+                  }}
+                />
               )}
             />
           </Grid>
@@ -739,6 +818,36 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
               onChange={(_, newValue) => {
                 setFormData({ ...formData, urun: newValue || '' });
               }}
+              onInputChange={(_, value, reason) => {
+                // Kullanıcı yazarken filtrelenen seçenekleri kontrol et
+                if (reason === 'input') {
+                  const filtered = urunler.filter(urun => 
+                    urun.isim.toLowerCase().includes(value.toLowerCase())
+                  );
+                  // Eğer tek bir seçenek kaldıysa otomatik seç
+                  if (filtered.length === 1 && value.length > 0) {
+                    setFormData({ ...formData, urun: filtered[0].isim });
+                  }
+                }
+              }}
+              onClose={(_, reason) => {
+                if (reason === 'blur') {
+                  const popup = document.querySelector('[role="listbox"]');
+                  if (popup) {
+                    const highlighted = popup.querySelector('[data-focus="true"]');
+                    if (highlighted) {
+                      const text = highlighted.textContent;
+                      if (text && urunler.some(u => u.isim === text)) {
+                        setFormData({ ...formData, urun: text });
+                      }
+                    }
+                  }
+                }
+              }}
+              autoHighlight
+              selectOnFocus
+              clearOnBlur={false}
+              handleHomeEndKeys={false}
               renderInput={(params) => (
                 <TextField
                   {...params}
@@ -748,6 +857,24 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
                   placeholder="Ürün ara ve seç..."
                   error={!formData.urun}
                   helperText={!formData.urun ? 'Listeden bir ürün seçmelisiniz' : ''}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Tab') {
+                      const popup = document.querySelector('[role="listbox"]');
+                      if (popup) {
+                        const highlighted = popup.querySelector('[data-focus="true"]') as HTMLElement;
+                        if (highlighted) {
+                          e.preventDefault();
+                          const text = highlighted.textContent;
+                          if (text && urunler.some(u => u.isim === text)) {
+                            setFormData({ ...formData, urun: text });
+                            setTimeout(() => {
+                              (e.target as HTMLElement).blur();
+                            }, 10);
+                          }
+                        }
+                      }
+                    }
+                  }}
                 />
               )}
             />
@@ -759,6 +886,22 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
               onChange={(_, newValue) => {
                 setFormData({ ...formData, marka: newValue || '' });
               }}
+              onInputChange={(_, value, reason) => {
+                // Kullanıcı yazarken filtrelenen seçenekleri kontrol et
+                if (reason === 'input') {
+                  const filtered = markalar.filter(marka => 
+                    marka.isim.toLowerCase().includes(value.toLowerCase())
+                  );
+                  // Eğer tek bir seçenek kaldıysa otomatik seç
+                  if (filtered.length === 1 && value.length > 0) {
+                    setFormData({ ...formData, marka: filtered[0].isim });
+                  }
+                }
+              }}
+              autoHighlight
+              selectOnFocus
+              clearOnBlur={false}
+              handleHomeEndKeys={false}
               renderInput={(params) => (
                 <TextField
                   {...params}
@@ -768,6 +911,24 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
                   placeholder="Marka ara ve seç..."
                   error={!formData.marka}
                   helperText={!formData.marka ? 'Listeden bir marka seçmelisiniz' : ''}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Tab') {
+                      const popup = document.querySelector('[role="listbox"]');
+                      if (popup) {
+                        const highlighted = popup.querySelector('[data-focus="true"]') as HTMLElement;
+                        if (highlighted) {
+                          e.preventDefault();
+                          const text = highlighted.textContent;
+                          if (text && markalar.some(m => m.isim === text)) {
+                            setFormData({ ...formData, marka: text });
+                            setTimeout(() => {
+                              (e.target as HTMLElement).blur();
+                            }, 10);
+                          }
+                        }
+                      }
+                    }
+                  }}
                 />
               )}
             />
@@ -963,15 +1124,48 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
                   setFormData({ ...formData, teknisyen_ismi: newValue || '' });
                 }}
                 inputValue={formData.teknisyen_ismi || ''}
-                onInputChange={(_, newInputValue) => {
+                onInputChange={(_, newInputValue, reason) => {
                   setFormData({ ...formData, teknisyen_ismi: newInputValue || '' });
+                  
+                  // Kullanıcı yazarken filtrelenen seçenekleri kontrol et
+                  if (reason === 'input') {
+                    const filtered = teknisyenler.filter(tek => 
+                      tek.isim.toLowerCase().includes(newInputValue.toLowerCase())
+                    );
+                    // Eğer tek bir seçenek kaldıysa otomatik seç
+                    if (filtered.length === 1 && newInputValue.length > 0) {
+                      setFormData({ ...formData, teknisyen_ismi: filtered[0].isim });
+                    }
+                  }
                 }}
+                autoHighlight
+                selectOnFocus
+                clearOnBlur={false}
+                handleHomeEndKeys={false}
                 renderInput={(params) => (
                   <TextField
                     {...params}
                     required
                     fullWidth
                     label="Teknisyen İsmi"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Tab') {
+                        const popup = document.querySelector('[role="listbox"]');
+                        if (popup) {
+                          const highlighted = popup.querySelector('[data-focus="true"]') as HTMLElement;
+                          if (highlighted) {
+                            e.preventDefault();
+                            const text = highlighted.textContent;
+                            if (text) {
+                              setFormData({ ...formData, teknisyen_ismi: text });
+                              setTimeout(() => {
+                                (e.target as HTMLElement).blur();
+                              }, 10);
+                            }
+                          }
+                        }
+                      }
+                    }}
                   />
                 )}
               />

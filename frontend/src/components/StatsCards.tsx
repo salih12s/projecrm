@@ -83,17 +83,17 @@ const StatsCards: React.FC<StatsCardsProps> = ({ islemler, onFilterClick, active
   }
 
   return (
-    <Grid container spacing={2} sx={{ mb: 2 }}>
+    <Grid container spacing={1} sx={{ mb: 1.5 }}>
       {stats.map((stat, index) => (
-        <Grid item xs={12} sm={6} md={isAdmin ? 2.4 : 3} key={index}>
+        <Grid item xs={6} sm={4} md={isAdmin ? 2.4 : 3} key={index}>
           <Paper
             elevation={1}
             onClick={() => onFilterClick && onFilterClick(stat.filterValue)}
             sx={{
-              p: 1.5,
+              p: 1,
               display: 'flex',
               alignItems: 'center',
-              gap: 1,
+              gap: 0.75,
               cursor: onFilterClick ? 'pointer' : 'default',
               transition: 'all 0.2s',
               border: activeFilter === stat.filterValue ? '2px solid' : '2px solid transparent',
@@ -108,20 +108,20 @@ const StatsCards: React.FC<StatsCardsProps> = ({ islemler, onFilterClick, active
               sx={{
                 backgroundColor: stat.bgColor,
                 color: stat.color,
-                borderRadius: '6px',
-                p: 0.75,
+                borderRadius: '4px',
+                p: 0.5,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
               }}
             >
-              {React.cloneElement(stat.icon, { fontSize: 'small' })}
+              {React.cloneElement(stat.icon, { sx: { fontSize: '1.1rem' } })}
             </Box>
-            <Box>
-              <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
+            <Box sx={{ minWidth: 0 }}>
+              <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.65rem', lineHeight: 1 }}>
                 {stat.title}
               </Typography>
-              <Typography variant="h6" fontWeight="bold" sx={{ lineHeight: 1.1, fontSize: '1.1rem' }}>
+              <Typography variant="h6" fontWeight="bold" sx={{ lineHeight: 1.1, fontSize: '0.95rem' }}>
                 {stat.value}
               </Typography>
             </Box>

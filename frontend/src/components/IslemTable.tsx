@@ -450,47 +450,47 @@ const IslemTable: React.FC<IslemTableProps> = ({
     ad_soyad: {
       id: 'ad_soyad',
       label: 'Ad Soyad',
-      render: (islem) => <TableCell sx={{ fontWeight: 500, fontSize: '0.65rem', py: 0.1, px: 0.2 }}>{islem.ad_soyad || '-'}</TableCell>,
+      render: (islem) => <TableCell sx={{ fontWeight: 500, fontSize: '0.65rem', py: 0.1, px: 0.2, textTransform: 'uppercase' }}>{islem.ad_soyad || '-'}</TableCell>,
     },
     ilce: {
       id: 'ilce',
       label: 'İlçe',
-      render: (islem) => <TableCell sx={{ fontSize: '0.65rem', py: 0.1, px: 0.2 }}>{islem.ilce || '-'}</TableCell>,
+      render: (islem) => <TableCell sx={{ fontSize: '0.65rem', py: 0.1, px: 0.2, textTransform: 'uppercase' }}>{islem.ilce || '-'}</TableCell>,
     },
     mahalle: {
       id: 'mahalle',
       label: 'Mahalle',
-      render: (islem) => <TableCell sx={{ fontSize: '0.65rem', py: 0.1, px: 0.2 }}>{islem.mahalle || '-'}</TableCell>,
+      render: (islem) => <TableCell sx={{ fontSize: '0.65rem', py: 0.1, px: 0.2, textTransform: 'uppercase' }}>{islem.mahalle || '-'}</TableCell>,
     },
     cadde: {
       id: 'cadde',
       label: 'Cadde',
-      render: (islem) => <TableCell sx={{ fontSize: '0.65rem', py: 0.1, px: 0.2 }}>{islem.cadde || '-'}</TableCell>,
+      render: (islem) => <TableCell sx={{ fontSize: '0.65rem', py: 0.1, px: 0.2, textTransform: 'uppercase' }}>{islem.cadde || '-'}</TableCell>,
     },
     sokak: {
       id: 'sokak',
       label: 'Sokak',
-      render: (islem) => <TableCell sx={{ fontSize: '0.65rem', py: 0.1, px: 0.2 }}>{islem.sokak || '-'}</TableCell>,
+      render: (islem) => <TableCell sx={{ fontSize: '0.65rem', py: 0.1, px: 0.2, textTransform: 'uppercase' }}>{islem.sokak || '-'}</TableCell>,
     },
     apartman_site: {
       id: 'apartman_site',
       label: 'Apartman/Site',
-      render: (islem) => <TableCell sx={{ fontSize: '0.65rem', py: 0.1, px: 0.2 }}>{islem.apartman_site || '-'}</TableCell>,
+      render: (islem) => <TableCell sx={{ fontSize: '0.65rem', py: 0.1, px: 0.2, textTransform: 'uppercase' }}>{islem.apartman_site || '-'}</TableCell>,
     },
     blok_no: {
       id: 'blok_no',
       label: 'Blok No',
-      render: (islem) => <TableCell sx={{ fontSize: '0.65rem', py: 0.1, px: 0.2 }}>{islem.blok_no || '-'}</TableCell>,
+      render: (islem) => <TableCell sx={{ fontSize: '0.65rem', py: 0.1, px: 0.2, textTransform: 'uppercase' }}>{islem.blok_no || '-'}</TableCell>,
     },
     daire_no: {
       id: 'daire_no',
       label: 'Daire No',
-      render: (islem) => <TableCell sx={{ fontSize: '0.65rem', py: 0.1, px: 0.2 }}>{islem.daire_no || '-'}</TableCell>,
+      render: (islem) => <TableCell sx={{ fontSize: '0.65rem', py: 0.1, px: 0.2, textTransform: 'uppercase' }}>{islem.daire_no || '-'}</TableCell>,
     },
     kapi_no: {
       id: 'kapi_no',
       label: 'Kapı No',
-      render: (islem) => <TableCell sx={{ fontSize: '0.65rem', py: 0.1, px: 0.2 }}>{islem.kapi_no || '-'}</TableCell>,
+      render: (islem) => <TableCell sx={{ fontSize: '0.65rem', py: 0.1, px: 0.2, textTransform: 'uppercase' }}>{islem.kapi_no || '-'}</TableCell>,
     },
     cep_tel: {
       id: 'cep_tel',
@@ -505,18 +505,18 @@ const IslemTable: React.FC<IslemTableProps> = ({
     urun: {
       id: 'urun',
       label: 'Ürün',
-      render: (islem) => <TableCell sx={{ fontSize: '0.65rem', py: 0.1, px: 0.2 }}>{islem.urun || '-'}</TableCell>,
+      render: (islem) => <TableCell sx={{ fontSize: '0.65rem', py: 0.1, px: 0.2, textTransform: 'uppercase' }}>{islem.urun || '-'}</TableCell>,
     },
     marka: {
       id: 'marka',
       label: 'Marka',
-      render: (islem) => <TableCell sx={{ fontWeight: 500, fontSize: '0.65rem', py: 0.1, px: 0.2 }}>{islem.marka || '-'}</TableCell>,
+      render: (islem) => <TableCell sx={{ fontWeight: 500, fontSize: '0.65rem', py: 0.1, px: 0.2, textTransform: 'uppercase' }}>{islem.marka || '-'}</TableCell>,
     },
     sikayet: {
       id: 'sikayet',
       label: 'Şikayet',
       render: (islem) => (
-        <TableCell sx={{ maxWidth: 120, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: '0.65rem', py: 0.1, px: 0.2 }}>
+        <TableCell sx={{ maxWidth: 120, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: '0.65rem', py: 0.1, px: 0.2, textTransform: 'uppercase' }}>
           <Tooltip title={islem.sikayet || '-'}>
             <span>{islem.sikayet || '-'}</span>
           </Tooltip>
@@ -527,7 +527,7 @@ const IslemTable: React.FC<IslemTableProps> = ({
       id: 'yapilan_islem',
       label: 'Yapılan İşlem',
       render: (islem) => (
-        <TableCell sx={{ maxWidth: 120, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: '0.65rem', py: 0.1, px: 0.2 }}>
+        <TableCell sx={{ maxWidth: 120, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: '0.65rem', py: 0.1, px: 0.2, textTransform: 'uppercase' }}>
           <Tooltip title={islem.yapilan_islem || '-'}>
             <span>{islem.yapilan_islem || '-'}</span>
           </Tooltip>
@@ -537,7 +537,7 @@ const IslemTable: React.FC<IslemTableProps> = ({
     teknisyen: {
       id: 'teknisyen',
       label: 'Teknisyen',
-      render: (islem) => <TableCell sx={{ fontSize: '0.65rem', py: 0.1, px: 0.2 }}>{islem.teknisyen_ismi || '-'}</TableCell>,
+      render: (islem) => <TableCell sx={{ fontSize: '0.65rem', py: 0.1, px: 0.2, textTransform: 'uppercase' }}>{islem.teknisyen_ismi || '-'}</TableCell>,
     },
     tutar: {
       id: 'tutar',
@@ -765,7 +765,7 @@ const IslemTable: React.FC<IslemTableProps> = ({
                     />
                   </Box>
                   
-                  <Typography variant="subtitle2" color="primary" sx={{ fontWeight: 600, mb: 0.5 }}>
+                  <Typography variant="subtitle2" color="primary" sx={{ fontWeight: 600, mb: 0.5, textTransform: 'uppercase' }}>
                     {islem.ad_soyad}
                   </Typography>
                   
@@ -778,11 +778,11 @@ const IslemTable: React.FC<IslemTableProps> = ({
                     </Grid>
                     <Grid item xs={6}>
                       <Typography variant="caption" color="text.secondary">İlçe:</Typography>
-                      <Typography variant="body2" sx={{ fontSize: '0.75rem' }}>{islem.ilce || '-'}</Typography>
+                      <Typography variant="body2" sx={{ fontSize: '0.75rem', textTransform: 'uppercase' }}>{islem.ilce || '-'}</Typography>
                     </Grid>
                     <Grid item xs={12}>
                       <Typography variant="caption" color="text.secondary">Adres:</Typography>
-                      <Typography variant="body2" sx={{ fontSize: '0.75rem' }}>
+                      <Typography variant="body2" sx={{ fontSize: '0.75rem', textTransform: 'uppercase' }}>
                         {[islem.mahalle, islem.cadde, islem.sokak, islem.kapi_no].filter(Boolean).join(', ') || '-'}
                       </Typography>
                     </Grid>
@@ -802,26 +802,26 @@ const IslemTable: React.FC<IslemTableProps> = ({
                     )}
                     <Grid item xs={6}>
                       <Typography variant="caption" color="text.secondary">Ürün:</Typography>
-                      <Typography variant="body2" sx={{ fontSize: '0.75rem' }}>{islem.urun || '-'}</Typography>
+                      <Typography variant="body2" sx={{ fontSize: '0.75rem', textTransform: 'uppercase' }}>{islem.urun || '-'}</Typography>
                     </Grid>
                     <Grid item xs={6}>
                       <Typography variant="caption" color="text.secondary">Marka:</Typography>
-                      <Typography variant="body2" sx={{ fontSize: '0.75rem' }}>{islem.marka || '-'}</Typography>
+                      <Typography variant="body2" sx={{ fontSize: '0.75rem', textTransform: 'uppercase' }}>{islem.marka || '-'}</Typography>
                     </Grid>
                     <Grid item xs={12}>
                       <Typography variant="caption" color="text.secondary">Şikayet:</Typography>
-                      <Typography variant="body2" sx={{ fontSize: '0.75rem' }}>{islem.sikayet || '-'}</Typography>
+                      <Typography variant="body2" sx={{ fontSize: '0.75rem', textTransform: 'uppercase' }}>{islem.sikayet || '-'}</Typography>
                     </Grid>
                     {islem.yapilan_islem && (
                       <Grid item xs={12}>
                         <Typography variant="caption" color="text.secondary">Yapılan İşlem:</Typography>
-                        <Typography variant="body2" sx={{ fontSize: '0.75rem' }}>{islem.yapilan_islem}</Typography>
+                        <Typography variant="body2" sx={{ fontSize: '0.75rem', textTransform: 'uppercase' }}>{islem.yapilan_islem}</Typography>
                       </Grid>
                     )}
                     {islem.teknisyen_ismi && (
                       <Grid item xs={6}>
                         <Typography variant="caption" color="text.secondary">Teknisyen:</Typography>
-                        <Typography variant="body2" sx={{ fontSize: '0.75rem' }}>{islem.teknisyen_ismi}</Typography>
+                        <Typography variant="body2" sx={{ fontSize: '0.75rem', textTransform: 'uppercase' }}>{islem.teknisyen_ismi}</Typography>
                       </Grid>
                     )}
                     {islem.tutar && (

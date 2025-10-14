@@ -25,7 +25,6 @@ import {
   ListItemText,
   useMediaQuery,
   useTheme,
-  TextField,
 } from '@mui/material';
 import { 
   Logout as LogoutIcon, 
@@ -38,8 +37,6 @@ import {
   History,
   Menu as MenuIcon,
   AdminPanelSettings,
-  CalendarToday,
-  Clear as ClearIcon,
 } from '@mui/icons-material';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
@@ -56,7 +53,6 @@ import AdminPanel from './AdminPanel.tsx';
 import { exportListToPDF } from '../utils/print.ts';
 import Loading from './Loading';
 import ErrorMessage from './ErrorMessage';
-import StatsCards from './StatsCards';
 import { useSnackbar } from '../context/SnackbarContext';
 
 const Dashboard: React.FC = () => {
@@ -76,7 +72,6 @@ const Dashboard: React.FC = () => {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
   const [statusFilter, setStatusFilter] = useState<'all' | 'acik' | 'parca_bekliyor' | 'tamamlandi'>('all');
-  const [dateFilter, setDateFilter] = useState<string>(''); // Tarih filtresi
   const [showTodayOnly, setShowTodayOnly] = useState(false); // Bugün alınan işler
   // Bayi için tab değeri her zaman 0 (tek tab var)
   const [activeTab, setActiveTab] = useState(0);
@@ -245,20 +240,9 @@ const Dashboard: React.FC = () => {
 
   const handleTodayFilter = () => {
     setShowTodayOnly(!showTodayOnly);
-    if (!showTodayOnly) {
-      setDateFilter(''); // Bugün filtresi aktifken tarih filtresini temizle
-    }
-  };
-
-  const handleDateFilterChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setDateFilter(event.target.value);
-    if (event.target.value) {
-      setShowTodayOnly(false); // Tarih seçilince bugün filtresini kapat
-    }
   };
 
   const handleClearDateFilters = () => {
-    setDateFilter('');
     setShowTodayOnly(false);
   };
 
@@ -307,10 +291,77 @@ const Dashboard: React.FC = () => {
             </IconButton>
           )}
           <Build sx={{ mr: 1, fontSize: '1.5rem' }} />
-          <Typography variant="h6" component="div" sx={{ fontWeight: 600, fontSize: { xs: '0.95rem', sm: '1.1rem' } }}>
+          <Typography variant="h6" component="div" sx={{ fontWeight: 600, fontSize: { xs: '0.95rem', sm: '1.1rem' }, mr: 3 }}>
             Teknik Servis - Ana Sayfa
           </Typography>
+          
+          {/* İstatistikler - Sadece Ana Sayfa'da görünsün - Sol tarafta */}
+          {activeTab === 0 && !isMobile && (
+            <Box sx={{ 
+              display: 'flex', 
+              gap: 2.5, 
+              fontSize: '0.75rem',
+              color: 'rgba(255,255,255,0.9)'
+            }}>
+              <Box 
+                onClick={() => handleStatusFilterClick('all')}
+                sx={{ 
+                  cursor: 'pointer',
+                  fontWeight: statusFilter === 'all' ? 700 : 400,
+                  opacity: statusFilter === 'all' ? 1 : 0.8,
+                  '&:hover': { opacity: 1 }
+                }}
+              >
+                Toplam: <strong>{islemler.length}</strong>
+              </Box>
+              <Box 
+                onClick={() => handleStatusFilterClick('acik')}
+                sx={{ 
+                  cursor: 'pointer',
+                  fontWeight: statusFilter === 'acik' ? 700 : 400,
+                  opacity: statusFilter === 'acik' ? 1 : 0.8,
+                  '&:hover': { opacity: 1 }
+                }}
+              >
+                Açık: <strong>{islemler.filter(i => i.is_durumu === 'acik').length}</strong>
+              </Box>
+              <Box 
+                onClick={() => handleStatusFilterClick('parca_bekliyor')}
+                sx={{ 
+                  cursor: 'pointer',
+                  fontWeight: statusFilter === 'parca_bekliyor' ? 700 : 400,
+                  opacity: statusFilter === 'parca_bekliyor' ? 1 : 0.8,
+                  '&:hover': { opacity: 1 }
+                }}
+              >
+                Parça Bekliyor: <strong>{islemler.filter(i => i.is_durumu === 'parca_bekliyor').length}</strong>
+              </Box>
+              <Box 
+                onClick={() => handleStatusFilterClick('tamamlandi')}
+                sx={{ 
+                  cursor: 'pointer',
+                  fontWeight: statusFilter === 'tamamlandi' ? 700 : 400,
+                  opacity: statusFilter === 'tamamlandi' ? 1 : 0.8,
+                  '&:hover': { opacity: 1 }
+                }}
+              >
+                Tamamlanan: <strong>{islemler.filter(i => i.is_durumu === 'tamamlandi').length}</strong>
+              </Box>
+              {isAdmin && (
+                <Box sx={{ fontWeight: 600 }}>
+                  Toplam Tutar: <strong>
+                    {islemler.reduce((sum, i) => {
+                      const tutar = typeof i.tutar === 'number' ? i.tutar : parseFloat(String(i.tutar || 0));
+                      return sum + (isNaN(tutar) ? 0 : tutar);
+                    }, 0).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ₺
+                  </strong>
+                </Box>
+              )}
+            </Box>
+          )}
+          
           <Box sx={{ flexGrow: 1 }} />
+          
           <Typography variant="body2" sx={{ mr: 2, display: { xs: 'none', sm: 'block' } }}>
             {new Date().toLocaleDateString('tr-TR', { day: '2-digit', month: '2-digit', year: 'numeric' })}
           </Typography>
@@ -461,78 +512,63 @@ const Dashboard: React.FC = () => {
             <Loading message="İşlemler yükleniyor..." />
           ) : (
             <>
-              <StatsCards 
-                islemler={islemler} 
-                onFilterClick={handleStatusFilterClick}
-                activeFilter={statusFilter}
-              />
-
-              {/* Tarih Filtreleri */}
-              <Box sx={{ display: 'flex', gap: 2, mb: 2, flexWrap: 'wrap', alignItems: 'center' }}>
-                <Button
-                  variant={showTodayOnly ? 'contained' : 'outlined'}
-                  startIcon={<CalendarToday />}
-                  onClick={handleTodayFilter}
-                  sx={{
-                    color: showTodayOnly ? '#fff' : '#2C3E82',
-                    borderColor: '#2C3E82',
-                    bgcolor: showTodayOnly ? '#2C3E82' : 'transparent',
-                    '&:hover': {
-                      borderColor: '#1a2850',
-                      bgcolor: showTodayOnly ? '#1a2850' : 'rgba(44, 62, 130, 0.04)',
-                    }
-                  }}
-                >
-                  Bugün Alınan İşler
-                </Button>
-                <TextField
-                  type="date"
-                  label="Tarih Seçin"
-                  value={dateFilter}
-                  onChange={handleDateFilterChange}
-                  InputLabelProps={{
-                    shrink: true,
-                  }}
-                  sx={{ minWidth: 200 }}
-                  size="small"
-                />
-                {(showTodayOnly || dateFilter) && (
-                  <>
+              {/* Tablo Başlığı ve Filtreler */}
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2, gap: 2, flexWrap: 'wrap' }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                  <Typography variant="h6" sx={{ fontWeight: 600, fontSize: '1rem' }}>
+                    İşlemler
+                  </Typography>
+                  
+                  <Button
+                    variant={showTodayOnly ? 'contained' : 'outlined'}
+                    size="small"
+                    onClick={handleTodayFilter}
+                    sx={{
+                      fontSize: '0.7rem',
+                      py: 0.4,
+                      px: 1.2,
+                      minWidth: 'auto',
+                      color: showTodayOnly ? '#fff' : '#2C3E82',
+                      borderColor: '#2C3E82',
+                      bgcolor: showTodayOnly ? '#2C3E82' : 'transparent',
+                      '&:hover': {
+                        borderColor: '#1a2850',
+                        bgcolor: showTodayOnly ? '#1a2850' : 'rgba(44, 62, 130, 0.04)',
+                      }
+                    }}
+                  >
+                    Bugün Alınan İşler
+                  </Button>
+                  
+                  {showTodayOnly && (
                     <Button
-                      variant="outlined"
-                      startIcon={<ClearIcon />}
-                      onClick={handleClearDateFilters}
-                      color="error"
+                      variant="text"
                       size="small"
+                      onClick={handleClearDateFilters}
+                      sx={{ fontSize: '0.7rem', py: 0.5, px: 1, minWidth: 'auto' }}
                     >
-                      Sıfırla
+                      ✕
                     </Button>
-                    <Typography variant="body2" color="text.secondary">
-                      {showTodayOnly ? 'Bugün alınan işlemler gösteriliyor' : `${dateFilter} tarihli işlemler gösteriliyor`}
-                    </Typography>
-                  </>
-                )}
-              </Box>
-              
-              <IslemFilters
-                islemler={islemler}
-                onFilterChange={setFilteredIslemler}
-                statusFilter={statusFilter}
-                dateFilter={dateFilter}
-                showTodayOnly={showTodayOnly}
-              />
+                  )}
+                </Box>
 
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-                <Typography variant="h5" sx={{ fontWeight: 600 }}>
-                  İşlemler
-                </Typography>
-                <Box sx={{ display: 'flex', gap: 2 }}>
+                {/* Filtreler - Sağ taraf */}
+                <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'wrap' }}>
+                  <IslemFilters
+                    islemler={islemler}
+                    onFilterChange={setFilteredIslemler}
+                    statusFilter={statusFilter}
+                    dateFilter=""
+                    showTodayOnly={showTodayOnly}
+                  />
+                  
                   <Button
                     variant="outlined"
                     startIcon={<DownloadIcon />}
                     onClick={handleExport}
-                    size="large"
+                    size="small"
                     sx={{
+                      fontSize: '0.75rem',
                       color: '#d32f2f',
                       borderColor: '#d32f2f',
                       '&:hover': {
@@ -541,24 +577,25 @@ const Dashboard: React.FC = () => {
                       }
                     }}
                   >
-                    PDF İndir
+                    PDF
                   </Button>
                   <Button
                     variant="contained"
                     startIcon={<AddIcon />}
                     onClick={() => handleOpenDialog()}
-                    size="large"
+                    size="small"
                     sx={{ 
+                      fontSize: '0.75rem',
                       boxShadow: 2,
                       '&:hover': {
                         boxShadow: 4,
                       }
                     }}
                   >
-                  Yeni İşlem Ekle
-                </Button>
+                    Yeni İşlem
+                  </Button>
+                </Box>
               </Box>
-            </Box>
 
             <IslemTable
               islemler={filteredIslemler}

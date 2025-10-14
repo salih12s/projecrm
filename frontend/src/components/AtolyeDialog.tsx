@@ -39,6 +39,7 @@ const AtolyeDialog: React.FC<AtolyeDialogProps> = ({ open, onClose, atolyeId }) 
 
   const [bayiler, setBayiler] = useState<Bayi[]>([]);
   const [markalar, setMarkalar] = useState<Marka[]>([]);
+  const [nextSiraNo, setNextSiraNo] = useState<number | null>(null);
   const [formData, setFormData] = useState<AtolyeUpdateDto & AtolyeCreateDto>({
     bayi_adi: '',
     musteri_ad_soyad: '',
@@ -61,8 +62,19 @@ const AtolyeDialog: React.FC<AtolyeDialogProps> = ({ open, onClose, atolyeId }) 
       fetchAtolyeData();
     } else {
       resetForm();
+      fetchNextSiraNo();
     }
   }, [atolyeId, open]);
+
+  const fetchNextSiraNo = async () => {
+    try {
+      const response = await api.get('/atolye');
+      const allAtolyeList = response.data;
+      setNextSiraNo(allAtolyeList.length + 1);
+    } catch (error) {
+      console.error('Sıra numarası alınamadı:', error);
+    }
+  };
 
   const fetchBayiler = async () => {
     try {
@@ -229,7 +241,19 @@ const AtolyeDialog: React.FC<AtolyeDialogProps> = ({ open, onClose, atolyeId }) 
 
   return (
     <Dialog open={open} onClose={() => onClose()} maxWidth="md" fullWidth fullScreen={isMobile}>
-      <DialogTitle>{isEdit ? 'Kaydı Düzenle' : 'Yeni Kayıt Ekle'}</DialogTitle>
+      <DialogTitle sx={{ textAlign: 'center' }}>
+        {isEdit ? 'Kaydı Düzenle' : 'Yeni Kayıt Ekle'}
+        {!isEdit && nextSiraNo && (
+          <div style={{ 
+            fontSize: '2rem', 
+            fontWeight: 700, 
+            color: '#0D3282',
+            marginTop: '8px'
+          }}>
+            {nextSiraNo}
+          </div>
+        )}
+      </DialogTitle>
       <DialogContent>
         <Grid container spacing={2} sx={{ mt: 1 }}>
           {/* Bayi Adı - Autocomplete */}

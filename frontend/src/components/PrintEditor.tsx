@@ -64,18 +64,6 @@ const PrintEditor: React.FC<PrintEditorProps> = ({ open, onClose, islem }) => {
 
   // Varsayılan alan pozisyonları (mm cinsinden)
   const getDefaultFields = (): FieldConfig[] => {
-    // Adres parçalarını formatla (Mah., Cad., Sok. ekleri ile)
-    const adresParcalari = [
-      islem.ilce,
-      islem.mahalle ? islem.mahalle + ' Mah.' : '',
-      islem.cadde ? islem.cadde + ' Cad.' : '',
-      islem.sokak ? islem.sokak + ' Sok.' : '',
-      islem.apartman_site,
-      islem.kapi_no ? 'No:' + islem.kapi_no : '',
-      islem.blok_no ? 'Blok:' + islem.blok_no : '',
-      islem.daire_no ? 'D:' + islem.daire_no : ''
-    ].filter(Boolean).join(' ');
-
     const fields: FieldConfig[] = [];
     
     // Sadece değerler, etiket yok
@@ -92,20 +80,49 @@ const PrintEditor: React.FC<PrintEditorProps> = ({ open, onClose, islem }) => {
       fields.push({ id: 'ad_soyad', label: 'Ad Soyad', value: islem.ad_soyad, position: { left: 20, top: 35 } });
     }
     
-    if (adresParcalari) {
-      fields.push({ id: 'adres', label: 'Adres', value: adresParcalari, position: { left: 20, top: 42 } });
+    // Adres parçalarını ayrı ayrı ekle
+    if (islem.ilce) {
+      fields.push({ id: 'ilce', label: 'İlçe', value: islem.ilce, position: { left: 20, top: 42 } });
+    }
+    
+    if (islem.mahalle) {
+      fields.push({ id: 'mahalle', label: 'Mahalle', value: islem.mahalle + ' Mah.', position: { left: 20, top: 47 } });
+    }
+    
+    if (islem.cadde) {
+      fields.push({ id: 'cadde', label: 'Cadde', value: islem.cadde + ' Cad.', position: { left: 20, top: 52 } });
+    }
+    
+    if (islem.sokak) {
+      fields.push({ id: 'sokak', label: 'Sokak', value: islem.sokak + ' Sok.', position: { left: 20, top: 57 } });
+    }
+    
+    if (islem.apartman_site) {
+      fields.push({ id: 'apartman_site', label: 'Apartman/Site', value: islem.apartman_site, position: { left: 20, top: 62 } });
+    }
+    
+    if (islem.kapi_no) {
+      fields.push({ id: 'kapi_no', label: 'Kapı No', value: 'No:' + islem.kapi_no, position: { left: 20, top: 67 } });
+    }
+    
+    if (islem.blok_no) {
+      fields.push({ id: 'blok_no', label: 'Blok No', value: 'Blok:' + islem.blok_no, position: { left: 50, top: 67 } });
+    }
+    
+    if (islem.daire_no) {
+      fields.push({ id: 'daire_no', label: 'Daire No', value: 'D:' + islem.daire_no, position: { left: 80, top: 67 } });
     }
     
     if (islem.cep_tel) {
-      fields.push({ id: 'cep_tel', label: 'Cep Tel', value: formatPhoneNumber(islem.cep_tel), position: { left: 20, top: 49 } });
+      fields.push({ id: 'cep_tel', label: 'Cep Tel', value: formatPhoneNumber(islem.cep_tel), position: { left: 20, top: 75 } });
     }
     
     if (islem.sabit_tel) {
-      fields.push({ id: 'sabit_tel', label: 'Sabit Tel', value: formatPhoneNumber(islem.sabit_tel), position: { left: 20, top: 56 } });
+      fields.push({ id: 'sabit_tel', label: 'Sabit Tel', value: formatPhoneNumber(islem.sabit_tel), position: { left: 20, top: 80 } });
     }
     
     if (islem.yedek_tel) {
-      fields.push({ id: 'yedek_tel', label: 'Yedek Tel', value: formatPhoneNumber(islem.yedek_tel), position: { left: 20, top: 63 } });
+      fields.push({ id: 'yedek_tel', label: 'Yedek Tel', value: formatPhoneNumber(islem.yedek_tel), position: { left: 20, top: 85 } });
     }
     
     if (islem.urun) {
@@ -117,24 +134,24 @@ const PrintEditor: React.FC<PrintEditorProps> = ({ open, onClose, islem }) => {
     }
     
     if (islem.sikayet) {
-      fields.push({ id: 'sikayet', label: 'Şikayet', value: islem.sikayet, position: { left: 20, top: 75 } });
+      fields.push({ id: 'sikayet', label: 'Şikayet', value: islem.sikayet, position: { left: 20, top: 95 } });
     }
     
     if (islem.teknisyen_ismi) {
-      fields.push({ id: 'teknisyen', label: 'Teknisyen', value: islem.teknisyen_ismi, position: { left: 20, top: 85 } });
+      fields.push({ id: 'teknisyen', label: 'Teknisyen', value: islem.teknisyen_ismi, position: { left: 20, top: 105 } });
     }
     
     if (islem.yapilan_islem) {
-      fields.push({ id: 'yapilan_islem', label: 'Yapılan İşlem', value: islem.yapilan_islem, position: { left: 20, top: 95 } });
+      fields.push({ id: 'yapilan_islem', label: 'Yapılan İşlem', value: islem.yapilan_islem, position: { left: 20, top: 115 } });
     }
     
     if (islem.tutar) {
-      fields.push({ id: 'tutar', label: 'Tutar', value: islem.tutar.toString() + ' TL', position: { left: 20, top: 105 } });
+      fields.push({ id: 'tutar', label: 'Tutar', value: islem.tutar.toString() + ' TL', position: { left: 20, top: 125 } });
     }
     
     if (islem.is_durumu) {
       const durumText = islem.is_durumu === 'tamamlandi' ? 'Tamamlandı' : 'Açık';
-      fields.push({ id: 'durum', label: 'Durum', value: durumText, position: { left: 20, top: 115 } });
+      fields.push({ id: 'durum', label: 'Durum', value: durumText, position: { left: 20, top: 135 } });
     }
 
     return fields;
@@ -263,7 +280,12 @@ const PrintEditor: React.FC<PrintEditorProps> = ({ open, onClose, islem }) => {
     }
     
     const storageKey = getStorageKey();
-    localStorage.setItem(storageKey, JSON.stringify(fields));
+    // Sadece field ID'lerini ve pozisyonlarını kaydet (değerleri değil)
+    const configToSave = fields.map(f => ({
+      id: f.id,
+      position: f.position
+    }));
+    localStorage.setItem(storageKey, JSON.stringify(configToSave));
     setSnackbar({
       open: true,
       message: `Şablon ayarları "${islem.marka}" markası için kaydedildi!`,
@@ -314,8 +336,9 @@ const PrintEditor: React.FC<PrintEditorProps> = ({ open, onClose, islem }) => {
               box-sizing: border-box; 
             }
             body { 
-              font-family: 'Courier New', monospace;
+              font-family: 'Arial Black', 'Arial Bold', sans-serif;
               font-size: 12px;
+              font-weight: 900;
               color: #000;
               background: white;
               position: relative;
@@ -324,13 +347,27 @@ const PrintEditor: React.FC<PrintEditorProps> = ({ open, onClose, islem }) => {
             }
             .item {
               position: absolute;
+              font-weight: 900;
+              font-family: 'Arial Black', 'Arial Bold', sans-serif;
+            }
+            .item-small {
+              font-size: 9px;
+              max-width: 170mm;
+              white-space: normal;
+              word-wrap: break-word;
+              line-height: 1.2;
+            }
+            .item-normal {
+              font-size: 11px;
               white-space: nowrap;
             }
           </style>
         </head>
         <body>
           ${fields.map(field => {
-            return `<div class="item" style="left: ${field.position.left}mm; top: ${field.position.top}mm;">${field.value}</div>`;
+            const sizeClass = ['yapilan_islem', 'sikayet'].includes(field.id) ? 'item-small' : 'item-normal';
+            const value = field.value || '';
+            return `<div class="item ${sizeClass}" style="left: ${field.position.left}mm; top: ${field.position.top}mm;">${value}</div>`;
           }).join('\n          ')}
         </body>
       </html>
@@ -355,12 +392,17 @@ const PrintEditor: React.FC<PrintEditorProps> = ({ open, onClose, islem }) => {
       
       if (savedConfig) {
         try {
-          const savedFields: FieldConfig[] = JSON.parse(savedConfig);
-          // Sadece pozisyonları al, değerleri güncel tut
-          setFields(defaultFields.map(df => {
-            const savedField = savedFields.find(sf => sf.id === df.id);
-            return savedField ? { ...df, position: savedField.position } : df;
-          }));
+          const savedFields: Array<{ id: string; position: Position }> = JSON.parse(savedConfig);
+          // Sadece kaydedilmiş ID'lere sahip alanları göster
+          // Silinmiş alanlar (savedFields'de olmayanlar) gözükmeyecek
+          const restoredFields = savedFields
+            .map(sf => {
+              const defaultField = defaultFields.find(df => df.id === sf.id);
+              return defaultField ? { ...defaultField, position: sf.position } : null;
+            })
+            .filter((f): f is FieldConfig => f !== null);
+          
+          setFields(restoredFields);
         } catch {
           setFields(defaultFields);
         }
@@ -446,13 +488,13 @@ const PrintEditor: React.FC<PrintEditorProps> = ({ open, onClose, islem }) => {
                   padding: '2px 4px',
                   backgroundColor: selectedField === field.id ? 'rgba(25, 118, 210, 0.2)' : 'transparent',
                   border: selectedField === field.id ? '1px solid #1976d2' : '1px dashed transparent',
-                  fontSize: ['adres', 'yapilan_islem', 'sikayet'].includes(field.id) ? '9px' : '11px',
+                  fontSize: ['yapilan_islem', 'sikayet'].includes(field.id) ? '9px' : '11px',
                   fontWeight: 900,
                   fontFamily: 'Arial Black, Arial, sans-serif',
-                  whiteSpace: ['adres', 'yapilan_islem', 'sikayet'].includes(field.id) ? 'normal' : 'nowrap',
-                  wordWrap: ['adres', 'yapilan_islem', 'sikayet'].includes(field.id) ? 'break-word' : 'normal',
-                  maxWidth: ['adres', 'yapilan_islem', 'sikayet'].includes(field.id) ? mmToPx(170) : 'none',
-                  lineHeight: ['adres', 'yapilan_islem', 'sikayet'].includes(field.id) ? '1.2' : 'normal',
+                  whiteSpace: ['yapilan_islem', 'sikayet'].includes(field.id) ? 'normal' : 'nowrap',
+                  wordWrap: ['yapilan_islem', 'sikayet'].includes(field.id) ? 'break-word' : 'normal',
+                  maxWidth: ['yapilan_islem', 'sikayet'].includes(field.id) ? mmToPx(170) : 'none',
+                  lineHeight: ['yapilan_islem', 'sikayet'].includes(field.id) ? '1.2' : 'normal',
                   overflow: 'visible',
                   '&:hover': {
                     border: '1px dashed #1976d2',
@@ -567,7 +609,11 @@ const PrintEditor: React.FC<PrintEditorProps> = ({ open, onClose, islem }) => {
                       disabled={!isAdmin}
                     />
                     <Typography variant="caption" sx={{ flex: 1, fontSize: '11px' }}>
-                      {field.value.substring(0, 30)}{field.value.length > 30 ? '...' : ''}
+                      {field.value ? (
+                        <>
+                          {field.value.substring(0, 30)}{field.value.length > 30 ? '...' : ''}
+                        </>
+                      ) : '(Boş)'}
                     </Typography>
                   </Box>
                 </Paper>
