@@ -55,8 +55,8 @@ async function printWithPdfTemplate(islem: Islem, templateUrl: string) {
     // Adresi (sağ üst - "Adresi" satırı)
     if (islem.ilce || islem.mahalle || islem.cadde) {
       const adresParcalari = [
-        islem.ilce,
-        islem.mahalle ? islem.mahalle + ' Mah.' : '',
+        islem.ilce?.toUpperCase(),
+        islem.mahalle ? islem.mahalle.toUpperCase() + ' MAH.' : '',
         islem.cadde ? islem.cadde + ' Cad.' : '',
         islem.sokak ? islem.sokak + ' Sok.' : '',
         islem.apartman_site,
@@ -240,8 +240,8 @@ export const printIslem = async (islem: Islem) => {
               <div class="info-row">
                 <span class="info-label">Adres:</span>
                 <span class="info-value">${[
-                  islem.ilce,
-                  islem.mahalle ? islem.mahalle + ' Mah.' : '',
+                  islem.ilce?.toUpperCase(),
+                  islem.mahalle ? islem.mahalle.toUpperCase() + ' MAH.' : '',
                   islem.cadde ? islem.cadde + ' Cad.' : '',
                   islem.sokak ? islem.sokak + ' Sok.' : '',
                   islem.apartman_site,

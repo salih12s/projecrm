@@ -159,63 +159,63 @@ const IslemTable: React.FC<IslemTableProps> = ({
     // Filter by ad_soyad
     if (filters.ad_soyad) {
       filtered = filtered.filter((item) =>
-        (item.ad_soyad || '').toLowerCase().includes(filters.ad_soyad.toLowerCase())
+        (item.ad_soyad || '').toLocaleLowerCase('tr-TR').includes(filters.ad_soyad.toLocaleLowerCase('tr-TR'))
       );
     }
 
     // Filter by ilce
     if (filters.ilce) {
       filtered = filtered.filter((item) =>
-        (item.ilce || '').toLowerCase().includes(filters.ilce.toLowerCase())
+        (item.ilce || '').toLocaleLowerCase('tr-TR').includes(filters.ilce.toLocaleLowerCase('tr-TR'))
       );
     }
 
     // Filter by mahalle
     if (filters.mahalle) {
       filtered = filtered.filter((item) =>
-        (item.mahalle || '').toLowerCase().includes(filters.mahalle.toLowerCase())
+        (item.mahalle || '').toLocaleLowerCase('tr-TR').includes(filters.mahalle.toLocaleLowerCase('tr-TR'))
       );
     }
 
     // Filter by cadde
     if (filters.cadde) {
       filtered = filtered.filter((item) =>
-        (item.cadde || '').toLowerCase().includes(filters.cadde.toLowerCase())
+        (item.cadde || '').toLocaleLowerCase('tr-TR').includes(filters.cadde.toLocaleLowerCase('tr-TR'))
       );
     }
 
     // Filter by sokak
     if (filters.sokak) {
       filtered = filtered.filter((item) =>
-        (item.sokak || '').toLowerCase().includes(filters.sokak.toLowerCase())
+        (item.sokak || '').toLocaleLowerCase('tr-TR').includes(filters.sokak.toLocaleLowerCase('tr-TR'))
       );
     }
 
     // Filter by kapi_no
     if (filters.kapi_no) {
       filtered = filtered.filter((item) =>
-        (item.kapi_no || '').toLowerCase().includes(filters.kapi_no.toLowerCase())
+        (item.kapi_no || '').toLocaleLowerCase('tr-TR').includes(filters.kapi_no.toLocaleLowerCase('tr-TR'))
       );
     }
 
     // Filter by apartman_site
     if (filters.apartman_site) {
       filtered = filtered.filter((item) =>
-        (item.apartman_site || '').toLowerCase().includes(filters.apartman_site.toLowerCase())
+        (item.apartman_site || '').toLocaleLowerCase('tr-TR').includes(filters.apartman_site.toLocaleLowerCase('tr-TR'))
       );
     }
 
     // Filter by blok_no
     if (filters.blok_no) {
       filtered = filtered.filter((item) =>
-        (item.blok_no || '').toLowerCase().includes(filters.blok_no.toLowerCase())
+        (item.blok_no || '').toLocaleLowerCase('tr-TR').includes(filters.blok_no.toLocaleLowerCase('tr-TR'))
       );
     }
 
     // Filter by daire_no
     if (filters.daire_no) {
       filtered = filtered.filter((item) =>
-        (item.daire_no || '').toLowerCase().includes(filters.daire_no.toLowerCase())
+        (item.daire_no || '').toLocaleLowerCase('tr-TR').includes(filters.daire_no.toLocaleLowerCase('tr-TR'))
       );
     }
 
@@ -236,35 +236,35 @@ const IslemTable: React.FC<IslemTableProps> = ({
     // Filter by urun
     if (filters.urun) {
       filtered = filtered.filter((item) =>
-        (item.urun || '').toLowerCase().includes(filters.urun.toLowerCase())
+        (item.urun || '').toLocaleLowerCase('tr-TR').includes(filters.urun.toLocaleLowerCase('tr-TR'))
       );
     }
 
     // Filter by marka
     if (filters.marka) {
       filtered = filtered.filter((item) =>
-        (item.marka || '').toLowerCase().includes(filters.marka.toLowerCase())
+        (item.marka || '').toLocaleLowerCase('tr-TR').includes(filters.marka.toLocaleLowerCase('tr-TR'))
       );
     }
 
     // Filter by sikayet
     if (filters.sikayet) {
       filtered = filtered.filter((item) =>
-        (item.sikayet || '').toLowerCase().includes(filters.sikayet.toLowerCase())
+        (item.sikayet || '').toLocaleLowerCase('tr-TR').includes(filters.sikayet.toLocaleLowerCase('tr-TR'))
       );
     }
 
     // Filter by yapilan_islem
     if (filters.yapilan_islem) {
       filtered = filtered.filter((item) =>
-        (item.yapilan_islem || '').toLowerCase().includes(filters.yapilan_islem.toLowerCase())
+        (item.yapilan_islem || '').toLocaleLowerCase('tr-TR').includes(filters.yapilan_islem.toLocaleLowerCase('tr-TR'))
       );
     }
 
     // Filter by teknisyen - teknisyen_ismi kullan
     if (filters.teknisyen) {
       filtered = filtered.filter((item) =>
-        (item.teknisyen_ismi || '').toLowerCase().includes(filters.teknisyen.toLowerCase())
+        (item.teknisyen_ismi || '').toLocaleLowerCase('tr-TR').includes(filters.teknisyen.toLocaleLowerCase('tr-TR'))
       );
     }
 

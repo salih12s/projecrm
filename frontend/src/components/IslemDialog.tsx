@@ -725,6 +725,7 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
           </Grid>
           <Grid item xs={12} sm={6}>
             <Autocomplete
+              size="small"
               options={mahalleler}
               getOptionLabel={(option) => option.isim}
               value={mahalleler.find(m => m.isim === formData.mahalle) || null}
@@ -756,6 +757,7 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
               renderInput={(params) => (
                 <TextField 
                   {...params}
+                  size="small"
                   name="mahalle"
                   label="Mahalle"
                   onKeyDown={(e) => {
@@ -806,7 +808,7 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
             />
           </Grid>
           
-          <Grid item xs={12} sm={3}>
+          <Grid item xs={12} sm={6}>
             <TextField
               fullWidth
               required
@@ -817,7 +819,7 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
               onChange={handleChange('kapi_no')}
             />
           </Grid>
-          <Grid item xs={12} sm={3}>
+          <Grid item xs={12} sm={6}>
             <TextField
               fullWidth
               required
@@ -861,6 +863,16 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
             <TextField
               fullWidth
               size="small"
+              label="Sabit Telefon"
+              value={formatPhoneNumber(formData.sabit_tel)}
+              onChange={handleChange('sabit_tel')}
+              placeholder="0212 444 55 66"
+            />
+          </Grid>
+          <Grid item xs={12} sm={6}>
+            <TextField
+              fullWidth
+              size="small"
               label="Yedek Telefon"
               value={formatPhoneNumber(formData.yedek_tel)}
               onChange={handleChange('yedek_tel')}
@@ -869,6 +881,7 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
           </Grid>
           <Grid item xs={12} sm={6}>
             <Autocomplete
+              size="small"
               options={urunler.map(u => u.isim)}
               value={formData.urun || null}
               onChange={(_, newValue) => {
@@ -914,6 +927,7 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
                   {...params}
                   fullWidth
                   required
+                  size="small"
                   label="Ürün"
                   placeholder="Ürün ara ve seç..."
                   error={!formData.urun}
@@ -942,6 +956,7 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
           </Grid>
           <Grid item xs={12} sm={6}>
             <Autocomplete
+              size="small"
               options={markalar.map(m => m.isim)}
               value={formData.marka || null}
               onChange={(_, newValue) => {
@@ -974,6 +989,7 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
                   name="marka"
                   fullWidth
                   required
+                  size="small"
                   label="Marka"
                   placeholder="Marka ara ve seç..."
                   error={!formData.marka}
@@ -1114,13 +1130,13 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
         </DialogTitle>
         <DialogContent sx={{ py: 0.5, px: 2 }}>
           <Grid container spacing={0.75}>
-            {/* Montaj ve Aksesuar Checkboxları */}
+            {/* Montaj ve Aksesuar Checkboxları - Daha kompakt */}
             <Grid item xs={12}>
-              <Box sx={{ p: 1, border: '1px solid #e0e0e0', borderRadius: 1, bgcolor: '#f9f9f9' }}>
-                <Grid container spacing={1}>
+              <Box sx={{ p: 0.5, border: '1px solid #e0e0e0', borderRadius: 1, bgcolor: '#f9f9f9' }}>
+                <Grid container spacing={0.5}>
                   {/* Montajlar */}
                   <Grid item xs={12} sm={6}>
-                    <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 'bold', color: '#0D3282' }}>
+                    <Typography variant="caption" sx={{ mb: 0.5, fontWeight: 'bold', color: '#0D3282', display: 'block' }}>
                       Montaj
                     </Typography>
                     {montajlar.length > 0 ? (
@@ -1130,20 +1146,23 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
                             key={montaj.id}
                             control={
                               <Checkbox
+                                size="small"
                                 checked={selectedMontajlar.includes(montaj.id)}
                                 onChange={() => handleMontajChange(montaj.id)}
                                 sx={{
                                   color: '#0D3282',
-                                  '&.Mui-checked': { color: '#0D3282' }
+                                  '&.Mui-checked': { color: '#0D3282' },
+                                  py: 0.25
                                 }}
                               />
                             }
-                            label={montaj.isim}
+                            label={<Typography variant="body2">{montaj.isim}</Typography>}
+                            sx={{ my: 0 }}
                           />
                         ))}
                       </FormGroup>
                     ) : (
-                      <Typography variant="body2" color="text.secondary">
+                      <Typography variant="caption" color="text.secondary">
                         Montaj listesi boş
                       </Typography>
                     )}
@@ -1151,7 +1170,7 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
 
                   {/* Aksesuarlar */}
                   <Grid item xs={12} sm={6}>
-                    <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 'bold', color: '#0D8220' }}>
+                    <Typography variant="caption" sx={{ mb: 0.5, fontWeight: 'bold', color: '#0D8220', display: 'block' }}>
                       Aksesuarlar
                     </Typography>
                     {aksesuarlar.length > 0 ? (
@@ -1161,20 +1180,23 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
                             key={aksesuar.id}
                             control={
                               <Checkbox
+                                size="small"
                                 checked={selectedAksesuarlar.includes(aksesuar.id)}
                                 onChange={() => handleAksesuarChange(aksesuar.id)}
                                 sx={{
                                   color: '#0D8220',
-                                  '&.Mui-checked': { color: '#0D8220' }
+                                  '&.Mui-checked': { color: '#0D8220' },
+                                  py: 0.25
                                 }}
                               />
                             }
-                            label={aksesuar.isim}
+                            label={<Typography variant="body2">{aksesuar.isim}</Typography>}
+                            sx={{ my: 0 }}
                           />
                         ))}
                       </FormGroup>
                     ) : (
-                      <Typography variant="body2" color="text.secondary">
+                      <Typography variant="caption" color="text.secondary">
                         Aksesuar listesi boş
                       </Typography>
                     )}
@@ -1186,6 +1208,7 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
             {/* Teknisyen İsmi - Zorunlu */}
             <Grid item xs={12} sm={6}>
               <Autocomplete
+                size="small"
                 freeSolo
                 options={teknisyenler.map(t => t.isim)}
                 value={formData.teknisyen_ismi || ''}
@@ -1216,6 +1239,7 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
                     {...params}
                     required
                     fullWidth
+                    size="small"
                     label="Teknisyen İsmi"
                     onKeyDown={(e) => {
                       if (e.key === 'Tab') {

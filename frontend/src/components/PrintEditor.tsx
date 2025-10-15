@@ -83,11 +83,11 @@ const PrintEditor: React.FC<PrintEditorProps> = ({ open, onClose, islem }) => {
     
     // Adres parçalarını ayrı ayrı ekle
     if (islem.ilce) {
-      fields.push({ id: 'ilce', label: 'İlçe', value: islem.ilce, position: { left: 20, top: 42 } });
+      fields.push({ id: 'ilce', label: 'İlçe', value: islem.ilce.toUpperCase(), position: { left: 20, top: 42 } });
     }
     
     if (islem.mahalle) {
-      fields.push({ id: 'mahalle', label: 'Mahalle', value: islem.mahalle + ' Mah.', position: { left: 20, top: 47 } });
+      fields.push({ id: 'mahalle', label: 'Mahalle', value: islem.mahalle.toUpperCase() + ' MAH.', position: { left: 20, top: 47 } });
     }
     
     if (islem.cadde) {
@@ -549,7 +549,7 @@ const PrintEditor: React.FC<PrintEditorProps> = ({ open, onClose, islem }) => {
                   padding: '2px 4px',
                   backgroundColor: selectedField === field.id ? 'rgba(25, 118, 210, 0.2)' : 'transparent',
                   border: selectedField === field.id ? '1px solid #1976d2' : '1px dashed transparent',
-                  fontSize: ['yapilan_islem', 'sikayet'].includes(field.id) ? '11px' : '13px',
+                  fontSize: ['yapilan_islem', 'sikayet'].includes(field.id) ? '12px' : '14px',
                   fontWeight: 900,
                   fontFamily: 'Arial Black, Arial, sans-serif',
                   whiteSpace: ['yapilan_islem', 'sikayet'].includes(field.id) ? 'normal' : 'nowrap',
