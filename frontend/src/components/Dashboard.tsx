@@ -291,74 +291,9 @@ const Dashboard: React.FC = () => {
             </IconButton>
           )}
           <Build sx={{ mr: 1, fontSize: '1.5rem' }} />
-          <Typography variant="h6" component="div" sx={{ fontWeight: 600, fontSize: { xs: '0.95rem', sm: '1.1rem' }, mr: 3 }}>
+          <Typography variant="h6" component="div" sx={{ fontWeight: 600, fontSize: { xs: '0.95rem', sm: '1.1rem' } }}>
             Teknik Servis - Ana Sayfa
           </Typography>
-          
-          {/* İstatistikler - Sadece Ana Sayfa'da görünsün - Sol tarafta */}
-          {activeTab === 0 && !isMobile && (
-            <Box sx={{ 
-              display: 'flex', 
-              gap: 2.5, 
-              fontSize: '0.75rem',
-              color: 'rgba(255,255,255,0.9)'
-            }}>
-              <Box 
-                onClick={() => handleStatusFilterClick('all')}
-                sx={{ 
-                  cursor: 'pointer',
-                  fontWeight: statusFilter === 'all' ? 700 : 400,
-                  opacity: statusFilter === 'all' ? 1 : 0.8,
-                  '&:hover': { opacity: 1 }
-                }}
-              >
-                Toplam: <strong>{islemler.length}</strong>
-              </Box>
-              <Box 
-                onClick={() => handleStatusFilterClick('acik')}
-                sx={{ 
-                  cursor: 'pointer',
-                  fontWeight: statusFilter === 'acik' ? 700 : 400,
-                  opacity: statusFilter === 'acik' ? 1 : 0.8,
-                  '&:hover': { opacity: 1 }
-                }}
-              >
-                Açık: <strong>{islemler.filter(i => i.is_durumu === 'acik').length}</strong>
-              </Box>
-              <Box 
-                onClick={() => handleStatusFilterClick('parca_bekliyor')}
-                sx={{ 
-                  cursor: 'pointer',
-                  fontWeight: statusFilter === 'parca_bekliyor' ? 700 : 400,
-                  opacity: statusFilter === 'parca_bekliyor' ? 1 : 0.8,
-                  '&:hover': { opacity: 1 }
-                }}
-              >
-                Parça Bekliyor: <strong>{islemler.filter(i => i.is_durumu === 'parca_bekliyor').length}</strong>
-              </Box>
-              <Box 
-                onClick={() => handleStatusFilterClick('tamamlandi')}
-                sx={{ 
-                  cursor: 'pointer',
-                  fontWeight: statusFilter === 'tamamlandi' ? 700 : 400,
-                  opacity: statusFilter === 'tamamlandi' ? 1 : 0.8,
-                  '&:hover': { opacity: 1 }
-                }}
-              >
-                Tamamlanan: <strong>{islemler.filter(i => i.is_durumu === 'tamamlandi').length}</strong>
-              </Box>
-              {isAdmin && (
-                <Box sx={{ fontWeight: 600 }}>
-                  Toplam Tutar: <strong>
-                    {islemler.reduce((sum, i) => {
-                      const tutar = typeof i.tutar === 'number' ? i.tutar : parseFloat(String(i.tutar || 0));
-                      return sum + (isNaN(tutar) ? 0 : tutar);
-                    }, 0).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ₺
-                  </strong>
-                </Box>
-              )}
-            </Box>
-          )}
           
           <Box sx={{ flexGrow: 1 }} />
           
@@ -513,20 +448,128 @@ const Dashboard: React.FC = () => {
           ) : (
             <>
               {/* Tablo Başlığı ve Filtreler */}
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2, gap: 2, flexWrap: 'wrap' }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                  <Typography variant="h6" sx={{ fontWeight: 600, fontSize: '1rem' }}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2, gap: 2, flexWrap: 'wrap' }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexWrap: 'wrap' }}>
+                  <Typography variant="h6" sx={{ fontWeight: 600, fontSize: '1rem', mr: 0.5 }}>
                     İşlemler
                   </Typography>
                   
+                  {/* İstatistik Butonları */}
+                  <Button
+                    variant={statusFilter === 'all' ? 'contained' : 'outlined'}
+                    size="small"
+                    onClick={() => handleStatusFilterClick('all')}
+                    sx={{
+                      fontSize: '0.65rem',
+                      py: 0.3,
+                      px: 0.8,
+                      minWidth: 'auto',
+                      bgcolor: statusFilter === 'all' ? '#0D3282' : 'transparent',
+                      color: statusFilter === 'all' ? '#fff' : '#0D3282',
+                      borderColor: '#0D3282',
+                      '&:hover': {
+                        bgcolor: statusFilter === 'all' ? '#0a2461' : 'rgba(13, 50, 130, 0.04)',
+                      }
+                    }}
+                  >
+                    Toplam: {islemler.length}
+                  </Button>
+                  
+                  <Button
+                    variant={statusFilter === 'acik' ? 'contained' : 'outlined'}
+                    size="small"
+                    onClick={() => handleStatusFilterClick('acik')}
+                    sx={{
+                      fontSize: '0.65rem',
+                      py: 0.3,
+                      px: 0.8,
+                      minWidth: 'auto',
+                      bgcolor: statusFilter === 'acik' ? '#ed6c02' : 'transparent',
+                      color: statusFilter === 'acik' ? '#fff' : '#ed6c02',
+                      borderColor: '#ed6c02',
+                      '&:hover': {
+                        bgcolor: statusFilter === 'acik' ? '#e65100' : 'rgba(237, 108, 2, 0.04)',
+                      }
+                    }}
+                  >
+                    Açık: {islemler.filter(i => i.is_durumu === 'acik').length}
+                  </Button>
+                  
+                  <Button
+                    variant={statusFilter === 'parca_bekliyor' ? 'contained' : 'outlined'}
+                    size="small"
+                    onClick={() => handleStatusFilterClick('parca_bekliyor')}
+                    sx={{
+                      fontSize: '0.65rem',
+                      py: 0.3,
+                      px: 0.8,
+                      minWidth: 'auto',
+                      bgcolor: statusFilter === 'parca_bekliyor' ? '#1976d2' : 'transparent',
+                      color: statusFilter === 'parca_bekliyor' ? '#fff' : '#1976d2',
+                      borderColor: '#1976d2',
+                      '&:hover': {
+                        bgcolor: statusFilter === 'parca_bekliyor' ? '#1565c0' : 'rgba(25, 118, 210, 0.04)',
+                      }
+                    }}
+                  >
+                    Parça Bekliyor: {islemler.filter(i => i.is_durumu === 'parca_bekliyor').length}
+                  </Button>
+                  
+                  <Button
+                    variant={statusFilter === 'tamamlandi' ? 'contained' : 'outlined'}
+                    size="small"
+                    onClick={() => handleStatusFilterClick('tamamlandi')}
+                    sx={{
+                      fontSize: '0.65rem',
+                      py: 0.3,
+                      px: 0.8,
+                      minWidth: 'auto',
+                      bgcolor: statusFilter === 'tamamlandi' ? '#2e7d32' : 'transparent',
+                      color: statusFilter === 'tamamlandi' ? '#fff' : '#2e7d32',
+                      borderColor: '#2e7d32',
+                      '&:hover': {
+                        bgcolor: statusFilter === 'tamamlandi' ? '#1b5e20' : 'rgba(46, 125, 50, 0.04)',
+                      }
+                    }}
+                  >
+                    Tamamlanan: {islemler.filter(i => i.is_durumu === 'tamamlandi').length}
+                  </Button>
+                  
+                  {/* Toplam Tutar - Sadece admin için */}
+                  {isAdmin && (
+                    <Button
+                      variant="outlined"
+                      size="small"
+                      sx={{
+                        fontSize: '0.65rem',
+                        py: 0.3,
+                        px: 0.8,
+                        minWidth: 'auto',
+                        bgcolor: '#fff',
+                        color: '#0D3282',
+                        borderColor: '#0D3282',
+                        fontWeight: 600,
+                        '&:hover': {
+                          bgcolor: 'rgba(13, 50, 130, 0.04)',
+                        }
+                      }}
+                    >
+                      Tutar: {islemler.reduce((sum, i) => {
+                        const tutar = typeof i.tutar === 'number' ? i.tutar : parseFloat(String(i.tutar || 0));
+                        return sum + (isNaN(tutar) ? 0 : tutar);
+                      }, 0).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ₺
+                    </Button>
+                  )}
+                  
+                  {/* Bugün Alınan İşler - Daha küçük */}
                   <Button
                     variant={showTodayOnly ? 'contained' : 'outlined'}
                     size="small"
                     onClick={handleTodayFilter}
                     sx={{
-                      fontSize: '0.7rem',
-                      py: 0.4,
-                      px: 1.2,
+                      fontSize: '0.65rem',
+                      py: 0.3,
+                      px: 0.8,
                       minWidth: 'auto',
                       color: showTodayOnly ? '#fff' : '#2C3E82',
                       borderColor: '#2C3E82',
@@ -537,7 +580,15 @@ const Dashboard: React.FC = () => {
                       }
                     }}
                   >
-                    Bugün Alınan İşler
+                    Bugün alınan iş: {(() => {
+                      const today = new Date();
+                      today.setHours(0, 0, 0, 0);
+                      return islemler.filter(islem => {
+                        const islemDate = new Date(islem.full_tarih);
+                        islemDate.setHours(0, 0, 0, 0);
+                        return islemDate.getTime() === today.getTime();
+                      }).length;
+                    })()}
                   </Button>
                   
                   {showTodayOnly && (
@@ -545,7 +596,13 @@ const Dashboard: React.FC = () => {
                       variant="text"
                       size="small"
                       onClick={handleClearDateFilters}
-                      sx={{ fontSize: '0.7rem', py: 0.5, px: 1, minWidth: 'auto' }}
+                      sx={{ 
+                        fontSize: '0.65rem', 
+                        py: 0.3, 
+                        px: 0.5, 
+                        minWidth: 'auto',
+                        color: '#2C3E82',
+                      }}
                     >
                       ✕
                     </Button>
@@ -569,35 +626,35 @@ const Dashboard: React.FC = () => {
                     size="small"
                     sx={{
                       fontSize: '0.75rem',
-                      color: '#d32f2f',
-                      borderColor: '#d32f2f',
+                      color: '#0D3282',
+                      borderColor: '#0D3282',
                       '&:hover': {
-                        borderColor: '#9a0007',
-                        bgcolor: 'rgba(211, 47, 47, 0.04)',
+                        borderColor: '#0a2461',
+                        bgcolor: 'rgba(13, 50, 130, 0.04)',
                       }
                     }}
                   >
-                    PDF
+                    Excel
                   </Button>
                   <Button
-                    variant="contained"
-                    startIcon={<AddIcon />}
-                    onClick={() => handleOpenDialog()}
-                    size="small"
-                    sx={{ 
-                      fontSize: '0.75rem',
-                      boxShadow: 2,
-                      '&:hover': {
-                        boxShadow: 4,
-                      }
-                    }}
-                  >
-                    Yeni İşlem
-                  </Button>
+                      variant="contained"
+                      startIcon={<AddIcon />}
+                      onClick={() => handleOpenDialog()}
+                      size="small"
+                      sx={{ 
+                        fontSize: '0.75rem',
+                        boxShadow: 2,
+                        '&:hover': {
+                          boxShadow: 4,
+                        }
+                      }}
+                    >
+                      Yeni İşlem
+                    </Button>
+                  </Box>
                 </Box>
-              </Box>
 
-            <IslemTable
+              <IslemTable
               islemler={filteredIslemler}
               allIslemler={islemler}
               loading={loading}

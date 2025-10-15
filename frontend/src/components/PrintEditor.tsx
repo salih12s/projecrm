@@ -38,6 +38,7 @@ interface FieldConfig {
   label: string;
   value: string;
   position: Position;
+  isStatic?: boolean; // Sabit alan mı (MEFA TEKNİK gibi)
 }
 
 const formatPhoneNumber = (phone: string | undefined): string => {
@@ -148,6 +149,28 @@ const PrintEditor: React.FC<PrintEditorProps> = ({ open, onClose, islem }) => {
     if (islem.tutar) {
       fields.push({ id: 'tutar', label: 'Tutar', value: islem.tutar.toString() + ' TL', position: { left: 20, top: 125 } });
     }
+    
+    // MEFA TEKNİK alanları - her zaman ekle (ayrı ayrı)
+    fields.push({ 
+      id: 'mefa', 
+      label: 'MEFA', 
+      value: 'MEFA', 
+      position: { left: 120, top: 5 }
+    });
+    
+    fields.push({ 
+      id: 'teknik', 
+      label: 'TEKNİK', 
+      value: 'TEKNİK', 
+      position: { left: 145, top: 5 }
+    });
+    
+    fields.push({ 
+      id: 'mefa_telefon', 
+      label: 'MEFA Telefon', 
+      value: '0212 569 64 64', 
+      position: { left: 120, top: 10 }
+    });
     
     if (islem.is_durumu) {
       const durumText = islem.is_durumu === 'tamamlandi' ? 'Tamamlandı' : 'Açık';
@@ -337,7 +360,7 @@ const PrintEditor: React.FC<PrintEditorProps> = ({ open, onClose, islem }) => {
             }
             body { 
               font-family: 'Arial Black', 'Arial Bold', sans-serif;
-              font-size: 12px;
+              font-size: 15px;
               font-weight: 900;
               color: #000;
               background: white;
@@ -351,14 +374,14 @@ const PrintEditor: React.FC<PrintEditorProps> = ({ open, onClose, islem }) => {
               font-family: 'Arial Black', 'Arial Bold', sans-serif;
             }
             .item-small {
-              font-size: 9px;
+              font-size: 12px;
               max-width: 170mm;
               white-space: normal;
               word-wrap: break-word;
               line-height: 1.2;
             }
             .item-normal {
-              font-size: 11px;
+              font-size: 14px;
               white-space: nowrap;
             }
           </style>
@@ -367,7 +390,9 @@ const PrintEditor: React.FC<PrintEditorProps> = ({ open, onClose, islem }) => {
           ${fields.map(field => {
             const sizeClass = ['yapilan_islem', 'sikayet'].includes(field.id) ? 'item-small' : 'item-normal';
             const value = field.value || '';
-            return `<div class="item ${sizeClass}" style="left: ${field.position.left}mm; top: ${field.position.top}mm;">${value}</div>`;
+            // MEFA TEKNİK alanlarını kalın ve mavi yap
+            const staticStyle = field.isStatic ? 'font-weight: 900; color: #0D3282; font-size: 15px;' : '';
+            return `<div class="item ${sizeClass}" style="left: ${field.position.left}mm; top: ${field.position.top}mm; ${staticStyle}">${value}</div>`;
           }).join('\n          ')}
         </body>
       </html>
@@ -390,6 +415,8 @@ const PrintEditor: React.FC<PrintEditorProps> = ({ open, onClose, islem }) => {
       const storageKey = getStorageKey();
       const savedConfig = localStorage.getItem(storageKey);
       
+      let fieldsToSet: FieldConfig[] = [];
+      
       if (savedConfig) {
         try {
           const savedFields: Array<{ id: string; position: Position }> = JSON.parse(savedConfig);
@@ -402,13 +429,47 @@ const PrintEditor: React.FC<PrintEditorProps> = ({ open, onClose, islem }) => {
             })
             .filter((f): f is FieldConfig => f !== null);
           
-          setFields(restoredFields);
+          fieldsToSet = restoredFields;
         } catch {
-          setFields(defaultFields);
+          fieldsToSet = defaultFields;
         }
       } else {
-        setFields(defaultFields);
+        fieldsToSet = defaultFields;
       }
+      
+      // MEFA TEKNİK alanlarını her zaman ekle (eğer yoksa)
+      const hasMefa = fieldsToSet.some(f => f.id === 'mefa');
+      const hasTeknik = fieldsToSet.some(f => f.id === 'teknik');
+      const hasMefaTelefon = fieldsToSet.some(f => f.id === 'mefa_telefon');
+      
+      if (!hasMefa) {
+        fieldsToSet.push({ 
+          id: 'mefa', 
+          label: 'MEFA', 
+          value: 'MEFA', 
+          position: { left: 120, top: 5 }
+        });
+      }
+      
+      if (!hasTeknik) {
+        fieldsToSet.push({ 
+          id: 'teknik', 
+          label: 'TEKNİK', 
+          value: 'TEKNİK', 
+          position: { left: 145, top: 5 }
+        });
+      }
+      
+      if (!hasMefaTelefon) {
+        fieldsToSet.push({ 
+          id: 'mefa_telefon', 
+          label: 'MEFA Telefon', 
+          value: '0212 569 64 64', 
+          position: { left: 120, top: 10 }
+        });
+      }
+      
+      setFields(fieldsToSet);
     }
   }, [open, islem]);
 
@@ -488,7 +549,7 @@ const PrintEditor: React.FC<PrintEditorProps> = ({ open, onClose, islem }) => {
                   padding: '2px 4px',
                   backgroundColor: selectedField === field.id ? 'rgba(25, 118, 210, 0.2)' : 'transparent',
                   border: selectedField === field.id ? '1px solid #1976d2' : '1px dashed transparent',
-                  fontSize: ['yapilan_islem', 'sikayet'].includes(field.id) ? '9px' : '11px',
+                  fontSize: ['yapilan_islem', 'sikayet'].includes(field.id) ? '11px' : '13px',
                   fontWeight: 900,
                   fontFamily: 'Arial Black, Arial, sans-serif',
                   whiteSpace: ['yapilan_islem', 'sikayet'].includes(field.id) ? 'normal' : 'nowrap',

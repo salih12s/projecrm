@@ -485,6 +485,30 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
       return;
     }
     
+    // Cadde veya Sokak'tan en az biri dolu olmalı
+    if ((!formData.cadde || formData.cadde.trim() === '') && (!formData.sokak || formData.sokak.trim() === '')) {
+      showSnackbar('Cadde veya Sokak alanlarından en az biri doldurulmalıdır!', 'error');
+      return;
+    }
+    
+    // Kapı No zorunlu
+    if (!formData.kapi_no || formData.kapi_no.trim() === '') {
+      showSnackbar('Kapı No alanı zorunludur!', 'error');
+      return;
+    }
+    
+    // Daire No zorunlu
+    if (!formData.daire_no || formData.daire_no.trim() === '') {
+      showSnackbar('Daire No alanı zorunludur!', 'error');
+      return;
+    }
+    
+    // Cep Telefonu zorunlu
+    if (!formData.cep_tel || formData.cep_tel.trim() === '') {
+      showSnackbar('Cep Telefonu alanı zorunludur!', 'error');
+      return;
+    }
+    
     if (!formData.urun || formData.urun.trim() === '') {
       showSnackbar('Ürün alanı zorunludur!', 'error');
       return;
@@ -562,8 +586,8 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
   return (
     <>
     <Dialog open={open && !showTamamlaConfirm} onClose={onClose} maxWidth="md" fullWidth fullScreen={isMobile}>
-      <DialogTitle>{islem ? 'İşlem Düzenle' : 'Yeni İşlem Ekle'}</DialogTitle>
-      <DialogContent>
+      <DialogTitle sx={{ py: 1, fontSize: '1.1rem' }}>{islem ? 'İşlem Düzenle' : 'Yeni İşlem Ekle'}</DialogTitle>
+      <DialogContent sx={{ py: 0.5, px: 2 }}>
         {/* Telefon Numarası Sorgusu (Sadece yeni kayıt için) */}
         {showPhoneQuery && !islem && (
           <Box sx={{ mt: 2, mb: 2 }}>
@@ -627,11 +651,12 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
 
         {/* Form Alanları (Form gösterildiyse) */}
         {showForm && (
-        <Grid container spacing={2} sx={{ mt: 1 }}>
+        <Grid container spacing={0.75} sx={{ mt: 0.25 }}>
           <Grid item xs={12} sm={6}>
             <TextField
               fullWidth
               required
+              size="small"
               label="Ad Soyad"
               value={formData.ad_soyad}
               onChange={handleChange('ad_soyad')}
@@ -639,6 +664,7 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
           </Grid>
           <Grid item xs={12} sm={6}>
             <Autocomplete
+              size="small"
               options={ilceler}
               getOptionLabel={(option) => option.isim}
               value={ilceler.find(i => i.isim === formData.ilce) || null}
@@ -652,10 +678,15 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
                   const filtered = ilceler.filter(ilce => 
                     ilce.isim.toLowerCase().includes(value.toLowerCase())
                   );
-                  // Eğer tek bir seçenek kaldıysa otomatik seç
+                  // Eğer tek bir seçenek kaldıysa otomatik seç ve sonraki alana geç
                   if (filtered.length === 1 && value.length > 0) {
                     setFormData({ ...formData, ilce: filtered[0].isim, mahalle: '' });
                     setSelectedIlceId(filtered[0].ilce_id);
+                    // Otomatik bir sonraki alana geç (Mahalle)
+                    setTimeout(() => {
+                      const nextField = document.querySelector('[name="mahalle"]') as HTMLInputElement;
+                      if (nextField) nextField.focus();
+                    }, 100);
                   }
                 }
               }}
@@ -706,9 +737,14 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
                   const filtered = mahalleler.filter(mahalle => 
                     mahalle.isim.toLowerCase().includes(value.toLowerCase())
                   );
-                  // Eğer tek bir seçenek kaldıysa otomatik seç
+                  // Eğer tek bir seçenek kaldıysa otomatik seç ve sonraki alana geç
                   if (filtered.length === 1 && value.length > 0) {
                     setFormData({ ...formData, mahalle: filtered[0].isim });
+                    // Otomatik bir sonraki alana geç (Cadde)
+                    setTimeout(() => {
+                      const nextField = document.querySelector('[name="cadde"]') as HTMLInputElement;
+                      if (nextField) nextField.focus();
+                    }, 100);
                   }
                 }
               }}
@@ -719,7 +755,8 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
               disabled={!formData.ilce}
               renderInput={(params) => (
                 <TextField 
-                  {...params} 
+                  {...params}
+                  name="mahalle"
                   label="Mahalle"
                   onKeyDown={(e) => {
                     if (e.key === 'Tab') {
@@ -747,23 +784,34 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
           <Grid item xs={12} sm={6}>
             <TextField
               fullWidth
+              size="small"
+              name="cadde"
               label="Cadde"
               value={formData.cadde}
               onChange={handleChange('cadde')}
+              error={!formData.cadde && !formData.sokak}
+              helperText={!formData.cadde && !formData.sokak ? "Cadde veya Sokak doldurulmalı" : ""}
             />
           </Grid>
           <Grid item xs={12} sm={6}>
             <TextField
               fullWidth
+              size="small"
+              name="sokak"
               label="Sokak"
               value={formData.sokak}
               onChange={handleChange('sokak')}
+              error={!formData.cadde && !formData.sokak}
+              helperText={!formData.cadde && !formData.sokak ? "Cadde veya Sokak doldurulmalı" : ""}
             />
           </Grid>
           
           <Grid item xs={12} sm={3}>
             <TextField
               fullWidth
+              required
+              size="small"
+              name="kapi_no"
               label="Kapı No"
               value={formData.kapi_no}
               onChange={handleChange('kapi_no')}
@@ -772,6 +820,9 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
           <Grid item xs={12} sm={3}>
             <TextField
               fullWidth
+              required
+              size="small"
+              name="daire_no"
               label="Daire No"
               value={formData.daire_no}
               onChange={handleChange('daire_no')}
@@ -780,6 +831,7 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
           <Grid item xs={12} sm={6}>
             <TextField
               fullWidth
+              size="small"
               label="Blok No"
               value={formData.blok_no}
               onChange={handleChange('blok_no')}
@@ -788,6 +840,7 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
           <Grid item xs={12} sm={6}>
             <TextField
               fullWidth
+              size="small"
               label="Apartman/Site"
               value={formData.apartman_site}
               onChange={handleChange('apartman_site')}
@@ -795,7 +848,9 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
           </Grid>
           <Grid item xs={12} sm={6}>
             <TextField
-              fullWidth 
+              fullWidth
+              required
+              size="small"
               label="Cep Telefonu"
               value={formatPhoneNumber(formData.cep_tel)}
               onChange={handleChange('cep_tel')}
@@ -805,6 +860,7 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
           <Grid item xs={12} sm={6}>
             <TextField
               fullWidth
+              size="small"
               label="Yedek Telefon"
               value={formatPhoneNumber(formData.yedek_tel)}
               onChange={handleChange('yedek_tel')}
@@ -824,9 +880,14 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
                   const filtered = urunler.filter(urun => 
                     urun.isim.toLowerCase().includes(value.toLowerCase())
                   );
-                  // Eğer tek bir seçenek kaldıysa otomatik seç
+                  // Eğer tek bir seçenek kaldıysa otomatik seç ve sonraki alana geç
                   if (filtered.length === 1 && value.length > 0) {
                     setFormData({ ...formData, urun: filtered[0].isim });
+                    // Otomatik bir sonraki alana geç (Marka)
+                    setTimeout(() => {
+                      const nextField = document.querySelector('[name="marka"]') as HTMLInputElement;
+                      if (nextField) nextField.focus();
+                    }, 100);
                   }
                 }
               }}
@@ -892,9 +953,14 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
                   const filtered = markalar.filter(marka => 
                     marka.isim.toLowerCase().includes(value.toLowerCase())
                   );
-                  // Eğer tek bir seçenek kaldıysa otomatik seç
+                  // Eğer tek bir seçenek kaldıysa otomatik seç ve sonraki alana geç
                   if (filtered.length === 1 && value.length > 0) {
                     setFormData({ ...formData, marka: filtered[0].isim });
+                    // Otomatik bir sonraki alana geç (Şikayet)
+                    setTimeout(() => {
+                      const nextField = document.querySelector('[name="sikayet"]') as HTMLInputElement;
+                      if (nextField) nextField.focus();
+                    }, 100);
                   }
                 }
               }}
@@ -905,6 +971,7 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
               renderInput={(params) => (
                 <TextField
                   {...params}
+                  name="marka"
                   fullWidth
                   required
                   label="Marka"
@@ -1006,8 +1073,10 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
             <TextField
               fullWidth
               required
+              size="small"
+              name="sikayet"
               multiline
-              rows={3}
+              rows={1}
               label="Şikayet"
               value={formData.sikayet}
               onChange={handleChange('sikayet')}
@@ -1040,15 +1109,15 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
         fullScreen={isMobile}
         disableEscapeKeyDown={false}
       >
-        <DialogTitle sx={{ bgcolor: 'success.light', color: 'success.contrastText' }}>
+        <DialogTitle sx={{ bgcolor: 'success.light', color: 'success.contrastText', py: 1, fontSize: '1.1rem' }}>
           İşlemi Tamamla
         </DialogTitle>
-        <DialogContent sx={{ mt: 2 }}>
-          <Grid container spacing={2}>
+        <DialogContent sx={{ py: 0.5, px: 2 }}>
+          <Grid container spacing={0.75}>
             {/* Montaj ve Aksesuar Checkboxları */}
             <Grid item xs={12}>
-              <Box sx={{ p: 2, border: '1px solid #e0e0e0', borderRadius: 1, bgcolor: '#f9f9f9' }}>
-                <Grid container spacing={2}>
+              <Box sx={{ p: 1, border: '1px solid #e0e0e0', borderRadius: 1, bgcolor: '#f9f9f9' }}>
+                <Grid container spacing={1}>
                   {/* Montajlar */}
                   <Grid item xs={12} sm={6}>
                     <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 'bold', color: '#0D3282' }}>
@@ -1175,6 +1244,7 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
             <Grid item xs={12} sm={6}>
               <TextField
                 fullWidth
+                size="small"
                 label="Tutar"
                 type="number"
                 value={formData.tutar}
@@ -1190,8 +1260,9 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
               <TextField
                 required
                 fullWidth
+                size="small"
                 multiline
-                rows={3}
+                rows={1}
                 label="Yapılan İşlem"
                 value={formData.yapilan_islem}
                 onChange={handleChange('yapilan_islem')}
@@ -1203,6 +1274,7 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
               <TextField
                 select
                 fullWidth
+                size="small"
                 label="İş Durumu"
                 value={formData.is_durumu}
                 onChange={handleChange('is_durumu')}

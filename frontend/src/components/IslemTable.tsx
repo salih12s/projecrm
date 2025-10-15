@@ -474,22 +474,39 @@ const IslemTable: React.FC<IslemTableProps> = ({
     },
     apartman_site: {
       id: 'apartman_site',
-      label: 'Apartman/Site',
-      render: (islem) => <TableCell sx={{ fontSize: '0.65rem', py: 0.1, px: 0.2, textTransform: 'uppercase' }}>{islem.apartman_site || '-'}</TableCell>,
+      label: 'Apt/Site',
+      render: (islem) => (
+        <TableCell sx={{ 
+          fontSize: '0.65rem', 
+          py: 0.1, 
+          px: 0.2, 
+          textTransform: 'uppercase',
+          maxWidth: '80px',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          whiteSpace: 'nowrap'
+        }}>
+          {islem.apartman_site ? (
+            <Tooltip title={islem.apartman_site} arrow>
+              <span>{islem.apartman_site}</span>
+            </Tooltip>
+          ) : '-'}
+        </TableCell>
+      ),
     },
     blok_no: {
       id: 'blok_no',
-      label: 'Blok No',
+      label: 'Blok',
       render: (islem) => <TableCell sx={{ fontSize: '0.65rem', py: 0.1, px: 0.2, textTransform: 'uppercase' }}>{islem.blok_no || '-'}</TableCell>,
     },
     daire_no: {
       id: 'daire_no',
-      label: 'Daire No',
+      label: 'Daire',
       render: (islem) => <TableCell sx={{ fontSize: '0.65rem', py: 0.1, px: 0.2, textTransform: 'uppercase' }}>{islem.daire_no || '-'}</TableCell>,
     },
     kapi_no: {
       id: 'kapi_no',
-      label: 'Kapı No',
+      label: 'Kapı',
       render: (islem) => <TableCell sx={{ fontSize: '0.65rem', py: 0.1, px: 0.2, textTransform: 'uppercase' }}>{islem.kapi_no || '-'}</TableCell>,
     },
     cep_tel: {
@@ -499,8 +516,27 @@ const IslemTable: React.FC<IslemTableProps> = ({
     },
     yedek_tel: {
       id: 'yedek_tel',
-      label: 'Yedek Tel',
-      render: (islem) => <TableCell sx={{ fontSize: '0.65rem', py: 0.1, px: 0.2 }}>{islem.yedek_tel ? formatPhoneNumber(islem.yedek_tel) : '-'}</TableCell>,
+      label: 'Yedek',
+      render: (islem) => {
+        if (!islem.yedek_tel) return <TableCell sx={{ fontSize: '0.65rem', py: 0.1, px: 0.2 }}>-</TableCell>;
+        const formatted = formatPhoneNumber(islem.yedek_tel);
+        const firstFour = formatted.slice(0, 4);
+        return (
+          <TableCell sx={{ 
+            fontSize: '0.65rem', 
+            py: 0.1, 
+            px: 0.2,
+            maxWidth: '45px',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap'
+          }}>
+            <Tooltip title={formatted} arrow>
+              <span>{firstFour}</span>
+            </Tooltip>
+          </TableCell>
+        );
+      },
     },
     urun: {
       id: 'urun',
@@ -1080,9 +1116,13 @@ const IslemTable: React.FC<IslemTableProps> = ({
                       '& .MuiInputBase-input': { fontSize: '0.65rem', py: 0.2, px: 0.2 },
                       minWidth: columnId === 'tarih' ? '75px' : 
                                columnId === 'cep_tel' ? '85px' : 
-                               columnId === 'yedek_tel' ? '85px' : 
+                               columnId === 'yedek_tel' ? '45px' : 
                                columnId === 'tutar' ? '55px' :
-                               columnId === 'durum' ? '75px' : '80px'
+                               columnId === 'durum' ? '75px' : 
+                               columnId === 'apartman_site' ? '20px' :
+                               columnId === 'blok_no' ? '10px' :
+                               columnId === 'daire_no' ? '10px' :
+                               columnId === 'kapi_no' ? '10px' : '80px'
                     }}
                   />
                 ) : null}
