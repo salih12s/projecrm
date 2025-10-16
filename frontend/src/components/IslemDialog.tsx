@@ -67,6 +67,8 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
   const [showTamamlaConfirm, setShowTamamlaConfirm] = useState(false);
   const [phoneNumber, setPhoneNumber] = useState('');
   const [showForm, setShowForm] = useState(false);
+  const [markaUyari, setMarkaUyari] = useState<string>(''); // Marka uyarı mesajı
+  const [mahalleAutoCompleted, setMahalleAutoCompleted] = useState(false); // Mahalle otomatik doldu mu?
   const [formData, setFormData] = useState<IslemUpdateDto>({
     ad_soyad: '',
     ilce: '',
@@ -200,6 +202,8 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
       });
       setShowConfirmDialog(false);
       setExistingRecord(null);
+      setMarkaUyari(''); // Marka uyarısını temizle
+      setMahalleAutoCompleted(false); // Mahalle flag'ini sıfırla
     }
   }, [islem, open]);
 
@@ -302,6 +306,8 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
         setFormData({ ...formData, [field]: value });
       }
     } else {
+      // Tüm text inputlar için büyük harf dönüşümü
+      value = value.toLocaleUpperCase('tr-TR');
       setFormData({ ...formData, [field]: value });
     }
   };
@@ -309,6 +315,7 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
   const handlePhoneNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     const cleaned = cleanPhoneNumber(value);
+    // Telefon numaraları için büyük harf dönüşümü YAPMA
     if (cleaned.length <= 11) {
       setPhoneNumber(cleaned);
     }
@@ -585,17 +592,19 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
 
   return (
     <>
-    <Dialog open={open && !showTamamlaConfirm} onClose={onClose} maxWidth="md" fullWidth fullScreen={isMobile}>
-      <DialogTitle sx={{ py: 1, fontSize: '1.1rem' }}>{islem ? 'İşlem Düzenle' : 'Yeni İşlem Ekle'}</DialogTitle>
-      <DialogContent sx={{ py: 0.5, px: 2 }}>
+    <Dialog open={open && !showTamamlaConfirm} onClose={onClose} maxWidth="lg" fullWidth fullScreen={isMobile}>
+      <DialogTitle sx={{ py: 0.75, px: 2, fontSize: '1rem', fontWeight: 600 }}>{islem ? 'İşlem Düzenle' : 'Yeni İşlem Ekle'}</DialogTitle>
+      <DialogContent sx={{ py: 0.5, px: 2, maxHeight: '80vh', overflowY: 'auto' }}>
         {/* Telefon Numarası Sorgusu (Sadece yeni kayıt için) */}
         {showPhoneQuery && !islem && (
-          <Box sx={{ mt: 2, mb: 2 }}>
-            <Alert severity="info" sx={{ mb: 2 }}>
-              <AlertTitle>Telefon Numarası Sorgusu</AlertTitle>
-              Lütfen müşterinin cep telefon numarasını girin. Daha önce kayıt varsa bilgileri getireceğiz.
+          <Box sx={{ mt: 1, mb: 1 }}>
+            <Alert severity="info" sx={{ mb: 1.5, py: 0.5 }}>
+              <AlertTitle sx={{ fontSize: '0.875rem', mb: 0.5 }}>Telefon Numarası Sorgusu</AlertTitle>
+              <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
+                Lütfen müşterinin cep telefon numarasını girin. Daha önce kayıt varsa bilgileri getireceğiz.
+              </Typography>
             </Alert>
-            <Grid container spacing={2} alignItems="center">
+            <Grid container spacing={1.5} alignItems="center">
               <Grid item xs={12} sm={8}>
                 <TextField
                   fullWidth
@@ -631,7 +640,7 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
         {showConfirmDialog && existingRecord && (
           <Alert 
             severity="warning" 
-            sx={{ mb: 2, mt: 2 }}
+            sx={{ mb: 1.5, mt: 1, py: 0.5 }}
             action={
               <>
                 <Button color="inherit" size="small" onClick={handleUseExistingData}>
@@ -643,15 +652,17 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
               </>
             }
           >
-            <AlertTitle>Daha Önce Kayıt Bulundu!</AlertTitle>
-            Bu telefon numarasıyla ({formatPhoneNumber(existingRecord.cep_tel)}) daha önce <strong>{existingRecord.ad_soyad}</strong> adına kayıt açılmış. 
-            Önceki müşteri bilgilerini getirmek ister misiniz?
+            <AlertTitle sx={{ fontSize: '0.875rem', mb: 0.5 }}>Daha Önce Kayıt Bulundu!</AlertTitle>
+            <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
+              Bu telefon numarasıyla ({formatPhoneNumber(existingRecord.cep_tel)}) daha önce <strong>{existingRecord.ad_soyad}</strong> adına kayıt açılmış. 
+              Önceki müşteri bilgilerini getirmek ister misiniz?
+            </Typography>
           </Alert>
         )}
 
         {/* Form Alanları (Form gösterildiyse) */}
         {showForm && (
-        <Grid container spacing={0.75} sx={{ mt: 0.25 }}>
+        <Grid container spacing={1} sx={{ mt: 0 }}>
           <Grid item xs={12} sm={6}>
             <TextField
               fullWidth
@@ -678,15 +689,11 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
                   const filtered = ilceler.filter(ilce => 
                     ilce.isim.toLowerCase().includes(value.toLowerCase())
                   );
-                  // Eğer tek bir seçenek kaldıysa otomatik seç ve sonraki alana geç
+                  // Eğer tek bir seçenek kaldıysa otomatik seç (ama bir sonraki alana GEÇMESİN)
                   if (filtered.length === 1 && value.length > 0) {
                     setFormData({ ...formData, ilce: filtered[0].isim, mahalle: '' });
                     setSelectedIlceId(filtered[0].ilce_id);
-                    // Otomatik bir sonraki alana geç (Mahalle)
-                    setTimeout(() => {
-                      const nextField = document.querySelector('[name="mahalle"]') as HTMLInputElement;
-                      if (nextField) nextField.focus();
-                    }, 100);
+                    // Otomatik geçiş YOK - kullanıcı manuel Tab/Enter ile geçecek
                   }
                 }
               }}
@@ -731,21 +738,33 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
               value={mahalleler.find(m => m.isim === formData.mahalle) || null}
               onChange={(_, newValue) => {
                 setFormData({ ...formData, mahalle: newValue?.isim || '' });
+                setMahalleAutoCompleted(false); // Manuel seçimde flag'i sıfırla
               }}
               onInputChange={(_, value, reason) => {
                 // Kullanıcı yazarken filtrelenen seçenekleri kontrol et
-                if (reason === 'input') {
+                if (reason === 'input' && !mahalleAutoCompleted) {
                   const filtered = mahalleler.filter(mahalle => 
                     mahalle.isim.toLowerCase().includes(value.toLowerCase())
                   );
-                  // Eğer tek bir seçenek kaldıysa otomatik seç ve sonraki alana geç
+                  // Eğer tek bir seçenek kaldıysa otomatik seç ve 1 saniye sonra Cadde'ye geç
                   if (filtered.length === 1 && value.length > 0) {
                     setFormData({ ...formData, mahalle: filtered[0].isim });
-                    // Otomatik bir sonraki alana geç (Cadde)
+                    setMahalleAutoCompleted(true); // Otomatik dolduruldu flag'i
+                    // Input alanını blur et - yazı yazmayı engelle
                     setTimeout(() => {
-                      const nextField = document.querySelector('[name="cadde"]') as HTMLInputElement;
-                      if (nextField) nextField.focus();
-                    }, 100);
+                      const mahalleInput = document.querySelector('input[name="mahalle"]') as HTMLInputElement;
+                      if (mahalleInput) {
+                        mahalleInput.blur();
+                      }
+                    }, 50);
+                    // 1 saniye bekle, sonra Cadde alanına geç
+                    setTimeout(() => {
+                      const caddeInput = document.querySelector('input[name="cadde"]') as HTMLInputElement;
+                      if (caddeInput) {
+                        caddeInput.focus();
+                      }
+                      setMahalleAutoCompleted(false); // Flag'i sıfırla
+                    }, 300); // 300ms = 0.3 saniye
                   }
                 }
               }}
@@ -834,18 +853,18 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
             <TextField
               fullWidth
               size="small"
-              label="Blok No"
-              value={formData.blok_no}
-              onChange={handleChange('blok_no')}
+              label="Apartman/Site"
+              value={formData.apartman_site}
+              onChange={handleChange('apartman_site')}
             />
           </Grid>
           <Grid item xs={12} sm={6}>
             <TextField
               fullWidth
               size="small"
-              label="Apartman/Site"
-              value={formData.apartman_site}
-              onChange={handleChange('apartman_site')}
+              label="Blok No"
+              value={formData.blok_no}
+              onChange={handleChange('blok_no')}
             />
           </Grid>
           <Grid item xs={12} sm={6}>
@@ -857,16 +876,6 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
               value={formatPhoneNumber(formData.cep_tel)}
               onChange={handleChange('cep_tel')}
               placeholder="0544 448 88 88"
-            />
-          </Grid>
-          <Grid item xs={12} sm={6}>
-            <TextField
-              fullWidth
-              size="small"
-              label="Sabit Telefon"
-              value={formatPhoneNumber(formData.sabit_tel)}
-              onChange={handleChange('sabit_tel')}
-              placeholder="0212 444 55 66"
             />
           </Grid>
           <Grid item xs={12} sm={6}>
@@ -961,6 +970,7 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
               value={formData.marka || null}
               onChange={(_, newValue) => {
                 setFormData({ ...formData, marka: newValue || '' });
+                setMarkaUyari(''); // Seçim yapıldığında uyarıyı temizle
               }}
               onInputChange={(_, value, reason) => {
                 // Kullanıcı yazarken filtrelenen seçenekleri kontrol et
@@ -971,11 +981,30 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
                   // Eğer tek bir seçenek kaldıysa otomatik seç ve sonraki alana geç
                   if (filtered.length === 1 && value.length > 0) {
                     setFormData({ ...formData, marka: filtered[0].isim });
+                    setMarkaUyari(''); // Uyarıyı temizle
                     // Otomatik bir sonraki alana geç (Şikayet)
                     setTimeout(() => {
                       const nextField = document.querySelector('[name="sikayet"]') as HTMLInputElement;
                       if (nextField) nextField.focus();
                     }, 100);
+                  } else if (value.length > 2 && filtered.length === 0) {
+                    // Eğer yazdığı marka listede yoksa "DİĞER" seç
+                    const digerMarka = markalar.find(m => m.isim.toUpperCase() === 'DİĞER' || m.isim.toUpperCase() === 'DIGER');
+                    if (digerMarka) {
+                      setFormData({ ...formData, marka: digerMarka.isim });
+                      setMarkaUyari(`"${value}" markası listede bulunamadı, "DİĞER" seçildi.`);
+                    }
+                  }
+                }
+              }}
+              onBlur={(e) => {
+                // Kullanıcı alanı terk ettiğinde kontrol et
+                const inputValue = (e.target as HTMLInputElement).value;
+                if (inputValue && !markalar.some(m => m.isim.toLowerCase() === inputValue.toLowerCase())) {
+                  const digerMarka = markalar.find(m => m.isim.toUpperCase() === 'DİĞER' || m.isim.toUpperCase() === 'DIGER');
+                  if (digerMarka) {
+                    setFormData({ ...formData, marka: digerMarka.isim });
+                    setMarkaUyari(`"${inputValue}" markası listede bulunamadı, "DİĞER" seçildi.`);
                   }
                 }
               }}
@@ -993,7 +1022,10 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
                   label="Marka"
                   placeholder="Marka ara ve seç..."
                   error={!formData.marka}
-                  helperText={!formData.marka ? 'Listeden bir marka seçmelisiniz' : ''}
+                  helperText={markaUyari || (!formData.marka ? 'Listeden bir marka seçmelisiniz' : '')}
+                  FormHelperTextProps={{
+                    sx: markaUyari ? { color: 'warning.main', fontWeight: 500 } : undefined
+                  }}
                   onKeyDown={(e) => {
                     if (e.key === 'Tab') {
                       const popup = document.querySelector('[role="listbox"]');
@@ -1004,6 +1036,7 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
                           const text = highlighted.textContent;
                           if (text && markalar.some(m => m.isim === text)) {
                             setFormData({ ...formData, marka: text });
+                            setMarkaUyari(''); // Uyarıyı temizle
                             setTimeout(() => {
                               (e.target as HTMLElement).blur();
                             }, 10);
@@ -1019,14 +1052,15 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
           
           {/* Şikayet Hızlı Seçim */}
           <Grid item xs={12}>
-            <Box sx={{ mb: 1 }}>
-              <Typography variant="subtitle2" sx={{ mb: 1, color: '#666' }}>
+            <Box sx={{ mb: 0.5 }}>
+              <Typography variant="caption" sx={{ mb: 0.5, color: '#666', fontSize: '0.75rem', display: 'block' }}>
                 Hızlı Seçim:
               </Typography>
               <FormGroup row>
                 <FormControlLabel
                   control={
                     <Checkbox
+                      size="small"
                       checked={formData.sikayet === 'MONTAJ'}
                       onChange={(e) => {
                         if (e.target.checked) {
@@ -1037,15 +1071,18 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
                       }}
                       sx={{
                         color: '#0D3282',
-                        '&.Mui-checked': { color: '#0D3282' }
+                        '&.Mui-checked': { color: '#0D3282' },
+                        py: 0.5
                       }}
                     />
                   }
                   label="MONTAJ"
+                  sx={{ mr: 2 }}
                 />
                 <FormControlLabel
                   control={
                     <Checkbox
+                      size="small"
                       checked={formData.sikayet === 'ARIZA'}
                       onChange={(e) => {
                         if (e.target.checked) {
@@ -1056,15 +1093,18 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
                       }}
                       sx={{
                         color: '#0D3282',
-                        '&.Mui-checked': { color: '#0D3282' }
+                        '&.Mui-checked': { color: '#0D3282' },
+                        py: 0.5
                       }}
                     />
                   }
                   label="ARIZA"
+                  sx={{ mr: 2 }}
                 />
                 <FormControlLabel
                   control={
                     <Checkbox
+                      size="small"
                       checked={formData.sikayet === 'DİĞER'}
                       onChange={(e) => {
                         if (e.target.checked) {
@@ -1075,11 +1115,13 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
                       }}
                       sx={{
                         color: '#0D3282',
-                        '&.Mui-checked': { color: '#0D3282' }
+                        '&.Mui-checked': { color: '#0D3282' },
+                        py: 0.5
                       }}
                     />
                   }
                   label="DİĞER"
+                  sx={{ mr: 2 }}
                 />
               </FormGroup>
             </Box>
@@ -1101,10 +1143,10 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
         </Grid>
         )}
       </DialogContent>
-      <DialogActions>
-        <Button onClick={onClose}>İptal</Button>
+      <DialogActions sx={{ px: 2, py: 1 }}>
+        <Button onClick={onClose} size="small">İptal</Button>
         {showForm && (
-          <Button onClick={handleSubmit} variant="contained">
+          <Button onClick={handleSubmit} variant="contained" size="small">
             Kaydet
           </Button>
         )}
@@ -1125,11 +1167,11 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
         fullScreen={isMobile}
         disableEscapeKeyDown={false}
       >
-        <DialogTitle sx={{ bgcolor: 'success.light', color: 'success.contrastText', py: 1, fontSize: '1.1rem' }}>
+        <DialogTitle sx={{ bgcolor: 'success.light', color: 'success.contrastText', py: 0.75, px: 2, fontSize: '1rem', fontWeight: 600 }}>
           İşlemi Tamamla
         </DialogTitle>
-        <DialogContent sx={{ py: 0.5, px: 2 }}>
-          <Grid container spacing={0.75}>
+        <DialogContent sx={{ py: 1, px: 2, maxHeight: '75vh', overflowY: 'auto' }}>
+          <Grid container spacing={1}>
             {/* Montaj ve Aksesuar Checkboxları - Daha kompakt */}
             <Grid item xs={12}>
               <Box sx={{ p: 0.5, border: '1px solid #e0e0e0', borderRadius: 1, bgcolor: '#f9f9f9' }}>
@@ -1310,11 +1352,11 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
             </Grid>
           </Grid>
         </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button onClick={handleCancelTamamla} variant="outlined">
+        <DialogActions sx={{ px: 2, py: 1 }}>
+          <Button onClick={handleCancelTamamla} variant="outlined" size="small">
             İptal
           </Button>
-          <Button onClick={handleConfirmTamamla} variant="contained" color="success" autoFocus>
+          <Button onClick={handleConfirmTamamla} variant="contained" color="success" size="small" autoFocus>
             Tamamla
           </Button>
         </DialogActions>

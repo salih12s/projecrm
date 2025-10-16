@@ -34,7 +34,6 @@ const AtolyeTakip: React.FC = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const [atolyeList, setAtolyeList] = useState<Atolye[]>([]); // Görüntülenen liste (bayi için filtrelenmiş)
-  const [allAtolyeList, setAllAtolyeList] = useState<Atolye[]>([]); // Tüm kayıtlar (global sıra için)
   const [filteredList, setFilteredList] = useState<Atolye[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedAtolyeId, setSelectedAtolyeId] = useState<number | null>(null);
@@ -90,9 +89,6 @@ const AtolyeTakip: React.FC = () => {
     // Yeni atölye kaydı eklendiğinde
     newSocket.on('yeni-atolye', (atolye: Atolye) => {
       if (atolye && atolye.id) {
-        // Tüm listeye ekle
-        setAllAtolyeList((prev) => [atolye, ...prev]);
-        
         // Bayi ise sadece kendi kayıtlarını görüntülenen listeye ekle
         if (isBayi) {
           if (atolye.bayi_adi === bayiIsim) {
@@ -109,10 +105,6 @@ const AtolyeTakip: React.FC = () => {
     // Atölye kaydı güncellendiğinde
     newSocket.on('atolye-guncellendi', (updatedAtolyeRecord: Atolye) => {
       if (updatedAtolyeRecord && updatedAtolyeRecord.id) {
-        // Tüm listede güncelle
-        setAllAtolyeList((prev) =>
-          prev.map((atolye) => (atolye.id === updatedAtolyeRecord.id ? updatedAtolyeRecord : atolye))
-        );
         // Görüntülenen listede güncelle
         setAtolyeList((prev) =>
           prev.map((atolye) => (atolye.id === updatedAtolyeRecord.id ? updatedAtolyeRecord : atolye))
@@ -124,8 +116,6 @@ const AtolyeTakip: React.FC = () => {
     // Atölye kaydı silindiğinde
     newSocket.on('atolye-silindi', (deletedId: number) => {
       if (deletedId) {
-        // Tüm listeden sil
-        setAllAtolyeList((prev) => prev.filter((atolye) => atolye.id !== deletedId));
         // Görüntülenen listeden sil
         setAtolyeList((prev) => prev.filter((atolye) => atolye.id !== deletedId));
         showSnackbar('Atölye kaydı silindi!', 'info');
@@ -150,9 +140,6 @@ const AtolyeTakip: React.FC = () => {
       
       // En yeni kayıtlar en üstte, en eski kayıtlar en altta (id'ye göre büyükten küçüğe)
       const sortedAllData = allData.sort((a: Atolye, b: Atolye) => b.id - a.id);
-      
-      // Tüm kayıtları sakla (global sıra hesabı için)
-      setAllAtolyeList(sortedAllData);
       
       // Bayi ise sadece kendi kayıtlarını göster
       if (isBayi) {
@@ -267,14 +254,11 @@ const AtolyeTakip: React.FC = () => {
       );
     }
 
-    // Filter by sira (GLOBAL listeye göre hesaplanmalı - tüm kayıtlar bazında)
+    // Filter by sira (ID bazlı - kalıcı sıra numarası)
     if (filters.sira) {
       filtered = filtered.filter((item) => {
-        // Global listedeki index'i bul
-        const originalIndex = allAtolyeList.findIndex(original => original.id === item.id);
-        // Sıra numarasını hesapla (en yeni en üstte en büyük numara)
-        const siraNo = allAtolyeList.length - originalIndex;
-        return siraNo.toString().includes(filters.sira);
+        // Sıra numarası olarak ID kullanılıyor
+        return item.id.toString().includes(filters.sira);
       });
     }
 
@@ -565,8 +549,8 @@ const AtolyeTakip: React.FC = () => {
         {isMobile ? (
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 2 }}>
             {filteredList.map((atolye) => {
-              const originalIndex = allAtolyeList.findIndex(item => item.id === atolye.id);
-              const siraNo = allAtolyeList.length - originalIndex;
+              // Kalıcı sıra numarası olarak ID kullan
+              const siraNo = atolye.id;
 
               return (
                 <Card key={atolye.id} elevation={2}>
@@ -913,9 +897,8 @@ const AtolyeTakip: React.FC = () => {
             </TableHead>
             <TableBody>
               {filteredList.map((atolye) => {
-                // GLOBAL sıra hesabı - tüm kayıtlara göre (bayi/admin fark etmeksizin)
-                const originalIndex = allAtolyeList.findIndex(item => item.id === atolye.id);
-                const siraNo = allAtolyeList.length - originalIndex;
+                // Kalıcı sıra numarası olarak ID kullan - silme işlemlerinde kayma olmaz
+                const siraNo = atolye.id;
                 
                 return (
                 <TableRow 

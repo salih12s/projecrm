@@ -229,8 +229,9 @@ router.put('/:id', authMiddleware, async (req: Request, res: Response): Promise<
         marka = $17,
         sikayet = $18,
         is_durumu = $19,
+        yazdirildi = $20,
         updated_at = CURRENT_TIMESTAMP
-      WHERE id = $20
+      WHERE id = $21
       RETURNING *`,
       [
         updatedData.teknisyen_ismi, updatedData.yapilan_islem, updatedData.tutar, 
@@ -238,7 +239,8 @@ router.put('/:id', authMiddleware, async (req: Request, res: Response): Promise<
         updatedData.cadde, updatedData.sokak, updatedData.kapi_no, 
         updatedData.apartman_site, updatedData.blok_no, updatedData.daire_no,
         updatedData.sabit_tel, updatedData.cep_tel, updatedData.yedek_tel, updatedData.urun, 
-        updatedData.marka, updatedData.sikayet, updatedData.is_durumu, id
+        updatedData.marka, updatedData.sikayet, updatedData.is_durumu, 
+        updatedData.yazdirildi, id
       ]
     );
 

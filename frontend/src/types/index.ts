@@ -32,6 +32,7 @@ export interface Islem {
   is_durumu: 'acik' | 'parca_bekliyor' | 'tamamlandi';
   created_by?: string;
   updated_at: string;
+  yazdirildi?: boolean; // Yazdırıldı mı? (yazıcı ikonu durumu)
 }
 
 export interface IslemCreateDto {

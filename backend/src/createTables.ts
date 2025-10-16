@@ -117,7 +117,39 @@ const createTables = async (): Promise<void> => {
       )
     `);
 
-    console.log('Tablolar başarıyla oluşturuldu');
+    // Migration: yazdirildi sütunu ekle (eğer yoksa)
+    await pool.query(`
+      DO $$
+      BEGIN
+        IF NOT EXISTS (
+          SELECT 1 FROM information_schema.columns 
+          WHERE table_name = 'islemler' 
+            AND column_name = 'yazdirildi'
+        ) THEN
+          ALTER TABLE islemler ADD COLUMN yazdirildi BOOLEAN DEFAULT FALSE;
+          RAISE NOTICE 'yazdirildi sütunu islemler tablosuna eklendi';
+        END IF;
+      END
+      $$;
+    `);
+
+    // Migration: yedek_tel sütunu ekle (eğer yoksa)
+    await pool.query(`
+      DO $$
+      BEGIN
+        IF NOT EXISTS (
+          SELECT 1 FROM information_schema.columns 
+          WHERE table_name = 'islemler' 
+            AND column_name = 'yedek_tel'
+        ) THEN
+          ALTER TABLE islemler ADD COLUMN yedek_tel VARCHAR(20);
+          RAISE NOTICE 'yedek_tel sütunu islemler tablosuna eklendi';
+        END IF;
+      END
+      $$;
+    `);
+
+    console.log('Tablolar ve migration\'lar başarıyla oluşturuldu');
   } catch (error) {
     console.error('Tablo oluşturma hatası:', error);
   }

@@ -26,7 +26,6 @@ const MusteriGecmisi: React.FC = () => {
   const [searchName, setSearchName] = useState('');
   const [searchResults, setSearchResults] = useState<Islem[]>([]);
   const [filteredResults, setFilteredResults] = useState<Islem[]>([]);
-  const [allIslemler, setAllIslemler] = useState<Islem[]>([]); // Global sıra için
   const [loading, setLoading] = useState(false);
 
   // Filter states
@@ -60,12 +59,10 @@ const MusteriGecmisi: React.FC = () => {
   const applyFilters = () => {
     let filtered = [...searchResults];
 
-    // Global sıra filtresi için
-    if (filters.sira && allIslemler.length > 0) {
+    // ID bazlı sabit sıra filtresi (silince kaymasın)
+    if (filters.sira) {
       filtered = filtered.filter((item) => {
-        const originalIndex = allIslemler.findIndex(i => i.id === item.id);
-        const globalSira = allIslemler.length - originalIndex;
-        return globalSira.toString().includes(filters.sira);
+        return item.id.toString().includes(filters.sira);
       });
     }
 
@@ -213,7 +210,6 @@ const MusteriGecmisi: React.FC = () => {
     setLoading(true);
     try {
       const fetchedIslemler = await islemService.getAll();
-      setAllIslemler(fetchedIslemler); // Global sıra için sakla
       
       // Arama metnini ve kayıt adını temizle (boşluksuz, küçük harf)
       const cleanSearchName = searchName.toLowerCase().replace(/\s+/g, '');
@@ -223,14 +219,8 @@ const MusteriGecmisi: React.FC = () => {
         return cleanIslemName.includes(cleanSearchName);
       });
 
-      // Global sıra numarasına göre sırala (büyük sıra en üstte - en yeni)
-      filtered.sort((a, b) => {
-        const indexA = fetchedIslemler.findIndex(item => item.id === a.id);
-        const indexB = fetchedIslemler.findIndex(item => item.id === b.id);
-        const siraA = fetchedIslemler.length - indexA;
-        const siraB = fetchedIslemler.length - indexB;
-        return siraB - siraA; // Büyük sıra en üstte (en yeni)
-      });
+      // ID bazlı sıralama (büyük ID en üstte - en yeni)
+      filtered.sort((a, b) => b.id - a.id);
 
       if (filtered.length === 0) {
         showSnackbar('Bu isimle kayıt bulunamadı!', 'info');
@@ -274,21 +264,22 @@ const MusteriGecmisi: React.FC = () => {
       // Her kayıt için
       let startY = 45;
       
-      searchResults.forEach((islem, index) => {
+      searchResults.forEach((islem) => {
         // Yeni sayfa kontrolü
         if (startY > 250) {
           doc.addPage();
           startY = 20;
         }
         
-        // Kayıt başlığı
+        // Kayıt başlığı - ID bazlı sıra
+        const siraNo = islem.id;
         doc.setFillColor(13, 50, 130);
         doc.rect(14, startY, 182, 7, 'F');
         doc.setTextColor(255, 255, 255);
         doc.setFontSize(10);
         doc.setFont('helvetica', 'bold');
         doc.text(
-          `KAYIT ${index + 1} - ${islem.full_tarih ? new Date(islem.full_tarih).toLocaleDateString('tr-TR') : '-'}`,
+          `SIRA ${siraNo} - ${islem.full_tarih ? new Date(islem.full_tarih).toLocaleDateString('tr-TR') : '-'}`,
           16,
           startY + 5
         );
@@ -614,13 +605,12 @@ const MusteriGecmisi: React.FC = () => {
               </TableHead>
               <TableBody>
                 {filteredResults.map((islem) => {
-                  // Global sıra hesabı (ana tablo ile aynı)
-                  const originalIndex = allIslemler.findIndex(item => item.id === islem.id);
-                  const globalSira = allIslemler.length - originalIndex;
+                  // ID bazlı sabit sıra (silince kaymasın)
+                  const siraNo = islem.id;
                   
                   return (
                   <TableRow key={islem.id} hover>
-                    <TableCell sx={{ fontSize: '0.75rem', py: 0.3, px: 0.5 }}>{globalSira}</TableCell>
+                    <TableCell sx={{ fontSize: '0.75rem', py: 0.3, px: 0.5 }}>{siraNo}</TableCell>
                     <TableCell sx={{ fontSize: '0.75rem', py: 0.3, px: 0.5 }}>
                       {islem.full_tarih
                         ? new Date(islem.full_tarih).toLocaleDateString('tr-TR')

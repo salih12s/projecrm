@@ -30,6 +30,7 @@ import {
   CheckCircle,
   Check,
   Print,
+  PrintOutlined,
   DragIndicator,
   History,
   Delete,
@@ -51,7 +52,6 @@ const formatPhoneNumber = (phone: string | undefined): string => {
 
 interface IslemTableProps {
   islemler: Islem[];
-  allIslemler?: Islem[]; // Tüm kayıtlar (global sıra hesabı için)
   loading: boolean;
   onEdit: (islem: Islem) => void;
   onToggleDurum: (islem: Islem) => void;
@@ -68,7 +68,6 @@ interface ColumnConfig {
 
 const IslemTable: React.FC<IslemTableProps> = ({
   islemler,
-  allIslemler,
   loading,
   onEdit,
   onToggleDurum,
@@ -78,8 +77,6 @@ const IslemTable: React.FC<IslemTableProps> = ({
 }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
-  // Global sıra hesabı için kullanılacak liste - En yeni en üstte (ID'ye göre azalan)
-  const siraReferenceList = [...(allIslemler || islemler)].sort((a, b) => b.id - a.id);
   const [filteredIslemler, setFilteredIslemler] = useState<Islem[]>(islemler);
   const [printEditorOpen, setPrintEditorOpen] = useState(false);
   const [selectedIslemForPrint, setSelectedIslemForPrint] = useState<Islem | null>(null);
@@ -139,15 +136,6 @@ const IslemTable: React.FC<IslemTableProps> = ({
 
   const applyFilters = () => {
     let filtered = [...islemler];
-
-    // Sıra filtresi varsa, önce GLOBAL listedeki pozisyonları işaretle (en yeni en üstte - azalan sıra: 8,7,6,5...)
-    const originalIndices = new Map<number, number>();
-    if (filters.sira) {
-      siraReferenceList.forEach((item, index) => {
-        // Sıra = Toplam - Index (örnek: 8 kayıt varsa: 8-0=8, 8-1=7, 8-2=6...)
-        originalIndices.set(item.id, siraReferenceList.length - index);
-      });
-    }
 
     // Filter by tarih
     if (filters.tarih) {
@@ -286,11 +274,10 @@ const IslemTable: React.FC<IslemTableProps> = ({
       });
     }
 
-    // Filter by sira - GLOBAL sıraya göre filtrele (tüm kayıtlar bazında)
+    // Filter by sira - ID bazlı sabit sıra (silince kaymasın)
     if (filters.sira) {
       filtered = filtered.filter((item) => {
-        const globalSira = originalIndices.get(item.id);
-        return globalSira?.toString().includes(filters.sira);
+        return item.id.toString().includes(filters.sira);
       });
     }
 
@@ -319,6 +306,18 @@ const IslemTable: React.FC<IslemTableProps> = ({
   const handleClosePrintEditor = () => {
     setPrintEditorOpen(false);
     setSelectedIslemForPrint(null);
+  };
+
+  // Yazdırıldı durumunu toggle et
+  const handleToggleYazdirildi = async (islem: Islem, event: React.MouseEvent) => {
+    event.stopPropagation(); // Satır tıklamasını engelle
+    try {
+      const newYazdirildi = !islem.yazdirildi;
+      await islemService.update(islem.id, { ...islem, yazdirildi: newYazdirildi } as any);
+      // Socket.IO otomatik güncelleyecek, manuel güncellemeye gerek yok
+    } catch (error) {
+      console.error('Yazdırıldı durumu güncellenirken hata:', error);
+    }
   };
 
   // Müşteri Geçmişi fonksiyonları
@@ -378,12 +377,11 @@ const IslemTable: React.FC<IslemTableProps> = ({
     setHistoryFilters(newFilters);
 
     const filtered = customerHistory.filter((islem) => {
-      // Global sıra hesabı
-      const originalIndex = siraReferenceList.findIndex(item => item.id === islem.id);
-      const originalSira = siraReferenceList.length - originalIndex;
+      // ID bazlı sabit sıra
+      const siraNo = islem.id;
 
       return (
-        (!newFilters.sira || originalSira.toString().includes(newFilters.sira)) &&
+        (!newFilters.sira || siraNo.toString().includes(newFilters.sira)) &&
         (!newFilters.tarih || (islem.full_tarih && new Date(islem.full_tarih).toLocaleDateString('tr-TR').includes(newFilters.tarih))) &&
         (!newFilters.ilce || (islem.ilce && islem.ilce.toLowerCase().includes(newFilters.ilce.toLowerCase()))) &&
         (!newFilters.mahalle || (islem.mahalle && islem.mahalle.toLowerCase().includes(newFilters.mahalle.toLowerCase()))) &&
@@ -699,6 +697,26 @@ const IslemTable: React.FC<IslemTableProps> = ({
                 <History sx={{ color: 'white', fontSize: '0.7rem' }} />
               </IconButton>
             </Tooltip>
+            <Tooltip title={islem.yazdirildi ? "Yazdırıldı olarak işaretle" : "Yazdırılmadı olarak işaretle"}>
+              <IconButton 
+                size="small" 
+                onClick={(e) => handleToggleYazdirildi(islem, e)}
+                sx={{ 
+                  bgcolor: islem.yazdirildi ? '#9c27b0' : 'grey.300',
+                  width: 20,
+                  height: 20,
+                  '&:hover': {
+                    bgcolor: islem.yazdirildi ? '#7b1fa2' : 'grey.400',
+                  }
+                }}
+              >
+                {islem.yazdirildi ? (
+                  <Print sx={{ color: 'white', fontSize: '0.7rem' }} />
+                ) : (
+                  <PrintOutlined sx={{ color: 'grey.700', fontSize: '0.7rem' }} />
+                )}
+              </IconButton>
+            </Tooltip>
             <Tooltip title="Yazdır">
               <IconButton 
                 size="small" 
@@ -773,8 +791,8 @@ const IslemTable: React.FC<IslemTableProps> = ({
       <>
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
           {filteredIslemler.map((islem) => {
-            const originalIndex = siraReferenceList.findIndex(item => item.id === islem.id);
-            const siraNo = siraReferenceList.length - originalIndex;
+            // Sabit ID bazlı sıra - silince kaymasın
+            const siraNo = islem.id;
 
             return (
               <Card key={islem.id} elevation={2}>
@@ -976,15 +994,14 @@ const IslemTable: React.FC<IslemTableProps> = ({
                 </Box>
                 <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
                   {filteredHistory.map((record) => {
-                    // Global sıra hesabı
-                    const originalIndex = siraReferenceList.findIndex(item => item.id === record.id);
-                    const originalSira = siraReferenceList.length - originalIndex;
+                    // ID bazlı sabit sıra
+                    const siraNo = record.id;
                     
                     return (
                     <Card key={record.id} variant="outlined">
                     <CardContent sx={{ p: 1.5, '&:last-child': { pb: 1.5 } }}>
                       <Typography variant="caption" color="primary" sx={{ fontWeight: 600 }}>
-                        Sıra #{originalSira} - {record.full_tarih ? new Date(record.full_tarih).toLocaleDateString('tr-TR') : '-'}
+                        Sıra #{siraNo} - {record.full_tarih ? new Date(record.full_tarih).toLocaleDateString('tr-TR') : '-'}
                       </Typography>
                       <Typography variant="body2" sx={{ fontSize: '0.75rem', mt: 0.5 }}>
                         <strong>Ürün:</strong> {record.urun} - {record.marka}
@@ -1132,9 +1149,8 @@ const IslemTable: React.FC<IslemTableProps> = ({
         </TableHead>
         <TableBody>
           {filteredIslemler.map((islem) => {
-            // Global sıra hesabı - en yeni en üstte (büyük numara)
-            const originalIndex = siraReferenceList.findIndex(item => item.id === islem.id);
-            const originalSira = siraReferenceList.length - originalIndex; // Tersten say
+            // Sabit ID bazlı sıra - silince kaymasın
+            const siraNo = islem.id;
             
             return (
             <TableRow 
@@ -1146,9 +1162,9 @@ const IslemTable: React.FC<IslemTableProps> = ({
                 }
               }}
             >
-              {/* Sıra No - GLOBAL SIRA (EN YENİ EN ÜSTTE) */}
+              {/* Sıra No - ID bazlı sabit sıra (silince kaymasın) */}
               <TableCell sx={{ fontWeight: 500, fontSize: '0.65rem', py: 0.1, px: 0.2, textAlign: 'center' }}>
-                {originalSira}
+                {siraNo}
               </TableCell>
               {columnOrder.map((columnId) => {
                 const column = columnConfigs[columnId];
@@ -1349,13 +1365,12 @@ const IslemTable: React.FC<IslemTableProps> = ({
               </TableHead>
               <TableBody>
                 {filteredHistory.map((islem) => {
-                  // Global sıra hesabı - en yeni en üstte (büyük numara)
-                  const originalIndex = siraReferenceList.findIndex(item => item.id === islem.id);
-                  const originalSira = siraReferenceList.length - originalIndex;
+                  // Sabit ID bazlı sıra - silince kaymasın
+                  const siraNo = islem.id;
                   
                   return (
                   <TableRow key={islem.id} hover>
-                    <TableCell>{originalSira}</TableCell>
+                    <TableCell>{siraNo}</TableCell>
                     <TableCell>
                       {islem.full_tarih ? new Date(islem.full_tarih).toLocaleDateString('tr-TR') : '-'}
                     </TableCell>

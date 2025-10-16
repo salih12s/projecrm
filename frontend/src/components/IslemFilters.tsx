@@ -18,9 +18,10 @@ interface IslemFiltersProps {
   statusFilter?: 'all' | 'acik' | 'parca_bekliyor' | 'tamamlandi';
   dateFilter?: string;
   showTodayOnly?: boolean;
+  showYazdirilmamis?: boolean; // Yazdırılmamış işler filtresi
 }
 
-const IslemFilters: React.FC<IslemFiltersProps> = ({ islemler, onFilterChange, statusFilter = 'all', dateFilter = '', showTodayOnly = false }) => {
+const IslemFilters: React.FC<IslemFiltersProps> = ({ islemler, onFilterChange, statusFilter = 'all', dateFilter = '', showTodayOnly = false, showYazdirilmamis = false }) => {
   const { user } = useAuth();
   const isAdmin = user?.role === 'admin';
   
@@ -57,7 +58,7 @@ const IslemFilters: React.FC<IslemFiltersProps> = ({ islemler, onFilterChange, s
   useEffect(() => {
     applyFilters();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedMontajlar, selectedAksesuarlar, localDateFilter, islemler, statusFilter, dateFilter, showTodayOnly]);
+  }, [selectedMontajlar, selectedAksesuarlar, localDateFilter, islemler, statusFilter, dateFilter, showTodayOnly, showYazdirilmamis]);
 
   const applyFilters = () => {
     let filtered = [...islemler];
@@ -132,6 +133,11 @@ const IslemFilters: React.FC<IslemFiltersProps> = ({ islemler, onFilterChange, s
     // StatsCard'dan gelen durum filtresi
     if (statusFilter !== 'all') {
       filtered = filtered.filter((islem) => islem.is_durumu === statusFilter);
+    }
+
+    // Yazdırılmamış işler filtresi
+    if (showYazdirilmamis) {
+      filtered = filtered.filter((islem) => !islem.yazdirildi);
     }
 
     // Montaj filtresi (sadece admin için)

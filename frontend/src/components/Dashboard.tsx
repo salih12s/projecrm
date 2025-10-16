@@ -73,6 +73,7 @@ const Dashboard: React.FC = () => {
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
   const [statusFilter, setStatusFilter] = useState<'all' | 'acik' | 'parca_bekliyor' | 'tamamlandi'>('all');
   const [showTodayOnly, setShowTodayOnly] = useState(false); // Bugün alınan işler
+  const [showYazdirilmamis, setShowYazdirilmamis] = useState(false); // Yazdırılmamış işler filtresi
   // Bayi için tab değeri her zaman 0 (tek tab var)
   const [activeTab, setActiveTab] = useState(0);
   const [confirmDialog, setConfirmDialog] = useState<{ open: boolean; islem: Islem | null }>({ open: false, islem: null });
@@ -242,8 +243,13 @@ const Dashboard: React.FC = () => {
     setShowTodayOnly(!showTodayOnly);
   };
 
+  const handleYazdirilmamisFilter = () => {
+    setShowYazdirilmamis(!showYazdirilmamis);
+  };
+
   const handleClearDateFilters = () => {
     setShowTodayOnly(false);
+    setShowYazdirilmamis(false);
   };
 
   const handleMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
@@ -449,8 +455,8 @@ const Dashboard: React.FC = () => {
             <>
               {/* Tablo Başlığı ve Filtreler */}
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2, gap: 2, flexWrap: 'wrap' }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexWrap: 'wrap' }}>
-                  <Typography variant="h6" sx={{ fontWeight: 600, fontSize: '1rem', mr: 0.5 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.4, flexWrap: 'nowrap', overflowX: 'auto' }}>
+                  <Typography variant="h6" sx={{ fontWeight: 600, fontSize: '0.9rem', mr: 0.3 }}>
                     İşlemler
                   </Typography>
                   
@@ -460,9 +466,9 @@ const Dashboard: React.FC = () => {
                     size="small"
                     onClick={() => handleStatusFilterClick('all')}
                     sx={{
-                      fontSize: '0.65rem',
-                      py: 0.3,
-                      px: 0.8,
+                      fontSize: '0.6rem',
+                      py: 0.25,
+                      px: 0.6,
                       minWidth: 'auto',
                       bgcolor: statusFilter === 'all' ? '#0D3282' : 'transparent',
                       color: statusFilter === 'all' ? '#fff' : '#0D3282',
@@ -480,9 +486,9 @@ const Dashboard: React.FC = () => {
                     size="small"
                     onClick={() => handleStatusFilterClick('acik')}
                     sx={{
-                      fontSize: '0.65rem',
-                      py: 0.3,
-                      px: 0.8,
+                      fontSize: '0.6rem',
+                      py: 0.25,
+                      px: 0.6,
                       minWidth: 'auto',
                       bgcolor: statusFilter === 'acik' ? '#ed6c02' : 'transparent',
                       color: statusFilter === 'acik' ? '#fff' : '#ed6c02',
@@ -500,9 +506,9 @@ const Dashboard: React.FC = () => {
                     size="small"
                     onClick={() => handleStatusFilterClick('parca_bekliyor')}
                     sx={{
-                      fontSize: '0.65rem',
-                      py: 0.3,
-                      px: 0.8,
+                      fontSize: '0.6rem',
+                      py: 0.25,
+                      px: 0.6,
                       minWidth: 'auto',
                       bgcolor: statusFilter === 'parca_bekliyor' ? '#1976d2' : 'transparent',
                       color: statusFilter === 'parca_bekliyor' ? '#fff' : '#1976d2',
@@ -520,9 +526,9 @@ const Dashboard: React.FC = () => {
                     size="small"
                     onClick={() => handleStatusFilterClick('tamamlandi')}
                     sx={{
-                      fontSize: '0.65rem',
-                      py: 0.3,
-                      px: 0.8,
+                      fontSize: '0.6rem',
+                      py: 0.25,
+                      px: 0.6,
                       minWidth: 'auto',
                       bgcolor: statusFilter === 'tamamlandi' ? '#2e7d32' : 'transparent',
                       color: statusFilter === 'tamamlandi' ? '#fff' : '#2e7d32',
@@ -534,6 +540,27 @@ const Dashboard: React.FC = () => {
                   >
                     Tamamlanan: {islemler.filter(i => i.is_durumu === 'tamamlandi').length}
                   </Button>
+
+                  {/* Yazdırılmamış İşler Filtresi */}
+                  <Button
+                    variant={showYazdirilmamis ? 'contained' : 'outlined'}
+                    size="small"
+                    onClick={handleYazdirilmamisFilter}
+                    sx={{
+                      fontSize: '0.6rem',
+                      py: 0.25,
+                      px: 0.6,
+                      minWidth: 'auto',
+                      bgcolor: showYazdirilmamis ? '#9c27b0' : 'transparent',
+                      color: showYazdirilmamis ? '#fff' : '#9c27b0',
+                      borderColor: '#9c27b0',
+                      '&:hover': {
+                        bgcolor: showYazdirilmamis ? '#7b1fa2' : 'rgba(156, 39, 176, 0.04)',
+                      }
+                    }}
+                  >
+                    Yazdırılmamış: {islemler.filter(i => !i.yazdirildi).length}
+                  </Button>
                   
                   {/* Toplam Tutar - Sadece admin için */}
                   {isAdmin && (
@@ -541,9 +568,9 @@ const Dashboard: React.FC = () => {
                       variant="outlined"
                       size="small"
                       sx={{
-                        fontSize: '0.65rem',
-                        py: 0.3,
-                        px: 0.8,
+                        fontSize: '0.6rem',
+                        py: 0.25,
+                        px: 0.6,
                         minWidth: 'auto',
                         bgcolor: '#fff',
                         color: '#0D3282',
@@ -567,9 +594,9 @@ const Dashboard: React.FC = () => {
                     size="small"
                     onClick={handleTodayFilter}
                     sx={{
-                      fontSize: '0.65rem',
-                      py: 0.3,
-                      px: 0.8,
+                      fontSize: '0.6rem',
+                      py: 0.25,
+                      px: 0.6,
                       minWidth: 'auto',
                       color: showTodayOnly ? '#fff' : '#2C3E82',
                       borderColor: '#2C3E82',
@@ -617,6 +644,7 @@ const Dashboard: React.FC = () => {
                     statusFilter={statusFilter}
                     dateFilter=""
                     showTodayOnly={showTodayOnly}
+                    showYazdirilmamis={showYazdirilmamis}
                   />
                   
                   <Button
@@ -634,7 +662,7 @@ const Dashboard: React.FC = () => {
                       }
                     }}
                   >
-                    Excel
+                    PDF İndir
                   </Button>
                   <Button
                       variant="contained"
@@ -656,7 +684,6 @@ const Dashboard: React.FC = () => {
 
               <IslemTable
               islemler={filteredIslemler}
-              allIslemler={islemler}
               loading={loading}
               onEdit={handleOpenDialog}
               onToggleDurum={handleToggleDurum}
