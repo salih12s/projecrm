@@ -149,6 +149,60 @@ const createTables = async (): Promise<void> => {
       $$;
     `);
 
+    // Migration: kayit_tarihi sütunu ekle (eğer yoksa)
+    await pool.query(`
+      DO $$
+      BEGIN
+        IF NOT EXISTS (
+          SELECT 1 FROM information_schema.columns 
+          WHERE table_name = 'atolye' 
+            AND column_name = 'kayit_tarihi'
+        ) THEN
+          ALTER TABLE atolye ADD COLUMN kayit_tarihi DATE;
+          RAISE NOTICE 'kayit_tarihi sütunu atolye tablosuna eklendi';
+        END IF;
+      END
+      $$;
+    `);
+
+    // Migration: created_by sütunu ekle (eğer yoksa)
+    await pool.query(`
+      DO $$
+      BEGIN
+        IF NOT EXISTS (
+          SELECT 1 FROM information_schema.columns 
+          WHERE table_name = 'atolye' 
+            AND column_name = 'created_by'
+        ) THEN
+          ALTER TABLE atolye ADD COLUMN created_by VARCHAR(50);
+          RAISE NOTICE 'created_by sütunu atolye tablosuna eklendi';
+        END IF;
+      END
+      $$;
+    `);
+
+    // Migration: kayit_tarihi kolonunu VARCHAR'a çevir (timezone sorununu çözmek için)
+    await pool.query(`
+      DO $$
+      BEGIN
+        IF EXISTS (
+          SELECT 1 FROM information_schema.columns 
+          WHERE table_name = 'atolye' 
+            AND column_name = 'kayit_tarihi'
+            AND data_type != 'character varying'
+        ) THEN
+          ALTER TABLE atolye 
+          ALTER COLUMN kayit_tarihi TYPE VARCHAR(10) 
+          USING CASE 
+            WHEN kayit_tarihi IS NOT NULL THEN kayit_tarihi::date::text 
+            ELSE NULL 
+          END;
+          RAISE NOTICE 'kayit_tarihi kolonu VARCHAR(10) tipine çevrildi';
+        END IF;
+      END
+      $$;
+    `);
+
     console.log('Tablolar ve migration\'lar başarıyla oluşturuldu');
   } catch (error) {
     console.error('Tablo oluşturma hatası:', error);

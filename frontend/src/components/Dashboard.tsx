@@ -301,6 +301,29 @@ const Dashboard: React.FC = () => {
             Teknik Servis - Ana Sayfa
           </Typography>
           
+          {/* Toplam Tutar - Header'da büyük ve belirgin */}
+          {isAdmin && !isBayi && (
+            <Typography 
+              variant="h6" 
+              sx={{ 
+                ml: 2,
+                fontWeight: 700, 
+                fontSize: { xs: '0.85rem', sm: '1rem' },
+                color: '#fff',
+                bgcolor: 'rgba(255, 255, 255, 0.2)',
+                px: 2,
+                py: 0.5,
+                borderRadius: 1,
+                border: '2px solid rgba(255, 255, 255, 0.5)'
+              }}
+            >
+             TOPLAM TUTAR: {islemler.reduce((sum, i) => {
+                const tutar = typeof i.tutar === 'number' ? i.tutar : parseFloat(String(i.tutar || 0));
+                return sum + (isNaN(tutar) ? 0 : tutar);
+              }, 0).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ₺
+            </Typography>
+          )}
+          
           <Box sx={{ flexGrow: 1 }} />
           
           <Typography variant="body2" sx={{ mr: 2, display: { xs: 'none', sm: 'block' } }}>
@@ -456,7 +479,7 @@ const Dashboard: React.FC = () => {
               {/* Tablo Başlığı ve Filtreler */}
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2, gap: 2, flexWrap: 'wrap' }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.4, flexWrap: 'nowrap', overflowX: 'auto' }}>
-                  <Typography variant="h6" sx={{ fontWeight: 600, fontSize: '0.9rem', mr: 0.3 }}>
+                  <Typography variant="h6" sx={{ fontWeight: 600, fontSize: '0.9rem', mr: 0.5 }}>
                     İşlemler
                   </Typography>
                   
@@ -559,34 +582,8 @@ const Dashboard: React.FC = () => {
                       }
                     }}
                   >
-                    Yazdırılmamış: {islemler.filter(i => !i.yazdirildi).length}
+                    Yazdırılmamış iş: {islemler.filter(i => !i.yazdirildi).length}
                   </Button>
-                  
-                  {/* Toplam Tutar - Sadece admin için */}
-                  {isAdmin && (
-                    <Button
-                      variant="outlined"
-                      size="small"
-                      sx={{
-                        fontSize: '0.6rem',
-                        py: 0.25,
-                        px: 0.6,
-                        minWidth: 'auto',
-                        bgcolor: '#fff',
-                        color: '#0D3282',
-                        borderColor: '#0D3282',
-                        fontWeight: 600,
-                        '&:hover': {
-                          bgcolor: 'rgba(13, 50, 130, 0.04)',
-                        }
-                      }}
-                    >
-                      Tutar: {islemler.reduce((sum, i) => {
-                        const tutar = typeof i.tutar === 'number' ? i.tutar : parseFloat(String(i.tutar || 0));
-                        return sum + (isNaN(tutar) ? 0 : tutar);
-                      }, 0).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ₺
-                    </Button>
-                  )}
                   
                   {/* Bugün Alınan İşler - Daha küçük */}
                   <Button

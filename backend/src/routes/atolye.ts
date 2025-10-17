@@ -31,6 +31,11 @@ router.get('/:id', auth, async (req: Request, res: Response) => {
       return res.status(404).json({ error: 'Kayıt bulunamadı' });
     }
 
+    console.log('=== BACKEND GET /:id ===');
+    console.log('Database\'den okunan kayit_tarihi:', result.rows[0].kayit_tarihi);
+    console.log('Typeof:', typeof result.rows[0].kayit_tarihi);
+    console.log('========================');
+
     return res.json(result.rows[0]);
   } catch (error) {
     console.error('Error fetching atolye record:', error);
@@ -44,10 +49,20 @@ router.post('/', auth, async (req: Request, res: Response) => {
     const createDto: AtolyeCreateDto = req.body;
     const username = (req as any).user?.username;
 
+    // Tarihi sadece YYYY-MM-DD formatında al (saat kısmını at)
+    let kayitTarihi = null;
+    if (createDto.kayit_tarihi) {
+      kayitTarihi = String(createDto.kayit_tarihi).substring(0, 10);
+    }
+    
+    console.log('=== BACKEND POST ===');
+    console.log('Frontend\'den gelen kayit_tarihi:', createDto.kayit_tarihi);
+    console.log('Kullanılacak kayitTarihi (sadece tarih):', kayitTarihi);
+
     const result = await pool.query<Atolye>(
       `INSERT INTO atolye (
-        bayi_adi, musteri_ad_soyad, tel_no, marka, kod, seri_no, sikayet, ozel_not, created_by
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) 
+        bayi_adi, musteri_ad_soyad, tel_no, marka, kod, seri_no, sikayet, ozel_not, kayit_tarihi, created_by
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) 
       RETURNING *`,
       [
         createDto.bayi_adi || null,
@@ -58,9 +73,13 @@ router.post('/', auth, async (req: Request, res: Response) => {
         createDto.seri_no || null,
         createDto.sikayet || null,
         createDto.ozel_not || null,
+        kayitTarihi,
         username || null
       ]
     );
+
+    console.log('Database\'den dönen kayit_tarihi:', result.rows[0].kayit_tarihi);
+    console.log('===================');
 
     const newRecord = result.rows[0];
 
@@ -135,6 +154,12 @@ router.put('/:id', auth, async (req: Request, res: Response) => {
     if (updateDto.yapilma_tarihi !== undefined) {
       updates.push(`yapilma_tarihi = $${paramCounter++}`);
       values.push(updateDto.yapilma_tarihi);
+    }
+    if (updateDto.kayit_tarihi !== undefined) {
+      updates.push(`kayit_tarihi = $${paramCounter++}`);
+      // Tarihi sadece YYYY-MM-DD formatında al
+      const kayitTarihiOnly = String(updateDto.kayit_tarihi).substring(0, 10);
+      values.push(kayitTarihiOnly);
     }
 
     if (updates.length === 0) {

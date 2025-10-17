@@ -53,6 +53,7 @@ const AtolyeDialog: React.FC<AtolyeDialogProps> = ({ open, onClose, atolyeId }) 
     ucret: undefined,
     yapilma_tarihi: undefined,
     teslim_durumu: 'beklemede',
+    kayit_tarihi: new Date().toISOString().split('T')[0], // Bugünün tarihi
   });
 
   useEffect(() => {
@@ -99,6 +100,15 @@ const AtolyeDialog: React.FC<AtolyeDialogProps> = ({ open, onClose, atolyeId }) 
     try {
       const response = await api.get(`/atolye/${atolyeId}`);
       const data: Atolye = response.data;
+      
+      console.log('=== FRONTEND fetchAtolyeData ===');
+      console.log('Backend\'den gelen kayit_tarihi:', data.kayit_tarihi);
+      console.log('Typeof:', typeof data.kayit_tarihi);
+      
+      const processedDate = data.kayit_tarihi ? String(data.kayit_tarihi).substring(0, 10) : new Date().toISOString().substring(0, 10);
+      console.log('Substring sonrası:', processedDate);
+      console.log('================================');
+      
       setFormData({
         bayi_adi: data.bayi_adi,
         musteri_ad_soyad: data.musteri_ad_soyad,
@@ -110,7 +120,8 @@ const AtolyeDialog: React.FC<AtolyeDialogProps> = ({ open, onClose, atolyeId }) 
         ozel_not: data.ozel_not || '',
         yapilan_islem: data.yapilan_islem || '',
         ucret: data.ucret,
-        yapilma_tarihi: data.yapilma_tarihi ? data.yapilma_tarihi.split('T')[0] : undefined,
+        yapilma_tarihi: data.yapilma_tarihi ? String(data.yapilma_tarihi).substring(0, 10) : undefined,
+        kayit_tarihi: processedDate,
         teslim_durumu: data.teslim_durumu,
       });
     } catch (error) {
@@ -132,6 +143,7 @@ const AtolyeDialog: React.FC<AtolyeDialogProps> = ({ open, onClose, atolyeId }) 
       ucret: undefined,
       yapilma_tarihi: undefined,
       teslim_durumu: 'beklemede',
+      kayit_tarihi: new Date().toISOString().split('T')[0], // Bugünün tarihi
     });
   };
 
@@ -212,13 +224,30 @@ const AtolyeDialog: React.FC<AtolyeDialogProps> = ({ open, onClose, atolyeId }) 
 
     try {
       if (isEdit) {
+        console.log('=== FRONTEND handleSubmit PUT ===');
+        console.log('formData.kayit_tarihi:', formData.kayit_tarihi);
+        
+        // Tarihe 12:00:00 ekleyerek timezone kaymasını önle
+        const kayitTarihiWithTime = formData.kayit_tarihi ? `${formData.kayit_tarihi}T12:00:00` : undefined;
+        console.log('Timezone korumalı tarih:', kayitTarihiWithTime);
+        console.log('=================================');
+        
         const updateDto: AtolyeUpdateDto = {
           ...formData,
+          kayit_tarihi: kayitTarihiWithTime,
           ucret: formData.ucret || undefined,
         };
         await api.put(`/atolye/${atolyeId}`, updateDto);
         showSnackbar('Kayıt başarıyla güncellendi', 'success');
       } else {
+        console.log('=== FRONTEND handleSubmit POST ===');
+        console.log('formData.kayit_tarihi:', formData.kayit_tarihi);
+        
+        // Tarihe 12:00:00 ekleyerek timezone kaymasını önle
+        const kayitTarihiWithTime = formData.kayit_tarihi ? `${formData.kayit_tarihi}T12:00:00` : undefined;
+        console.log('Timezone korumalı tarih:', kayitTarihiWithTime);
+        console.log('==================================');
+        
         const createDto: AtolyeCreateDto = {
           bayi_adi: formData.bayi_adi,
           musteri_ad_soyad: formData.musteri_ad_soyad,
@@ -228,7 +257,11 @@ const AtolyeDialog: React.FC<AtolyeDialogProps> = ({ open, onClose, atolyeId }) 
           seri_no: formData.seri_no,
           sikayet: formData.sikayet,
           ozel_not: formData.ozel_not,
+          kayit_tarihi: kayitTarihiWithTime,
         };
+        
+        console.log('Backend\'e gönderilen createDto.kayit_tarihi:', createDto.kayit_tarihi);
+        
         await api.post('/atolye', createDto);
         showSnackbar('Kayıt başarıyla oluşturuldu', 'success');
       }
@@ -242,7 +275,23 @@ const AtolyeDialog: React.FC<AtolyeDialogProps> = ({ open, onClose, atolyeId }) 
   return (
     <Dialog open={open} onClose={() => onClose()} maxWidth="md" fullWidth fullScreen={isMobile}>
       <DialogTitle sx={{ textAlign: 'center' }}>
-        {isEdit ? 'Kaydı Düzenle' : 'Yeni Kayıt Ekle'}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '16px' }}>
+          <span>{isEdit ? 'Kaydı Düzenle' : 'Yeni Kayıt Ekle'}</span>
+          <TextField
+            type="date"
+            size="small"
+            value={
+              formData.kayit_tarihi 
+                ? (formData.kayit_tarihi.length > 10 ? formData.kayit_tarihi.substring(0, 10) : formData.kayit_tarihi)
+                : new Date().toISOString().split('T')[0]
+            }
+            onChange={(e) => handleChange('kayit_tarihi', e.target.value)}
+            InputLabelProps={{
+              shrink: true,
+            }}
+            sx={{ width: '150px' }}
+          />
+        </div>
         {!isEdit && nextSiraNo && (
           <div style={{ 
             fontSize: '2rem', 
@@ -261,13 +310,55 @@ const AtolyeDialog: React.FC<AtolyeDialogProps> = ({ open, onClose, atolyeId }) 
             <Autocomplete
               options={bayiler.map((b) => b.isim)}
               value={formData.bayi_adi || null}
+              filterOptions={(options, state) => {
+                if (!state.inputValue) return options;
+                return options.filter(option =>
+                  option.toLocaleLowerCase('tr-TR').includes(state.inputValue.toLocaleLowerCase('tr-TR'))
+                );
+              }}
               onChange={(_, newValue) => handleChange('bayi_adi', newValue || '')}
+              onInputChange={(_, value, reason) => {
+                if (reason === 'input') {
+                  const filtered = bayiler.filter(bayi => 
+                    bayi.isim.toLocaleLowerCase('tr-TR').includes(value.toLocaleLowerCase('tr-TR'))
+                  );
+                  if (filtered.length === 1 && value.length > 0) {
+                    handleChange('bayi_adi', filtered[0].isim);
+                  }
+                }
+              }}
+              autoHighlight
+              selectOnFocus
+              clearOnBlur={false}
+              handleHomeEndKeys={false}
               renderInput={(params) => (
                 <TextField 
-                  {...params} 
+                  {...params}
+                  name="bayi_adi"
                   label="Bayi Adı" 
                   fullWidth 
                   placeholder="Bayi ara ve seç..."
+                  onKeyDown={(e) => {
+                    if (e.key === 'Tab') {
+                      e.preventDefault();
+                      const popup = document.querySelector('[role="listbox"]');
+                      if (popup) {
+                        const highlighted = popup.querySelector('[data-focus="true"]') as HTMLElement;
+                        if (highlighted) {
+                          const text = highlighted.textContent;
+                          if (text && bayiler.some(b => b.isim === text)) {
+                            handleChange('bayi_adi', text);
+                          }
+                        }
+                      }
+                      setTimeout(() => {
+                        const musteriInput = document.querySelector('input[name="musteri_ad_soyad"]') as HTMLInputElement;
+                        if (musteriInput) {
+                          musteriInput.focus();
+                        }
+                      }, 100);
+                    }
+                  }}
                 />
               )}
             />
@@ -276,6 +367,7 @@ const AtolyeDialog: React.FC<AtolyeDialogProps> = ({ open, onClose, atolyeId }) 
           {/* Müşteri Ad Soyad */}
           <Grid item xs={12} md={6}>
             <TextField
+              name="musteri_ad_soyad"
               label="Müşteri Ad Soyad"
               fullWidth
               value={formData.musteri_ad_soyad}
@@ -299,16 +391,58 @@ const AtolyeDialog: React.FC<AtolyeDialogProps> = ({ open, onClose, atolyeId }) 
             <Autocomplete
               options={markalar.map((m) => m.isim)}
               value={formData.marka || null}
+              filterOptions={(options, state) => {
+                if (!state.inputValue) return options;
+                return options.filter(option =>
+                  option.toLocaleLowerCase('tr-TR').includes(state.inputValue.toLocaleLowerCase('tr-TR'))
+                );
+              }}
               onChange={(_, newValue) => handleChange('marka', newValue || '')}
+              onInputChange={(_, value, reason) => {
+                if (reason === 'input' && value.length > 2) {
+                  const filtered = markalar.filter(marka => 
+                    marka.isim.toLocaleLowerCase('tr-TR').includes(value.toLocaleLowerCase('tr-TR'))
+                  );
+                  if (filtered.length === 1) {
+                    handleChange('marka', filtered[0].isim);
+                  }
+                }
+              }}
+              autoHighlight
+              selectOnFocus
+              clearOnBlur={false}
+              handleHomeEndKeys={false}
               renderInput={(params) => (
                 <TextField 
                   {...params}
+                  name="marka"
                   required
                   label="Marka" 
                   fullWidth 
                   placeholder="Marka ara ve seç..."
                   error={!formData.marka}
                   helperText={!formData.marka ? 'Listeden bir marka seçmelisiniz' : ''}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Tab') {
+                      e.preventDefault();
+                      const popup = document.querySelector('[role="listbox"]');
+                      if (popup) {
+                        const highlighted = popup.querySelector('[data-focus="true"]') as HTMLElement;
+                        if (highlighted) {
+                          const text = highlighted.textContent;
+                          if (text && markalar.some(m => m.isim === text)) {
+                            handleChange('marka', text);
+                          }
+                        }
+                      }
+                      setTimeout(() => {
+                        const modelInput = document.querySelector('input[name="model"]') as HTMLInputElement;
+                        if (modelInput) {
+                          modelInput.focus();
+                        }
+                      }, 100);
+                    }
+                  }}
                 />
               )}
             />
@@ -317,6 +451,7 @@ const AtolyeDialog: React.FC<AtolyeDialogProps> = ({ open, onClose, atolyeId }) 
           {/* Model */}
           <Grid item xs={12} md={6}>
             <TextField
+              name="model"
               required
               label="Model"
               fullWidth

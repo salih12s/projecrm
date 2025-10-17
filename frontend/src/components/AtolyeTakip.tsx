@@ -170,10 +170,10 @@ const AtolyeTakip: React.FC = () => {
       );
     }
 
-    // Filter by tarih (created_at)
+    // Filter by tarih (kayit_tarihi or created_at)
     if (filters.tarih) {
       filtered = filtered.filter((item) =>
-        formatDate(item.created_at).includes(filters.tarih)
+        formatDate(item.kayit_tarihi || item.created_at).includes(filters.tarih)
       );
     }
 
@@ -587,7 +587,7 @@ const AtolyeTakip: React.FC = () => {
                       <Grid item xs={6}>
                         <Typography variant="caption" color="text.secondary">Tarih:</Typography>
                         <Typography variant="body2" sx={{ fontSize: '0.75rem' }}>
-                          {atolye.created_at ? new Date(atolye.created_at).toLocaleDateString('tr-TR') : '-'}
+                          {atolye.kayit_tarihi ? new Date(atolye.kayit_tarihi).toLocaleDateString('tr-TR') : (atolye.created_at ? new Date(atolye.created_at).toLocaleDateString('tr-TR') : '-')}
                         </Typography>
                       </Grid>
                       {!isBayi && atolye.bayi_adi && (
@@ -928,7 +928,7 @@ const AtolyeTakip: React.FC = () => {
                       }}
                     />
                   </TableCell>
-                  <TableCell sx={{ padding: '3px', fontSize: '0.75rem' }}>{formatDate(atolye.created_at)}</TableCell>
+                  <TableCell sx={{ padding: '3px', fontSize: '0.75rem' }}>{formatDate(atolye.kayit_tarihi || atolye.created_at)}</TableCell>
                   <TableCell sx={{ padding: '3px', fontSize: '0.75rem', textTransform: 'uppercase' }}>{atolye.bayi_adi}</TableCell>
                   <TableCell sx={{ padding: '3px', fontSize: '0.75rem', textTransform: 'uppercase' }}>{atolye.musteri_ad_soyad}</TableCell>
                   <TableCell sx={{ padding: '3px', fontSize: '0.75rem' }}>{formatPhoneNumber(atolye.tel_no)}</TableCell>

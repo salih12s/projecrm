@@ -697,7 +697,7 @@ const IslemTable: React.FC<IslemTableProps> = ({
                 <History sx={{ color: 'white', fontSize: '0.7rem' }} />
               </IconButton>
             </Tooltip>
-            <Tooltip title={islem.yazdirildi ? "Yazdırıldı olarak işaretle" : "Yazdırılmadı olarak işaretle"}>
+            <Tooltip title={islem.yazdirildi ? "Yazdırılmadı olarak işaretle" : "Yazdırıldı olarak işaretle"}>
               <IconButton 
                 size="small" 
                 onClick={(e) => handleToggleYazdirildi(islem, e)}

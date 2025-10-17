@@ -68,7 +68,6 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
   const [phoneNumber, setPhoneNumber] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [markaUyari, setMarkaUyari] = useState<string>(''); // Marka uyarı mesajı
-  const [mahalleAutoCompleted, setMahalleAutoCompleted] = useState(false); // Mahalle otomatik doldu mu?
   const [formData, setFormData] = useState<IslemUpdateDto>({
     ad_soyad: '',
     ilce: '',
@@ -203,7 +202,6 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
       setShowConfirmDialog(false);
       setExistingRecord(null);
       setMarkaUyari(''); // Marka uyarısını temizle
-      setMahalleAutoCompleted(false); // Mahalle flag'ini sıfırla
     }
   }, [islem, open]);
 
@@ -526,6 +524,13 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
       return;
     }
     
+    // Marka listeden seçilmiş olmalı
+    if (!markalar.some(m => m.isim === formData.marka)) {
+      showSnackbar('Lütfen marka listesinden geçerli bir seçim yapın! Gerekirse "DİĞER" seçeneğini kullanabilirsiniz.', 'error');
+      setMarkaUyari('Lütfen listeden geçerli bir marka seçin!');
+      return;
+    }
+    
     if (!formData.sikayet || formData.sikayet.trim() === '') {
       showSnackbar('Şikayet alanı zorunludur!', 'error');
       return;
@@ -679,6 +684,16 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
               options={ilceler}
               getOptionLabel={(option) => option.isim}
               value={ilceler.find(i => i.isim === formData.ilce) || null}
+              filterOptions={(options, state) => {
+                // Eğer input boşsa tüm seçenekleri göster
+                if (!state.inputValue) return options;
+                // Eğer input varsa filtrele
+                const filtered = options.filter(option =>
+                  option.isim.toLocaleLowerCase('tr-TR').includes(state.inputValue.toLocaleLowerCase('tr-TR'))
+                );
+                // Eşleşme yoksa boş liste döndür (hiçbir şey gösterme)
+                return filtered;
+              }}
               onChange={(_, newValue) => {
                 setFormData({ ...formData, ilce: newValue?.isim || '', mahalle: '' });
                 setSelectedIlceId(newValue?.ilce_id || null);
@@ -687,13 +702,12 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
                 // Kullanıcı yazarken filtrelenen seçenekleri kontrol et
                 if (reason === 'input') {
                   const filtered = ilceler.filter(ilce => 
-                    ilce.isim.toLowerCase().includes(value.toLowerCase())
+                    ilce.isim.toLocaleLowerCase('tr-TR').includes(value.toLocaleLowerCase('tr-TR'))
                   );
-                  // Eğer tek bir seçenek kaldıysa otomatik seç (ama bir sonraki alana GEÇMESİN)
+                  // Eğer tek bir seçenek kaldıysa otomatik seç (blur YAPMA - kullanıcı TAB ile geçecek)
                   if (filtered.length === 1 && value.length > 0) {
                     setFormData({ ...formData, ilce: filtered[0].isim, mahalle: '' });
                     setSelectedIlceId(filtered[0].ilce_id);
-                    // Otomatik geçiş YOK - kullanıcı manuel Tab/Enter ile geçecek
                   }
                 }
               }}
@@ -703,27 +717,33 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
               handleHomeEndKeys={false}
               renderInput={(params) => (
                 <TextField 
-                  {...params} 
+                  {...params}
+                  name="ilce"
                   required 
                   label="İlçe"
                   onKeyDown={(e) => {
                     if (e.key === 'Tab') {
+                      e.preventDefault(); // Default davranışı engelle
+                      // Eğer popup açıksa ve vurgulanan bir seçenek varsa onu seç
                       const popup = document.querySelector('[role="listbox"]');
                       if (popup) {
                         const highlighted = popup.querySelector('[data-focus="true"]') as HTMLElement;
                         if (highlighted) {
-                          e.preventDefault();
                           const text = highlighted.textContent;
                           const found = ilceler.find(i => i.isim === text);
                           if (found) {
                             setFormData({ ...formData, ilce: found.isim, mahalle: '' });
                             setSelectedIlceId(found.ilce_id);
-                            setTimeout(() => {
-                              (e.target as HTMLElement).blur();
-                            }, 10);
                           }
                         }
                       }
+                      // Her durumda mahalle alanına geç
+                      setTimeout(() => {
+                        const mahalleInput = document.querySelector('input[name="mahalle"]') as HTMLInputElement;
+                        if (mahalleInput) {
+                          mahalleInput.focus();
+                        }
+                      }, 100);
                     }
                   }}
                 />
@@ -736,36 +756,30 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
               options={mahalleler}
               getOptionLabel={(option) => option.isim}
               value={mahalleler.find(m => m.isim === formData.mahalle) || null}
+              filterOptions={(options, state) => {
+                // Eğer input boşsa tüm seçenekleri göster
+                if (!state.inputValue) return options;
+                // Eğer input varsa filtrele
+                const filtered = options.filter(option =>
+                  option.isim.toLocaleLowerCase('tr-TR').includes(state.inputValue.toLocaleLowerCase('tr-TR'))
+                );
+                // Eşleşme yoksa boş liste döndür (hiçbir şey gösterme)
+                return filtered;
+              }}
               onChange={(_, newValue) => {
                 setFormData({ ...formData, mahalle: newValue?.isim || '' });
-                setMahalleAutoCompleted(false); // Manuel seçimde flag'i sıfırla
               }}
               onInputChange={(_, value, reason) => {
                 // Kullanıcı yazarken filtrelenen seçenekleri kontrol et
-                if (reason === 'input' && !mahalleAutoCompleted) {
+                if (reason === 'input') {
                   const filtered = mahalleler.filter(mahalle => 
-                    mahalle.isim.toLowerCase().includes(value.toLowerCase())
+                    mahalle.isim.toLocaleLowerCase('tr-TR').includes(value.toLocaleLowerCase('tr-TR'))
                   );
-                  // Eğer tek bir seçenek kaldıysa otomatik seç ve 1 saniye sonra Cadde'ye geç
+                  // Eğer tek bir seçenek kaldıysa otomatik seç (blur YAPMA - kullanıcı TAB ile geçecek)
                   if (filtered.length === 1 && value.length > 0) {
                     setFormData({ ...formData, mahalle: filtered[0].isim });
-                    setMahalleAutoCompleted(true); // Otomatik dolduruldu flag'i
-                    // Input alanını blur et - yazı yazmayı engelle
-                    setTimeout(() => {
-                      const mahalleInput = document.querySelector('input[name="mahalle"]') as HTMLInputElement;
-                      if (mahalleInput) {
-                        mahalleInput.blur();
-                      }
-                    }, 50);
-                    // 1 saniye bekle, sonra Cadde alanına geç
-                    setTimeout(() => {
-                      const caddeInput = document.querySelector('input[name="cadde"]') as HTMLInputElement;
-                      if (caddeInput) {
-                        caddeInput.focus();
-                      }
-                      setMahalleAutoCompleted(false); // Flag'i sıfırla
-                    }, 300); // 300ms = 0.3 saniye
                   }
+                  // Eğer hiç eşleşme yoksa formData'dan mahalle'yi temizleme (kullanıcı hala yazıyor olabilir)
                 }
               }}
               autoHighlight
@@ -781,21 +795,26 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
                   label="Mahalle"
                   onKeyDown={(e) => {
                     if (e.key === 'Tab') {
+                      e.preventDefault(); // Default davranışı engelle
+                      // Eğer popup açıksa ve vurgulanan bir seçenek varsa onu seç
                       const popup = document.querySelector('[role="listbox"]');
                       if (popup) {
                         const highlighted = popup.querySelector('[data-focus="true"]') as HTMLElement;
                         if (highlighted) {
-                          e.preventDefault();
                           const text = highlighted.textContent;
                           const found = mahalleler.find(m => m.isim === text);
                           if (found) {
                             setFormData({ ...formData, mahalle: found.isim });
-                            setTimeout(() => {
-                              (e.target as HTMLElement).blur();
-                            }, 10);
                           }
                         }
                       }
+                      // Her durumda cadde alanına geç
+                      setTimeout(() => {
+                        const caddeInput = document.querySelector('input[name="cadde"]') as HTMLInputElement;
+                        if (caddeInput) {
+                          caddeInput.focus();
+                        }
+                      }, 100);
                     }
                   }}
                 />
@@ -893,6 +912,16 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
               size="small"
               options={urunler.map(u => u.isim)}
               value={formData.urun || null}
+              filterOptions={(options, state) => {
+                // Eğer input boşsa tüm seçenekleri göster
+                if (!state.inputValue) return options;
+                // Eğer input varsa filtrele
+                const filtered = options.filter(option =>
+                  option.toLocaleLowerCase('tr-TR').includes(state.inputValue.toLocaleLowerCase('tr-TR'))
+                );
+                // Eşleşme yoksa boş liste döndür
+                return filtered;
+              }}
               onChange={(_, newValue) => {
                 setFormData({ ...formData, urun: newValue || '' });
               }}
@@ -900,16 +929,11 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
                 // Kullanıcı yazarken filtrelenen seçenekleri kontrol et
                 if (reason === 'input') {
                   const filtered = urunler.filter(urun => 
-                    urun.isim.toLowerCase().includes(value.toLowerCase())
+                    urun.isim.toLocaleLowerCase('tr-TR').includes(value.toLocaleLowerCase('tr-TR'))
                   );
-                  // Eğer tek bir seçenek kaldıysa otomatik seç ve sonraki alana geç
+                  // Eğer tek bir seçenek kaldıysa otomatik seç (otomatik geçiş YAPMA)
                   if (filtered.length === 1 && value.length > 0) {
                     setFormData({ ...formData, urun: filtered[0].isim });
-                    // Otomatik bir sonraki alana geç (Marka)
-                    setTimeout(() => {
-                      const nextField = document.querySelector('[name="marka"]') as HTMLInputElement;
-                      if (nextField) nextField.focus();
-                    }, 100);
                   }
                 }
               }}
@@ -934,6 +958,7 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
               renderInput={(params) => (
                 <TextField
                   {...params}
+                  name="urun"
                   fullWidth
                   required
                   size="small"
@@ -943,20 +968,25 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
                   helperText={!formData.urun ? 'Listeden bir ürün seçmelisiniz' : ''}
                   onKeyDown={(e) => {
                     if (e.key === 'Tab') {
+                      e.preventDefault(); // Default davranışı engelle
+                      // Eğer popup açıksa ve vurgulanan bir seçenek varsa onu seç
                       const popup = document.querySelector('[role="listbox"]');
                       if (popup) {
                         const highlighted = popup.querySelector('[data-focus="true"]') as HTMLElement;
                         if (highlighted) {
-                          e.preventDefault();
                           const text = highlighted.textContent;
                           if (text && urunler.some(u => u.isim === text)) {
                             setFormData({ ...formData, urun: text });
-                            setTimeout(() => {
-                              (e.target as HTMLElement).blur();
-                            }, 10);
                           }
                         }
                       }
+                      // Her durumda marka alanına geç
+                      setTimeout(() => {
+                        const markaInput = document.querySelector('input[name="marka"]') as HTMLInputElement;
+                        if (markaInput) {
+                          markaInput.focus();
+                        }
+                      }, 100);
                     }
                   }}
                 />
@@ -968,43 +998,30 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
               size="small"
               options={markalar.map(m => m.isim)}
               value={formData.marka || null}
+              filterOptions={(options, state) => {
+                // Eğer input boşsa tüm seçenekleri göster
+                if (!state.inputValue) return options;
+                // Eğer input varsa filtrele
+                const filtered = options.filter(option =>
+                  option.toLocaleLowerCase('tr-TR').includes(state.inputValue.toLocaleLowerCase('tr-TR'))
+                );
+                // Eşleşme yoksa boş liste döndür
+                return filtered;
+              }}
               onChange={(_, newValue) => {
                 setFormData({ ...formData, marka: newValue || '' });
                 setMarkaUyari(''); // Seçim yapıldığında uyarıyı temizle
               }}
               onInputChange={(_, value, reason) => {
                 // Kullanıcı yazarken filtrelenen seçenekleri kontrol et
-                if (reason === 'input') {
+                if (reason === 'input' && value.length > 2) {
                   const filtered = markalar.filter(marka => 
-                    marka.isim.toLowerCase().includes(value.toLowerCase())
+                    marka.isim.toLocaleLowerCase('tr-TR').includes(value.toLocaleLowerCase('tr-TR'))
                   );
-                  // Eğer tek bir seçenek kaldıysa otomatik seç ve sonraki alana geç
-                  if (filtered.length === 1 && value.length > 0) {
+                  // Eğer tek bir seçenek kaldıysa otomatik seç
+                  if (filtered.length === 1) {
                     setFormData({ ...formData, marka: filtered[0].isim });
-                    setMarkaUyari(''); // Uyarıyı temizle
-                    // Otomatik bir sonraki alana geç (Şikayet)
-                    setTimeout(() => {
-                      const nextField = document.querySelector('[name="sikayet"]') as HTMLInputElement;
-                      if (nextField) nextField.focus();
-                    }, 100);
-                  } else if (value.length > 2 && filtered.length === 0) {
-                    // Eğer yazdığı marka listede yoksa "DİĞER" seç
-                    const digerMarka = markalar.find(m => m.isim.toUpperCase() === 'DİĞER' || m.isim.toUpperCase() === 'DIGER');
-                    if (digerMarka) {
-                      setFormData({ ...formData, marka: digerMarka.isim });
-                      setMarkaUyari(`"${value}" markası listede bulunamadı, "DİĞER" seçildi.`);
-                    }
-                  }
-                }
-              }}
-              onBlur={(e) => {
-                // Kullanıcı alanı terk ettiğinde kontrol et
-                const inputValue = (e.target as HTMLInputElement).value;
-                if (inputValue && !markalar.some(m => m.isim.toLowerCase() === inputValue.toLowerCase())) {
-                  const digerMarka = markalar.find(m => m.isim.toUpperCase() === 'DİĞER' || m.isim.toUpperCase() === 'DIGER');
-                  if (digerMarka) {
-                    setFormData({ ...formData, marka: digerMarka.isim });
-                    setMarkaUyari(`"${inputValue}" markası listede bulunamadı, "DİĞER" seçildi.`);
+                    setMarkaUyari('');
                   }
                 }
               }}
@@ -1028,21 +1045,26 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
                   }}
                   onKeyDown={(e) => {
                     if (e.key === 'Tab') {
+                      e.preventDefault(); // Default davranışı engelle
+                      // Eğer popup açıksa ve vurgulanan bir seçenek varsa onu seç
                       const popup = document.querySelector('[role="listbox"]');
                       if (popup) {
                         const highlighted = popup.querySelector('[data-focus="true"]') as HTMLElement;
                         if (highlighted) {
-                          e.preventDefault();
                           const text = highlighted.textContent;
                           if (text && markalar.some(m => m.isim === text)) {
                             setFormData({ ...formData, marka: text });
                             setMarkaUyari(''); // Uyarıyı temizle
-                            setTimeout(() => {
-                              (e.target as HTMLElement).blur();
-                            }, 10);
                           }
                         }
                       }
+                      // Her durumda şikayet alanına geç (textarea olabilir)
+                      setTimeout(() => {
+                        const sikayetInput = document.querySelector('textarea[name="sikayet"], input[name="sikayet"]') as HTMLInputElement | HTMLTextAreaElement;
+                        if (sikayetInput) {
+                          sikayetInput.focus();
+                        }
+                      }, 100);
                     }
                   }}
                 />
