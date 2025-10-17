@@ -1,3 +1,4 @@
+// @ts-ignore
 import * as XLSX from 'xlsx';
 import { Islem } from '../types';
 
