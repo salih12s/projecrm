@@ -7,7 +7,6 @@ import {
   Autocomplete,
   Chip,
 } from '@mui/material';
-import { Clear } from '@mui/icons-material';
 import { Islem, Montaj, Aksesuar } from '../types';
 import { api } from '../services/api';
 import { useAuth } from '../context/AuthContext';
@@ -21,7 +20,14 @@ interface IslemFiltersProps {
   showYazdirilmamis?: boolean; // Yazdırılmamış işler filtresi
 }
 
-const IslemFilters: React.FC<IslemFiltersProps> = ({ islemler, onFilterChange, statusFilter = 'all', dateFilter = '', showTodayOnly = false, showYazdirilmamis = false }) => {
+const IslemFilters: React.FC<IslemFiltersProps> = ({ 
+  islemler, 
+  onFilterChange, 
+  statusFilter = 'all', 
+  dateFilter = '', 
+  showTodayOnly = false, 
+  showYazdirilmamis = false
+}) => {
   const { user } = useAuth();
   const isAdmin = user?.role === 'admin';
   
@@ -34,6 +40,10 @@ const IslemFilters: React.FC<IslemFiltersProps> = ({ islemler, onFilterChange, s
   const [selectedAksesuarlar, setSelectedAksesuarlar] = useState<string[]>([]);
   const [filteredTutar, setFilteredTutar] = useState<number>(0);
   const [localDateFilter, setLocalDateFilter] = useState<string>('');
+  
+  // Tarih aralığı filtreleri (sadece admin için Montaj/Aksesuar ile birlikte)
+  const [startDate, setStartDate] = useState<string>('');
+  const [endDate, setEndDate] = useState<string>('');
 
   // Montaj ve Aksesuarları yükle
   useEffect(() => {
@@ -58,10 +68,40 @@ const IslemFilters: React.FC<IslemFiltersProps> = ({ islemler, onFilterChange, s
   useEffect(() => {
     applyFilters();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedMontajlar, selectedAksesuarlar, localDateFilter, islemler, statusFilter, dateFilter, showTodayOnly, showYazdirilmamis]);
+  }, [selectedMontajlar, selectedAksesuarlar, localDateFilter, islemler, statusFilter, dateFilter, showTodayOnly, showYazdirilmamis, startDate, endDate]);
 
   const applyFilters = () => {
     let filtered = [...islemler];
+
+    // Tarih aralığı filtresi (Dashboard'dan gelen startDate ve endDate)
+    if (startDate || endDate) {
+      filtered = filtered.filter((islem) => {
+        try {
+          const islemDate = new Date(islem.full_tarih);
+          islemDate.setHours(0, 0, 0, 0);
+          
+          if (startDate && endDate) {
+            const start = new Date(startDate);
+            start.setHours(0, 0, 0, 0);
+            const end = new Date(endDate);
+            end.setHours(0, 0, 0, 0);
+            return islemDate >= start && islemDate <= end;
+          } else if (startDate) {
+            const start = new Date(startDate);
+            start.setHours(0, 0, 0, 0);
+            return islemDate >= start;
+          } else if (endDate) {
+            const end = new Date(endDate);
+            end.setHours(0, 0, 0, 0);
+            return islemDate <= end;
+          }
+          return true;
+        } catch (error) {
+          console.error('❌ Tarih aralığı parse hatası:', islem.full_tarih, error);
+          return false;
+        }
+      });
+    }
 
     // Bugün alınan işler filtresi
     if (showTodayOnly) {
@@ -176,36 +216,11 @@ const IslemFilters: React.FC<IslemFiltersProps> = ({ islemler, onFilterChange, s
     onFilterChange(filtered);
   };
 
-  const handleClearDate = () => {
-    setLocalDateFilter('');
-  };
+
 
   return (
     <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'wrap' }}>
-      <TextField
-        size="small"
-        type="date"
-        value={localDateFilter}
-        onChange={(e) => setLocalDateFilter(e.target.value)}
-        InputLabelProps={{ shrink: true }}
-        InputProps={{
-          endAdornment: localDateFilter && (
-            <Button 
-              size="small" 
-              onClick={handleClearDate}
-              sx={{ minWidth: 'auto', p: 0.5 }}
-            >
-              <Clear sx={{ fontSize: '1rem' }} />
-            </Button>
-          )
-        }}
-        sx={{ 
-          width: '150px',
-          '& .MuiInputBase-root': { fontSize: '0.75rem' },
-          '& .MuiInputBase-input': { py: 0.75, px: 1 }
-        }}
-      />
-
+  
       {/* Montaj ve Aksesuar filtreleri - Sadece admin için */}
       {isAdmin && (
         <>
@@ -272,6 +287,54 @@ const IslemFilters: React.FC<IslemFiltersProps> = ({ islemler, onFilterChange, s
             }
             sx={{ width: '180px' }}
           />
+          
+          {/* Tarih Aralığı Filtreleri - Montaj/Aksesuar için */}
+          <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center' }}>
+            <input
+              type="date"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+              style={{
+                fontSize: '0.65rem',
+                padding: '4px 6px',
+                border: '1px solid #0D3282',
+                borderRadius: '4px',
+                outline: 'none',
+              }}
+            />
+            <span style={{ fontSize: '0.7rem', color: '#666' }}>-</span>
+            <input
+              type="date"
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+              style={{
+                fontSize: '0.65rem',
+                padding: '4px 6px',
+                border: '1px solid #0D3282',
+                borderRadius: '4px',
+                outline: 'none',
+              }}
+            />
+            {(startDate || endDate) && (
+              <Button
+                variant="text"
+                size="small"
+                onClick={() => {
+                  setStartDate('');
+                  setEndDate('');
+                }}
+                sx={{ 
+                  fontSize: '0.65rem', 
+                  py: 0.3, 
+                  px: 0.5, 
+                  minWidth: 'auto',
+                  color: '#2C3E82',
+                }}
+              >
+                ✕
+              </Button>
+            )}
+          </Box>
         </>
       )}
       

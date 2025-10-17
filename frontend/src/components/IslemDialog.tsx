@@ -165,8 +165,8 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
         teknisyen_ismi: islem.teknisyen_ismi || '',
         yapilan_islem: islem.yapilan_islem || '',
         tutar: islem.tutar || 0,
-        // İş durumunu o anki haliyle getir
-        is_durumu: islem.is_durumu,
+        // İş durumunu o anki haliyle getir (büyük harfse küçüğe çevir)
+        is_durumu: islem.is_durumu?.toLowerCase() || 'acik',
       });
       
       // Yapılan işlem alanından checkbox'ları otomatik işaretle

@@ -203,6 +203,13 @@ const createTables = async (): Promise<void> => {
       $$;
     `);
 
+    // Migration: is_durumu değerlerini küçük harfe çevir
+    await pool.query(`
+      UPDATE islemler 
+      SET is_durumu = LOWER(is_durumu)
+      WHERE is_durumu != LOWER(is_durumu);
+    `);
+
     console.log('Tablolar ve migration\'lar başarıyla oluşturuldu');
   } catch (error) {
     console.error('Tablo oluşturma hatası:', error);

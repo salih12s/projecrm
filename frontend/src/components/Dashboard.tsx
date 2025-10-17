@@ -236,15 +236,29 @@ const Dashboard: React.FC = () => {
 
   const handleStatusFilterClick = (filter: 'all' | 'acik' | 'parca_bekliyor' | 'tamamlandi') => {
     setStatusFilter(filter);
-    // IslemFilters useEffect'i otomatik olarak filtreyi uygulayacak
+    // Diğer filtreleri kapat
+    setShowTodayOnly(false);
+    setShowYazdirilmamis(false);
   };
 
   const handleTodayFilter = () => {
-    setShowTodayOnly(!showTodayOnly);
+    const newValue = !showTodayOnly;
+    setShowTodayOnly(newValue);
+    // Eğer aktif edildiyse diğerlerini kapat
+    if (newValue) {
+      setStatusFilter('all');
+      setShowYazdirilmamis(false);
+    }
   };
 
   const handleYazdirilmamisFilter = () => {
-    setShowYazdirilmamis(!showYazdirilmamis);
+    const newValue = !showYazdirilmamis;
+    setShowYazdirilmamis(newValue);
+    // Eğer aktif edildiyse diğerlerini kapat
+    if (newValue) {
+      setStatusFilter('all');
+      setShowTodayOnly(false);
+    }
   };
 
   const handleClearDateFilters = () => {
