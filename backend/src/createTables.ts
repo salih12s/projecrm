@@ -117,6 +117,16 @@ const createTables = async (): Promise<void> => {
       )
     `);
 
+    // Yazıcı ayarları tablosu (marka bazlı)
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS printer_settings (
+        id SERIAL PRIMARY KEY,
+        marka VARCHAR(100) UNIQUE NOT NULL,
+        config JSONB NOT NULL,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
     // Migration: yazdirildi sütunu ekle (eğer yoksa)
     await pool.query(`
       DO $$

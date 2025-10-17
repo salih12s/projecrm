@@ -189,7 +189,10 @@ const MusteriGecmisi: React.FC = () => {
     if (filters.durum) {
       const durumText = filters.durum.toLowerCase();
       filtered = filtered.filter((item) => {
-        const label = item.is_durumu === 'tamamlandi' ? 'tamamlandı' : 'açık';
+        const label = item.is_durumu === 'tamamlandi' ? 'tamamlandı' : 
+                      item.is_durumu === 'parca_bekliyor' ? 'parça bekliyor' :
+                      item.is_durumu === 'iptal' ? 'iptal' :
+                      'açık';
         return label.includes(durumText);
       });
     }
@@ -314,7 +317,12 @@ const MusteriGecmisi: React.FC = () => {
           ['Teknisyen', normalizeTurkish(islem.teknisyen_ismi || 'Atanmadi')],
           ['Yapilan Islem', normalizeTurkish(islem.yapilan_islem || '-')],
           ['Tutar', islem.tutar ? islem.tutar + ' TL' : '-'],
-          ['Durum', islem.is_durumu === 'tamamlandi' ? 'Tamamlandi' : 'Acik']
+          ['Durum', 
+            islem.is_durumu === 'tamamlandi' ? 'Tamamlandi' : 
+            islem.is_durumu === 'parca_bekliyor' ? 'Parca Bekliyor' :
+            islem.is_durumu === 'iptal' ? 'Iptal' :
+            'Acik'
+          ]
         );
         
         autoTable(doc, {
@@ -445,160 +453,169 @@ const MusteriGecmisi: React.FC = () => {
             </Typography>
           </Box>
           <TableContainer sx={{ maxHeight: 600, overflowX: 'auto' }}>
-            <Table stickyHeader size="small" sx={{ minWidth: 650 }}>
+            <Table stickyHeader size="small" sx={{ 
+              minWidth: 650,
+              '& .MuiTableCell-root': {
+                borderRight: '2px solid #e0e0e0',
+                borderBottom: '2px solid #e0e0e0',
+                '&:last-child': {
+                  borderRight: 'none'
+                }
+              }
+            }}>
               <TableHead>
                 <TableRow>
-                  <TableCell sx={{ fontWeight: 600, bgcolor: '#0D3282', color: 'white', fontSize: '0.75rem', py: 0.3, px: 0.5 }}>Sıra</TableCell>
-                  <TableCell sx={{ fontWeight: 600, bgcolor: '#0D3282', color: 'white', fontSize: '0.75rem', py: 0.3, px: 0.5 }}>Tarih</TableCell>
-                  <TableCell sx={{ fontWeight: 600, bgcolor: '#0D3282', color: 'white', fontSize: '0.75rem', py: 0.3, px: 0.5 }}>Müşteri</TableCell>
-                  <TableCell sx={{ fontWeight: 600, bgcolor: '#0D3282', color: 'white', fontSize: '0.75rem', py: 0.3, px: 0.5 }}>İlçe</TableCell>
-                  <TableCell sx={{ fontWeight: 600, bgcolor: '#0D3282', color: 'white', fontSize: '0.75rem', py: 0.3, px: 0.5 }}>Mahalle</TableCell>
-                  <TableCell sx={{ fontWeight: 600, bgcolor: '#0D3282', color: 'white', fontSize: '0.75rem', py: 0.3, px: 0.5 }}>Cadde</TableCell>
-                  <TableCell sx={{ fontWeight: 600, bgcolor: '#0D3282', color: 'white', fontSize: '0.75rem', py: 0.3, px: 0.5 }}>Sokak</TableCell>
-                  <TableCell sx={{ fontWeight: 600, bgcolor: '#0D3282', color: 'white', fontSize: '0.75rem', py: 0.3, px: 0.5 }}>Kapı No</TableCell>
-                  <TableCell sx={{ fontWeight: 600, bgcolor: '#0D3282', color: 'white', fontSize: '0.75rem', py: 0.3, px: 0.5 }}>Telefon</TableCell>
-                  <TableCell sx={{ fontWeight: 600, bgcolor: '#0D3282', color: 'white', fontSize: '0.75rem', py: 0.3, px: 0.5 }}>Ürün</TableCell>
-                  <TableCell sx={{ fontWeight: 600, bgcolor: '#0D3282', color: 'white', fontSize: '0.75rem', py: 0.3, px: 0.5 }}>Marka</TableCell>
-                  <TableCell sx={{ fontWeight: 600, bgcolor: '#0D3282', color: 'white', fontSize: '0.75rem', py: 0.3, px: 0.5 }}>Şikayet</TableCell>
-                  <TableCell sx={{ fontWeight: 600, bgcolor: '#0D3282', color: 'white', fontSize: '0.75rem', py: 0.3, px: 0.5 }}>Yapılan İşlem</TableCell>
-                  <TableCell sx={{ fontWeight: 600, bgcolor: '#0D3282', color: 'white', fontSize: '0.75rem', py: 0.3, px: 0.5 }}>Tutar</TableCell>
-                  <TableCell sx={{ fontWeight: 600, bgcolor: '#0D3282', color: 'white', fontSize: '0.75rem', py: 0.3, px: 0.5 }}>Durum</TableCell>
+                  <TableCell sx={{ fontWeight: 600, bgcolor: '#0D3282', color: 'white', fontSize: '0.7rem', py: 0.2, px: 0.2, width: '40px' }}>Sıra</TableCell>
+                  <TableCell sx={{ fontWeight: 600, bgcolor: '#0D3282', color: 'white', fontSize: '0.7rem', py: 0.2, px: 0.2, width: '75px' }}>Tarih</TableCell>
+                  <TableCell sx={{ fontWeight: 600, bgcolor: '#0D3282', color: 'white', fontSize: '0.7rem', py: 0.2, px: 0.2, width: '85px' }}>Müşteri</TableCell>
+                  <TableCell sx={{ fontWeight: 600, bgcolor: '#0D3282', color: 'white', fontSize: '0.7rem', py: 0.2, px: 0.2, width: '65px' }}>İlçe</TableCell>
+                  <TableCell sx={{ fontWeight: 600, bgcolor: '#0D3282', color: 'white', fontSize: '0.7rem', py: 0.2, px: 0.2, width: '75px' }}>Mahalle</TableCell>
+                  <TableCell sx={{ fontWeight: 600, bgcolor: '#0D3282', color: 'white', fontSize: '0.7rem', py: 0.2, px: 0.2, width: '65px' }}>Cadde</TableCell>
+                  <TableCell sx={{ fontWeight: 600, bgcolor: '#0D3282', color: 'white', fontSize: '0.7rem', py: 0.2, px: 0.2, width: '60px' }}>Sokak</TableCell>
+                  <TableCell sx={{ fontWeight: 600, bgcolor: '#0D3282', color: 'white', fontSize: '0.7rem', py: 0.2, px: 0.2, width: '45px' }}>Kapı</TableCell>
+                  <TableCell sx={{ fontWeight: 600, bgcolor: '#0D3282', color: 'white', fontSize: '0.7rem', py: 0.2, px: 0.2, width: '85px' }}>Telefon</TableCell>
+                  <TableCell sx={{ fontWeight: 600, bgcolor: '#0D3282', color: 'white', fontSize: '0.7rem', py: 0.2, px: 0.2, width: '55px' }}>Ürün</TableCell>
+                  <TableCell sx={{ fontWeight: 600, bgcolor: '#0D3282', color: 'white', fontSize: '0.7rem', py: 0.2, px: 0.2, width: '55px' }}>Marka</TableCell>
+                  <TableCell sx={{ fontWeight: 600, bgcolor: '#0D3282', color: 'white', fontSize: '0.7rem', py: 0.2, px: 0.2, width: '80px' }}>Şikayet</TableCell>
+                  <TableCell sx={{ fontWeight: 600, bgcolor: '#0D3282', color: 'white', fontSize: '0.7rem', py: 0.2, px: 0.2, width: '80px' }}>Yapılan</TableCell>
+                  <TableCell sx={{ fontWeight: 600, bgcolor: '#0D3282', color: 'white', fontSize: '0.7rem', py: 0.2, px: 0.2, width: '50px' }}>Tutar</TableCell>
+                  <TableCell sx={{ fontWeight: 600, bgcolor: '#0D3282', color: 'white', fontSize: '0.7rem', py: 0.2, px: 0.2, width: '75px' }}>Durum</TableCell>
                 </TableRow>
                 {/* Filter Row */}
                 <TableRow sx={{ bgcolor: '#f5f5f5' }}>
-                  <TableCell sx={{ py: 0.5, px: 0.5 }}>
+                  <TableCell sx={{ py: 0.2, px: 0.2 }}>
                     <TextField
                       size="small"
                       placeholder="Sıra..."
                       value={filters.sira}
                       onChange={(e) => handleFilterChange('sira', e.target.value)}
-                      sx={{ '& .MuiInputBase-input': { fontSize: '0.75rem', py: 0.5, px: 0.5 }, width: '60px' }}
+                      sx={{ '& .MuiInputBase-input': { fontSize: '0.65rem', py: 0.2, px: 0.2 }, width: '40px' }}
                     />
                   </TableCell>
-                  <TableCell sx={{ py: 0.5, px: 0.5 }}>
+                  <TableCell sx={{ py: 0.2, px: 0.2 }}>
                     <TextField
                       size="small"
                       placeholder="Tarih..."
                       value={filters.tarih}
                       onChange={(e) => handleFilterChange('tarih', e.target.value)}
-                      sx={{ '& .MuiInputBase-input': { fontSize: '0.75rem', py: 0.5, px: 0.5 }, minWidth: '90px' }}
+                      sx={{ '& .MuiInputBase-input': { fontSize: '0.65rem', py: 0.2, px: 0.2 }, width: '75px' }}
                     />
                   </TableCell>
-                  <TableCell sx={{ py: 0.5, px: 0.5 }}>
+                  <TableCell sx={{ py: 0.2, px: 0.2 }}>
                     <TextField
                       size="small"
                       placeholder="Müşteri..."
                       value={filters.ad_soyad}
                       onChange={(e) => handleFilterChange('ad_soyad', e.target.value)}
-                      sx={{ '& .MuiInputBase-input': { fontSize: '0.75rem', py: 0.5, px: 0.5 }, minWidth: '100px' }}
+                      sx={{ '& .MuiInputBase-input': { fontSize: '0.65rem', py: 0.2, px: 0.2 }, width: '85px' }}
                     />
                   </TableCell>
-                  <TableCell sx={{ py: 0.5, px: 0.5 }}>
+                  <TableCell sx={{ py: 0.2, px: 0.2 }}>
                     <TextField
                       size="small"
                       placeholder="İlçe..."
                       value={filters.ilce}
                       onChange={(e) => handleFilterChange('ilce', e.target.value)}
-                      sx={{ '& .MuiInputBase-input': { fontSize: '0.75rem', py: 0.5, px: 0.5 }, minWidth: '80px' }}
+                      sx={{ '& .MuiInputBase-input': { fontSize: '0.65rem', py: 0.2, px: 0.2 }, width: '65px' }}
                     />
                   </TableCell>
-                  <TableCell sx={{ py: 0.5, px: 0.5 }}>
+                  <TableCell sx={{ py: 0.2, px: 0.2 }}>
                     <TextField
                       size="small"
                       placeholder="Mahalle..."
                       value={filters.mahalle}
                       onChange={(e) => handleFilterChange('mahalle', e.target.value)}
-                      sx={{ '& .MuiInputBase-input': { fontSize: '0.75rem', py: 0.5, px: 0.5 }, minWidth: '100px' }}
+                      sx={{ '& .MuiInputBase-input': { fontSize: '0.65rem', py: 0.2, px: 0.2 }, width: '75px' }}
                     />
                   </TableCell>
-                  <TableCell sx={{ py: 0.5, px: 0.5 }}>
+                  <TableCell sx={{ py: 0.2, px: 0.2 }}>
                     <TextField
                       size="small"
                       placeholder="Cadde..."
                       value={filters.cadde}
                       onChange={(e) => handleFilterChange('cadde', e.target.value)}
-                      sx={{ '& .MuiInputBase-input': { fontSize: '0.75rem', py: 0.5, px: 0.5 }, minWidth: '100px' }}
+                      sx={{ '& .MuiInputBase-input': { fontSize: '0.65rem', py: 0.2, px: 0.2 }, width: '65px' }}
                     />
                   </TableCell>
-                  <TableCell sx={{ py: 0.5, px: 0.5 }}>
+                  <TableCell sx={{ py: 0.2, px: 0.2 }}>
                     <TextField
                       size="small"
                       placeholder="Sokak..."
                       value={filters.sokak}
                       onChange={(e) => handleFilterChange('sokak', e.target.value)}
-                      sx={{ '& .MuiInputBase-input': { fontSize: '0.75rem', py: 0.5, px: 0.5 }, minWidth: '100px' }}
+                      sx={{ '& .MuiInputBase-input': { fontSize: '0.65rem', py: 0.2, px: 0.2 }, width: '60px' }}
                     />
                   </TableCell>
-                  <TableCell sx={{ py: 0.5, px: 0.5 }}>
+                  <TableCell sx={{ py: 0.2, px: 0.2 }}>
                     <TextField
                       size="small"
                       placeholder="Kapı..."
                       value={filters.kapi_no}
                       onChange={(e) => handleFilterChange('kapi_no', e.target.value)}
-                      sx={{ '& .MuiInputBase-input': { fontSize: '0.75rem', py: 0.5, px: 0.5 }, width: '60px' }}
+                      sx={{ '& .MuiInputBase-input': { fontSize: '0.65rem', py: 0.2, px: 0.2 }, width: '45px' }}
                     />
                   </TableCell>
-                  <TableCell sx={{ py: 0.5, px: 0.5 }}>
+                  <TableCell sx={{ py: 0.2, px: 0.2 }}>
                     <TextField
                       size="small"
-                      placeholder="Telefon..."
+                      placeholder="Tel..."
                       value={filters.cep_tel}
                       onChange={(e) => handleFilterChange('cep_tel', e.target.value)}
-                      sx={{ '& .MuiInputBase-input': { fontSize: '0.75rem', py: 0.5, px: 0.5 }, minWidth: '100px' }}
+                      sx={{ '& .MuiInputBase-input': { fontSize: '0.65rem', py: 0.2, px: 0.2 }, width: '85px' }}
                     />
                   </TableCell>
-                  <TableCell sx={{ py: 0.5, px: 0.5 }}>
+                  <TableCell sx={{ py: 0.2, px: 0.2 }}>
                     <TextField
                       size="small"
                       placeholder="Ürün..."
                       value={filters.urun}
                       onChange={(e) => handleFilterChange('urun', e.target.value)}
-                      sx={{ '& .MuiInputBase-input': { fontSize: '0.75rem', py: 0.5, px: 0.5 }, minWidth: '100px' }}
+                      sx={{ '& .MuiInputBase-input': { fontSize: '0.65rem', py: 0.2, px: 0.2 }, width: '55px' }}
                     />
                   </TableCell>
-                  <TableCell sx={{ py: 0.5, px: 0.5 }}>
+                  <TableCell sx={{ py: 0.2, px: 0.2 }}>
                     <TextField
                       size="small"
                       placeholder="Marka..."
                       value={filters.marka}
                       onChange={(e) => handleFilterChange('marka', e.target.value)}
-                      sx={{ '& .MuiInputBase-input': { fontSize: '0.75rem', py: 0.5, px: 0.5 }, minWidth: '100px' }}
+                      sx={{ '& .MuiInputBase-input': { fontSize: '0.65rem', py: 0.2, px: 0.2 }, width: '55px' }}
                     />
                   </TableCell>
-                  <TableCell sx={{ py: 0.5, px: 0.5 }}>
+                  <TableCell sx={{ py: 0.2, px: 0.2 }}>
                     <TextField
                       size="small"
                       placeholder="Şikayet..."
                       value={filters.sikayet}
                       onChange={(e) => handleFilterChange('sikayet', e.target.value)}
-                      sx={{ '& .MuiInputBase-input': { fontSize: '0.75rem', py: 0.5, px: 0.5 }, minWidth: '120px' }}
+                      sx={{ '& .MuiInputBase-input': { fontSize: '0.65rem', py: 0.2, px: 0.2 }, width: '80px' }}
                     />
                   </TableCell>
-                  <TableCell sx={{ py: 0.5, px: 0.5 }}>
+                  <TableCell sx={{ py: 0.2, px: 0.2 }}>
                     <TextField
                       size="small"
-                      placeholder="Yapılan İşlem..."
+                      placeholder="Yapılan..."
                       value={filters.yapilan_islem}
                       onChange={(e) => handleFilterChange('yapilan_islem', e.target.value)}
-                      sx={{ '& .MuiInputBase-input': { fontSize: '0.75rem', py: 0.5, px: 0.5 }, minWidth: '120px' }}
+                      sx={{ '& .MuiInputBase-input': { fontSize: '0.65rem', py: 0.2, px: 0.2 }, width: '80px' }}
                     />
                   </TableCell>
-                  <TableCell sx={{ py: 0.5, px: 0.5 }}>
+                  <TableCell sx={{ py: 0.2, px: 0.2 }}>
                     <TextField
                       size="small"
                       placeholder="Tutar..."
                       value={filters.tutar}
                       onChange={(e) => handleFilterChange('tutar', e.target.value)}
-                      sx={{ '& .MuiInputBase-input': { fontSize: '0.75rem', py: 0.5, px: 0.5 }, width: '70px' }}
+                      sx={{ '& .MuiInputBase-input': { fontSize: '0.65rem', py: 0.2, px: 0.2 }, width: '50px' }}
                     />
                   </TableCell>
-                  <TableCell sx={{ py: 0.5, px: 0.5 }}>
+                  <TableCell sx={{ py: 0.2, px: 0.2 }}>
                     <TextField
                       size="small"
                       placeholder="Durum..."
                       value={filters.durum}
                       onChange={(e) => handleFilterChange('durum', e.target.value)}
-                      sx={{ '& .MuiInputBase-input': { fontSize: '0.75rem', py: 0.5, px: 0.5 }, minWidth: '90px' }}
+                      sx={{ '& .MuiInputBase-input': { fontSize: '0.65rem', py: 0.2, px: 0.2 }, width: '75px' }}
                     />
                   </TableCell>
                 </TableRow>
@@ -610,37 +627,47 @@ const MusteriGecmisi: React.FC = () => {
                   
                   return (
                   <TableRow key={islem.id} hover>
-                    <TableCell sx={{ fontSize: '0.75rem', py: 0.3, px: 0.5 }}>{siraNo}</TableCell>
-                    <TableCell sx={{ fontSize: '0.75rem', py: 0.3, px: 0.5 }}>
+                    <TableCell sx={{ fontSize: '0.7rem', py: 0.2, px: 0.3 }}>{siraNo}</TableCell>
+                    <TableCell sx={{ fontSize: '0.7rem', py: 0.2, px: 0.3 }}>
                       {islem.full_tarih
                         ? new Date(islem.full_tarih).toLocaleDateString('tr-TR')
                         : '-'}
                     </TableCell>
-                    <TableCell sx={{ fontSize: '0.75rem', py: 0.3, px: 0.5 }}>{islem.ad_soyad}</TableCell>
-                    <TableCell sx={{ fontSize: '0.75rem', py: 0.3, px: 0.5 }}>{islem.ilce || '-'}</TableCell>
-                    <TableCell sx={{ fontSize: '0.75rem', py: 0.3, px: 0.5 }}>{islem.mahalle || '-'}</TableCell>
-                    <TableCell sx={{ fontSize: '0.75rem', py: 0.3, px: 0.5 }}>{islem.cadde || '-'}</TableCell>
-                    <TableCell sx={{ fontSize: '0.75rem', py: 0.3, px: 0.5 }}>{islem.sokak || '-'}</TableCell>
-                    <TableCell sx={{ fontSize: '0.75rem', py: 0.3, px: 0.5 }}>{islem.kapi_no || '-'}</TableCell>
-                    <TableCell sx={{ fontSize: '0.75rem', py: 0.3, px: 0.5 }}>{formatPhoneNumber(islem.cep_tel)}</TableCell>
-                    <TableCell sx={{ fontSize: '0.75rem', py: 0.3, px: 0.5 }}>{islem.urun}</TableCell>
-                    <TableCell sx={{ fontSize: '0.75rem', py: 0.3, px: 0.5 }}>{islem.marka}</TableCell>
-                    <TableCell sx={{ maxWidth: 200, fontSize: '0.75rem', py: 0.3, px: 0.5 }}>
-                      <Typography variant="body2" noWrap title={islem.sikayet} sx={{ fontSize: '0.75rem' }}>
+                    <TableCell sx={{ fontSize: '0.7rem', py: 0.2, px: 0.3 }}>{islem.ad_soyad}</TableCell>
+                    <TableCell sx={{ fontSize: '0.7rem', py: 0.2, px: 0.3 }}>{islem.ilce || '-'}</TableCell>
+                    <TableCell sx={{ fontSize: '0.7rem', py: 0.2, px: 0.3 }}>{islem.mahalle || '-'}</TableCell>
+                    <TableCell sx={{ fontSize: '0.7rem', py: 0.2, px: 0.3 }}>{islem.cadde || '-'}</TableCell>
+                    <TableCell sx={{ fontSize: '0.7rem', py: 0.2, px: 0.3 }}>{islem.sokak || '-'}</TableCell>
+                    <TableCell sx={{ fontSize: '0.7rem', py: 0.2, px: 0.3 }}>{islem.kapi_no || '-'}</TableCell>
+                    <TableCell sx={{ fontSize: '0.7rem', py: 0.2, px: 0.3 }}>{formatPhoneNumber(islem.cep_tel)}</TableCell>
+                    <TableCell sx={{ fontSize: '0.7rem', py: 0.2, px: 0.3 }}>{islem.urun}</TableCell>
+                    <TableCell sx={{ fontSize: '0.7rem', py: 0.2, px: 0.3 }}>{islem.marka}</TableCell>
+                    <TableCell sx={{ maxWidth: 150, fontSize: '0.7rem', py: 0.2, px: 0.3 }}>
+                      <Typography variant="body2" noWrap title={islem.sikayet} sx={{ fontSize: '0.7rem' }}>
                         {islem.sikayet}
                       </Typography>
                     </TableCell>
-                    <TableCell sx={{ maxWidth: 200, fontSize: '0.75rem', py: 0.3, px: 0.5 }}>
-                      <Typography variant="body2" noWrap title={islem.yapilan_islem || '-'} sx={{ fontSize: '0.75rem' }}>
+                    <TableCell sx={{ maxWidth: 150, fontSize: '0.7rem', py: 0.2, px: 0.3 }}>
+                      <Typography variant="body2" noWrap title={islem.yapilan_islem || '-'} sx={{ fontSize: '0.7rem' }}>
                         {islem.yapilan_islem || '-'}
                       </Typography>
                     </TableCell>
-                    <TableCell sx={{ fontSize: '0.75rem', py: 0.3, px: 0.5 }}>{islem.tutar ? `${islem.tutar} TL` : '-'}</TableCell>
-                    <TableCell sx={{ fontSize: '0.75rem', py: 0.3, px: 0.5 }}>
+                    <TableCell sx={{ fontSize: '0.7rem', py: 0.2, px: 0.3 }}>{islem.tutar ? `${islem.tutar} TL` : '-'}</TableCell>
+                    <TableCell sx={{ fontSize: '0.7rem', py: 0.2, px: 0.3 }}>
                       <Chip
-                        label={islem.is_durumu === 'tamamlandi' ? 'Tamamlandı' : 'Açık'}
-                        color={islem.is_durumu === 'tamamlandi' ? 'success' : 'warning'}
+                        label={
+                          islem.is_durumu === 'tamamlandi' ? 'Tamamlandı' : 
+                          islem.is_durumu === 'parca_bekliyor' ? 'Parça Bekliyor' :
+                          islem.is_durumu === 'iptal' ? 'İptal' :
+                          'Açık'
+                        }
+                        color={
+                          islem.is_durumu === 'tamamlandi' ? 'success' : 
+                          islem.is_durumu === 'iptal' ? 'error' :
+                          'warning'
+                        }
                         size="small"
+                        sx={{ fontSize: '0.65rem', height: '20px' }}
                       />
                     </TableCell>
                   </TableRow>

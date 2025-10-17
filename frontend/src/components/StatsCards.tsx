@@ -6,14 +6,15 @@ import {
   HourglassEmpty,
   AttachMoney,
   Build,
+  Cancel,
 } from '@mui/icons-material';
 import { Islem } from '../types';
 import { useAuth } from '../context/AuthContext';
 
 interface StatsCardsProps {
   islemler: Islem[];
-  onFilterClick?: (filter: 'all' | 'acik' | 'parca_bekliyor' | 'tamamlandi') => void;
-  activeFilter?: 'all' | 'acik' | 'parca_bekliyor' | 'tamamlandi';
+  onFilterClick?: (filter: 'all' | 'acik' | 'parca_bekliyor' | 'tamamlandi' | 'iptal') => void;
+  activeFilter?: 'all' | 'acik' | 'parca_bekliyor' | 'tamamlandi' | 'iptal';
 }
 
 const StatsCards: React.FC<StatsCardsProps> = ({ islemler, onFilterClick, activeFilter = 'all' }) => {
@@ -23,6 +24,7 @@ const StatsCards: React.FC<StatsCardsProps> = ({ islemler, onFilterClick, active
   const acikIsler = islemler.filter(i => i.is_durumu === 'acik').length;
   const parcaBekliyor = islemler.filter(i => i.is_durumu === 'parca_bekliyor').length;
   const tamamlananIsler = islemler.filter(i => i.is_durumu === 'tamamlandi').length;
+  const iptalIsler = islemler.filter(i => i.is_durumu === 'iptal').length;
   const toplamTutar = islemler.reduce((sum, i) => {
     const tutar = typeof i.tutar === 'number' ? i.tutar : parseFloat(String(i.tutar || 0));
     return sum + (isNaN(tutar) ? 0 : tutar);
@@ -34,7 +36,7 @@ const StatsCards: React.FC<StatsCardsProps> = ({ islemler, onFilterClick, active
     icon: JSX.Element;
     color: string;
     bgColor: string;
-    filterValue: 'all' | 'acik' | 'parca_bekliyor' | 'tamamlandi';
+    filterValue: 'all' | 'acik' | 'parca_bekliyor' | 'tamamlandi' | 'iptal';
   }> = [
     {
       title: 'Toplam İşlem',
@@ -68,6 +70,14 @@ const StatsCards: React.FC<StatsCardsProps> = ({ islemler, onFilterClick, active
       bgColor: '#e8f5e9',
       filterValue: 'tamamlandi',
     },
+    {
+      title: 'İptal',
+      value: iptalIsler,
+      icon: <Cancel />,
+      color: '#d32f2f',
+      bgColor: '#ffebee',
+      filterValue: 'iptal',
+    },
   ];
 
   // Toplam Tutar sadece admin için
@@ -83,17 +93,17 @@ const StatsCards: React.FC<StatsCardsProps> = ({ islemler, onFilterClick, active
   }
 
   return (
-    <Grid container spacing={1} sx={{ mb: 1.5 }}>
+    <Grid container spacing={0.5} sx={{ mb: 1.5 }}>
       {stats.map((stat, index) => (
-        <Grid item xs={6} sm={4} md={isAdmin ? 2.4 : 3} key={index}>
+        <Grid item xs={6} sm={4} md={isAdmin ? 2 : 2.4} key={index}>
           <Paper
             elevation={1}
             onClick={() => onFilterClick && onFilterClick(stat.filterValue)}
             sx={{
-              p: 1,
+              p: 0.75,
               display: 'flex',
               alignItems: 'center',
-              gap: 0.75,
+              gap: 0.5,
               cursor: onFilterClick ? 'pointer' : 'default',
               transition: 'all 0.2s',
               border: activeFilter === stat.filterValue ? '2px solid' : '2px solid transparent',
@@ -109,19 +119,19 @@ const StatsCards: React.FC<StatsCardsProps> = ({ islemler, onFilterClick, active
                 backgroundColor: stat.bgColor,
                 color: stat.color,
                 borderRadius: '4px',
-                p: 0.5,
+                p: 0.4,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
               }}
             >
-              {React.cloneElement(stat.icon, { sx: { fontSize: '1.1rem' } })}
+              {React.cloneElement(stat.icon, { sx: { fontSize: '1rem' } })}
             </Box>
             <Box sx={{ minWidth: 0 }}>
-              <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.65rem', lineHeight: 1 }}>
+              <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.6rem', lineHeight: 1, whiteSpace: 'nowrap' }}>
                 {stat.title}
               </Typography>
-              <Typography variant="h6" fontWeight="bold" sx={{ lineHeight: 1.1, fontSize: '0.95rem' }}>
+              <Typography variant="h6" fontWeight="bold" sx={{ lineHeight: 1.1, fontSize: '0.85rem' }}>
                 {stat.value}
               </Typography>
             </Box>

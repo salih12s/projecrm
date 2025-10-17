@@ -29,7 +29,7 @@ export interface Islem {
   urun: string;
   marka: string;
   sikayet: string;
-  is_durumu: 'acik' | 'parca_bekliyor' | 'tamamlandi';
+  is_durumu: 'acik' | 'parca_bekliyor' | 'tamamlandi' | 'iptal';
   created_by?: string;
   updated_at: string;
   yazdirildi?: boolean; // Yazdırıldı mı? (yazıcı ikonu durumu)
@@ -54,7 +54,7 @@ export interface IslemCreateDto {
   teknisyen_ismi?: string;
   yapilan_islem?: string;
   tutar?: number;
-  is_durumu?: 'acik' | 'parca_bekliyor' | 'tamamlandi';
+  is_durumu?: 'acik' | 'parca_bekliyor' | 'tamamlandi' | 'iptal';
 }
 
 export interface IslemUpdateDto {
@@ -76,7 +76,7 @@ export interface IslemUpdateDto {
   urun: string;
   marka: string;
   sikayet: string;
-  is_durumu: 'acik' | 'parca_bekliyor' | 'tamamlandi';
+  is_durumu: 'acik' | 'parca_bekliyor' | 'tamamlandi' | 'iptal';
 }
 
 export interface FilterParams {
@@ -95,7 +95,7 @@ export interface FilterParams {
   marka?: string;
   sikayet?: string;
   teknisyen_ismi?: string;
-  is_durumu?: 'acik' | 'tamamlandi' | '';
+  is_durumu?: 'acik' | 'tamamlandi' | 'iptal' | '';
 }
 
 export interface Teknisyen {

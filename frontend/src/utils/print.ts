@@ -286,7 +286,11 @@ export const printIslem = async (islem: Islem) => {
           </div>
         </div>
 
-        <div class="section-title" style="border: 1px solid #000; padding: 5px; margin-bottom: 0;">- SERVİS DURUMU: ${islem.is_durumu === 'tamamlandi' ? 'Arıza Giderildi' : 'Açık'} -</div>
+        <div class="section-title" style="border: 1px solid #000; padding: 5px; margin-bottom: 0;">- SERVİS DURUMU: ${
+          islem.is_durumu === 'tamamlandi' ? 'Arıza Giderildi' : 
+          islem.is_durumu === 'iptal' ? 'İptal' : 
+          'Açık'
+        } -</div>
 
         <table class="service-table">
           <thead>
@@ -485,7 +489,7 @@ export const exportListToPDF = (islemler: Islem[]) => {
     turkishCharFix((islem.sikayet || '').substring(0, 30) + ((islem.sikayet || '').length > 30 ? '...' : '')),
     turkishCharFix(islem.teknisyen_ismi || ''),
     islem.tutar ? islem.tutar + ' TL' : '-',
-    islem.is_durumu === 'acik' ? 'Acik' : islem.is_durumu === 'parca_bekliyor' ? 'Parca Bekliyor' : 'Tamamlandi',
+    islem.is_durumu === 'acik' ? 'Acik' : islem.is_durumu === 'parca_bekliyor' ? 'Parca Bekliyor' : islem.is_durumu === 'iptal' ? 'Iptal' : 'Tamamlandi',
     // Yeni alanlar
     turkishCharFix(islem.apartman_site || '-'),
     turkishCharFix(islem.blok_no || '-'),

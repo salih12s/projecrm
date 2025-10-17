@@ -26,7 +26,7 @@ export interface Islem {
   urun: string;
   marka: string;
   sikayet: string;
-  is_durumu: 'acik' | 'parca_bekliyor' | 'tamamlandi';
+  is_durumu: 'acik' | 'parca_bekliyor' | 'tamamlandi' | 'iptal';
   created_by?: string;
   updated_at: Date;
 }
@@ -50,7 +50,7 @@ export interface IslemCreateDto {
   teknisyen_ismi?: string;
   yapilan_islem?: string;
   tutar?: number;
-  is_durumu?: 'acik' | 'parca_bekliyor' | 'tamamlandi';
+  is_durumu?: 'acik' | 'parca_bekliyor' | 'tamamlandi' | 'iptal';
 }
 
 export interface IslemUpdateDto {
@@ -72,7 +72,7 @@ export interface IslemUpdateDto {
   urun: string;
   marka: string;
   sikayet: string;
-  is_durumu: 'acik' | 'parca_bekliyor' | 'tamamlandi';
+  is_durumu: 'acik' | 'parca_bekliyor' | 'tamamlandi' | 'iptal';
 }
 
 export interface AuthPayload {

@@ -50,7 +50,7 @@ import Settings from './Settings';
 import MusteriGecmisi from './MusteriGecmisi.tsx';
 import AtolyeTakip from './AtolyeTakip.tsx';
 import AdminPanel from './AdminPanel.tsx';
-import { exportListToPDF } from '../utils/print.ts';
+import { exportToExcel } from '../utils/excel.ts';
 import Loading from './Loading';
 import ErrorMessage from './ErrorMessage';
 import { useSnackbar } from '../context/SnackbarContext';
@@ -71,7 +71,7 @@ const Dashboard: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
-  const [statusFilter, setStatusFilter] = useState<'all' | 'acik' | 'parca_bekliyor' | 'tamamlandi'>('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'acik' | 'parca_bekliyor' | 'tamamlandi' | 'iptal'>('all');
   const [showTodayOnly, setShowTodayOnly] = useState(false); // Bugün alınan işler
   const [showYazdirilmamis, setShowYazdirilmamis] = useState(false); // Yazdırılmamış işler filtresi
   // Bayi için tab değeri her zaman 0 (tek tab var)
@@ -226,15 +226,15 @@ const Dashboard: React.FC = () => {
   const handleExport = () => {
     // IslemTable'dan gelen filtrelenmiş listeyi kullan (kolon filtreleri dahil)
     const listToExport = tableFilteredIslemler.length > 0 ? tableFilteredIslemler : filteredIslemler;
-    exportListToPDF(listToExport);
-    showSnackbar(`${listToExport.length} kayıt PDF'e aktarıldı!`, 'success');
+    exportToExcel(listToExport);
+    showSnackbar(`${listToExport.length} kayıt Excel'e aktarıldı!`, 'success');
   };
   
   const handleTableFilterChange = (filtered: Islem[]) => {
     setTableFilteredIslemler(filtered);
   };
 
-  const handleStatusFilterClick = (filter: 'all' | 'acik' | 'parca_bekliyor' | 'tamamlandi') => {
+  const handleStatusFilterClick = (filter: 'all' | 'acik' | 'parca_bekliyor' | 'tamamlandi' | 'iptal') => {
     setStatusFilter(filter);
     // Diğer filtreleri kapat
     setShowTodayOnly(false);
@@ -578,6 +578,26 @@ const Dashboard: React.FC = () => {
                     Tamamlanan: {islemler.filter(i => i.is_durumu === 'tamamlandi').length}
                   </Button>
 
+                  <Button
+                    variant={statusFilter === 'iptal' ? 'contained' : 'outlined'}
+                    size="small"
+                    onClick={() => handleStatusFilterClick('iptal')}
+                    sx={{
+                      fontSize: '0.6rem',
+                      py: 0.25,
+                      px: 0.6,
+                      minWidth: 'auto',
+                      bgcolor: statusFilter === 'iptal' ? '#d32f2f' : 'transparent',
+                      color: statusFilter === 'iptal' ? '#fff' : '#d32f2f',
+                      borderColor: '#d32f2f',
+                      '&:hover': {
+                        bgcolor: statusFilter === 'iptal' ? '#c62828' : 'rgba(211, 47, 47, 0.04)',
+                      }
+                    }}
+                  >
+                    İptal: {islemler.filter(i => i.is_durumu === 'iptal').length}
+                  </Button>
+
                   {/* Yazdırılmamış İşler Filtresi */}
                   <Button
                     variant={showYazdirilmamis ? 'contained' : 'outlined'}
@@ -660,11 +680,13 @@ const Dashboard: React.FC = () => {
                   
                   <Button
                     variant="outlined"
-                    startIcon={<DownloadIcon />}
+                    startIcon={<DownloadIcon sx={{ fontSize: '1rem' }} />}
                     onClick={handleExport}
                     size="small"
                     sx={{
-                      fontSize: '0.75rem',
+                      fontSize: '0.65rem',
+                      py: 0.4,
+                      px: 0.8,
                       color: '#0D3282',
                       borderColor: '#0D3282',
                       '&:hover': {
@@ -673,15 +695,17 @@ const Dashboard: React.FC = () => {
                       }
                     }}
                   >
-                    PDF İndir
+                    Excel İndir
                   </Button>
                   <Button
                       variant="contained"
-                      startIcon={<AddIcon />}
+                      startIcon={<AddIcon sx={{ fontSize: '1rem' }} />}
                       onClick={() => handleOpenDialog()}
                       size="small"
                       sx={{ 
-                        fontSize: '0.75rem',
+                        fontSize: '0.65rem',
+                        py: 0.4,
+                        px: 0.8,
                         boxShadow: 2,
                         '&:hover': {
                           boxShadow: 4,

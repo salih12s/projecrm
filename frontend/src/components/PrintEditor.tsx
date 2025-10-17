@@ -21,6 +21,7 @@ import SaveIcon from '@mui/icons-material/Save';
 import DeleteIcon from '@mui/icons-material/Delete';
 import { Islem } from '../types';
 import { useAuth } from '../context/AuthContext';
+import { api } from '../services/api';
 
 interface PrintEditorProps {
   open: boolean;
@@ -183,21 +184,68 @@ const PrintEditor: React.FC<PrintEditorProps> = ({ open, onClose, islem }) => {
   // Marka bazında kayıt anahtarı oluştur
   const getStorageKey = () => {
     const marka = islem.marka?.toLowerCase().trim() || 'default';
-    return `print_template_config_${marka}`;
+    return marka;
   };
 
-  const [fields, setFields] = useState<FieldConfig[]>(() => {
-    const storageKey = getStorageKey();
-    const saved = localStorage.getItem(storageKey);
-    if (saved) {
+  const [fields, setFields] = useState<FieldConfig[]>(getDefaultFields());
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Veritabanından ayarları yükle
+  useEffect(() => {
+    const loadSettings = async () => {
+      const marka = getStorageKey();
+      console.log('📥 Yükleniyor:', marka);
       try {
-        return JSON.parse(saved);
-      } catch {
-        return getDefaultFields();
+        const response = await api.get(`/printer-settings/${marka}`);
+        console.log('📥 API Cevabı:', response.data);
+        
+        if (response.data && response.data.length > 0) {
+          // Veritabanından kaydedilen DÜZENİ (layout) getirdik
+          const savedLayout = response.data;
+          console.log('✅ Kaydedilmiş düzen bulundu:', savedLayout);
+          
+          // Şu andaki verileri al (getDefaultFields() yanında da veri doldurulmakta)
+          const currentFields = getDefaultFields();
+          
+          // SADECE kaydedilmiş alanları kullan (silinmiş olanları ekleme!)
+          // Kaydedilen her alan için, mevcut değerleri bul ve birleştir
+          const mergedFields = savedLayout.map((savedLayoutItem: any) => {
+            const currentField = currentFields.find(f => f.id === savedLayoutItem.id);
+            
+            if (currentField) {
+              // Kaydedilen koordinatları kullan, mevcut value'yu koru
+              return {
+                ...currentField,
+                position: savedLayoutItem.position,
+                label: savedLayoutItem.label,
+                isStatic: savedLayoutItem.isStatic
+              };
+            }
+            
+            // Eğer alan artık varsayılan listede yoksa (eski kayıt), atla
+            return null;
+          }).filter((f: FieldConfig | null): f is FieldConfig => f !== null);
+          
+          console.log('✅ Birleştirilmiş alanlar:', mergedFields);
+          setFields(mergedFields);
+        } else {
+          // Kaydedilmiş düzen yoksa varsayılanı kullan
+          console.log('⚠️ Kaydedilmiş düzen bulunamadı, varsayılan kullanılıyor');
+          setFields(getDefaultFields());
+        }
+      } catch (error: any) {
+        console.error('❌ Yazıcı ayarları yükleme hatası:', error);
+        console.error('Hata detayı:', error.response?.data);
+        setFields(getDefaultFields());
+      } finally {
+        setIsLoading(false);
       }
+    };
+    
+    if (open) {
+      loadSettings();
     }
-    return getDefaultFields();
-  });
+  }, [open, islem.marka]);
 
   // A4 kağıt boyutları (210mm x 297mm) - piksel olarak
   const A4_WIDTH_MM = 210;
@@ -292,7 +340,7 @@ const PrintEditor: React.FC<PrintEditorProps> = ({ open, onClose, islem }) => {
     }
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!isAdmin) {
       setSnackbar({
         open: true,
@@ -302,21 +350,39 @@ const PrintEditor: React.FC<PrintEditorProps> = ({ open, onClose, islem }) => {
       return;
     }
     
-    const storageKey = getStorageKey();
-    // Sadece field ID'lerini ve pozisyonlarını kaydet (değerleri değil)
-    const configToSave = fields.map(f => ({
-      id: f.id,
-      position: f.position
-    }));
-    localStorage.setItem(storageKey, JSON.stringify(configToSave));
-    setSnackbar({
-      open: true,
-      message: `Şablon ayarları "${islem.marka}" markası için kaydedildi!`,
-      severity: 'success'
-    });
+    const marka = getStorageKey();
+    try {
+      // Sadece koordinatları kaydet (verileri değil!)
+      // Her form için farklı veriler olacak, ama düzen aynı kalacak
+      const layoutConfig = fields.map(f => ({
+        id: f.id,
+        label: f.label,
+        position: f.position,
+        isStatic: f.isStatic // Sabit alanlar (MEFA TEKNİK gibi)
+      }));
+      
+      console.log('📝 Kaydedilecek düzen:', { marka, layoutConfig });
+      
+      const response = await api.post(`/printer-settings/${marka}`, layoutConfig);
+      console.log('✅ Kaydedildi, sunucu cevabı:', response.data);
+      
+      setSnackbar({
+        open: true,
+        message: `"${islem.marka}" markası için şablon düzeni kaydedildi! Tüm işlemlerde bu düzen kullanılacak.`,
+        severity: 'success'
+      });
+    } catch (error: any) {
+      console.error('❌ Yazıcı ayarları kaydetme hatası:', error);
+      console.error('Hata detayı:', error.response?.data);
+      setSnackbar({
+        open: true,
+        message: 'Ayarlar kaydedilemedi! ' + (error.response?.data?.message || ''),
+        severity: 'error'
+      });
+    }
   };
 
-  const handleReset = () => {
+  const handleReset = async () => {
     if (!isAdmin) {
       setSnackbar({
         open: true,
@@ -328,13 +394,23 @@ const PrintEditor: React.FC<PrintEditorProps> = ({ open, onClose, islem }) => {
     
     const defaultFields = getDefaultFields();
     setFields(defaultFields);
-    const storageKey = getStorageKey();
-    localStorage.removeItem(storageKey);
-    setSnackbar({
-      open: true,
-      message: 'Varsayılan ayarlara sıfırlandı!',
-      severity: 'info'
-    });
+    const marka = getStorageKey();
+    
+    try {
+      await api.delete(`/printer-settings/${marka}`);
+      setSnackbar({
+        open: true,
+        message: 'Varsayılan ayarlara sıfırlandı! Tüm bilgisayarlarda geçerli olacak.',
+        severity: 'info'
+      });
+    } catch (error) {
+      console.error('Yazıcı ayarları silme hatası:', error);
+      setSnackbar({
+        open: true,
+        message: 'Ayarlar sıfırlandı ancak sunucudan silinemedi!',
+        severity: 'warning'
+      });
+    }
   };
 
   const handleCloseSnackbar = () => {
@@ -408,77 +484,15 @@ const PrintEditor: React.FC<PrintEditorProps> = ({ open, onClose, islem }) => {
     }
   };
 
-  useEffect(() => {
-    // Değerler değiştiğinde (yeni islem geldiğinde) güncel değerleri yükle
-    if (open) {
-      const defaultFields = getDefaultFields();
-      const storageKey = getStorageKey();
-      const savedConfig = localStorage.getItem(storageKey);
-      
-      let fieldsToSet: FieldConfig[] = [];
-      
-      if (savedConfig) {
-        try {
-          const savedFields: Array<{ id: string; position: Position }> = JSON.parse(savedConfig);
-          // Sadece kaydedilmiş ID'lere sahip alanları göster
-          // Silinmiş alanlar (savedFields'de olmayanlar) gözükmeyecek
-          const restoredFields = savedFields
-            .map(sf => {
-              const defaultField = defaultFields.find(df => df.id === sf.id);
-              return defaultField ? { ...defaultField, position: sf.position } : null;
-            })
-            .filter((f): f is FieldConfig => f !== null);
-          
-          fieldsToSet = restoredFields;
-        } catch {
-          fieldsToSet = defaultFields;
-        }
-      } else {
-        fieldsToSet = defaultFields;
-      }
-      
-      // MEFA TEKNİK alanlarını her zaman ekle (eğer yoksa)
-      const hasMefa = fieldsToSet.some(f => f.id === 'mefa');
-      const hasTeknik = fieldsToSet.some(f => f.id === 'teknik');
-      const hasMefaTelefon = fieldsToSet.some(f => f.id === 'mefa_telefon');
-      
-      if (!hasMefa) {
-        fieldsToSet.push({ 
-          id: 'mefa', 
-          label: 'MEFA', 
-          value: 'MEFA', 
-          position: { left: 120, top: 5 }
-        });
-      }
-      
-      if (!hasTeknik) {
-        fieldsToSet.push({ 
-          id: 'teknik', 
-          label: 'TEKNİK', 
-          value: 'TEKNİK', 
-          position: { left: 145, top: 5 }
-        });
-      }
-      
-      if (!hasMefaTelefon) {
-        fieldsToSet.push({ 
-          id: 'mefa_telefon', 
-          label: 'MEFA Telefon', 
-          value: '0212 569 64 64', 
-          position: { left: 120, top: 10 }
-        });
-      }
-      
-      setFields(fieldsToSet);
-    }
-  }, [open, islem]);
-
   return (
     <Dialog open={open} onClose={onClose} maxWidth="xl" fullWidth>
       <DialogTitle>
         <Box display="flex" justifyContent="space-between" alignItems="center">
           <Box>
             <Typography variant="h6">Yazdırma Şablonu Düzenle</Typography>
+            <Typography variant="caption" color="primary" fontWeight="bold">
+              Marka: {islem.marka || 'Bilinmiyor'} {isLoading && '(Yükleniyor...)'}
+            </Typography>
             <Typography variant="caption" color="primary" fontWeight="bold">
               Marka: {islem.marka || 'Bilinmiyor'}
             </Typography>

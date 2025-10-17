@@ -141,6 +141,16 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
     }
   }, [montajlar, aksesuarlar]);
 
+  // İlçeler yüklendiğinde islem varsa ilçe ID'sini set et
+  useEffect(() => {
+    if (islem && ilceler.length > 0) {
+      const ilce = ilceler.find(i => i.isim === islem.ilce);
+      if (ilce) {
+        setSelectedIlceId(ilce.ilce_id);
+      }
+    }
+  }, [ilceler, islem]);
+
   useEffect(() => {
     if (islem) {
       // Düzenleme modu - formu direkt göster
@@ -166,7 +176,7 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
         yapilan_islem: islem.yapilan_islem || '',
         tutar: islem.tutar || 0,
         // İş durumunu o anki haliyle getir (büyük harfse küçüğe çevir)
-        is_durumu: islem.is_durumu?.toLowerCase() || 'acik',
+        is_durumu: (islem.is_durumu?.toLowerCase() as 'acik' | 'parca_bekliyor' | 'tamamlandi' | 'iptal') || 'acik',
       });
       
       // Yapılan işlem alanından checkbox'ları otomatik işaretle
@@ -178,6 +188,8 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
       setPhoneNumber('');
       setSelectedMontajlar([]);
       setSelectedAksesuarlar([]);
+      setSelectedIlceId(null); // İlçeyi de reset et
+      setMahalleler([]); // Mahalleleri temizle
       setFormData({
         ad_soyad: '',
         ilce: '',
@@ -282,10 +294,8 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
       }
     }
     
-    // Manuel yapılan işlem varsa ekle
-    if (formData.yapilan_islem && formData.yapilan_islem.trim()) {
-      parts.push(formData.yapilan_islem.trim());
-    }
+    // Manuel yapılan işlem ARTIK OTOMATİK EKLENMİYOR
+    // Sadece montaj ve aksesuar seçimleri yapılan işlem olarak kaydedilir
     
     return parts.join(' + ');
   };
@@ -303,6 +313,9 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
         value = cleaned;
         setFormData({ ...formData, [field]: value });
       }
+    } else if (field === 'is_durumu') {
+      // İş durumu için büyük harf dönüşümü YAPMA (küçük harf kalmalı)
+      setFormData({ ...formData, [field]: value as 'acik' | 'parca_bekliyor' | 'tamamlandi' | 'iptal' });
     } else {
       // Tüm text inputlar için büyük harf dönüşümü
       value = value.toLocaleUpperCase('tr-TR');
@@ -435,32 +448,36 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
   };
 
   const handleConfirmTamamla = async () => {
-    // Zorunlu alan kontrolü
-    if (!formData.teknisyen_ismi || formData.teknisyen_ismi.trim() === '') {
-      showSnackbar('Teknisyen İsmi alanı zorunludur!', 'error');
-      return;
-    }
+    // İptal durumu değilse zorunlu alan kontrolü
+    if (formData.is_durumu !== 'iptal') {
+      if (!formData.teknisyen_ismi || formData.teknisyen_ismi.trim() === '') {
+        showSnackbar('Teknisyen İsmi alanı zorunludur!', 'error');
+        return;
+      }
 
-    const yapilanIslemText = buildYapilanIslem();
-    
-    if (!yapilanIslemText || yapilanIslemText.trim() === '') {
-      showSnackbar('Yapılan İşlem alanı zorunludur!', 'error');
-      return;
+      const yapilanIslemText = buildYapilanIslem();
+      
+      if (!yapilanIslemText || yapilanIslemText.trim() === '') {
+        showSnackbar('Yapılan İşlem alanı zorunludur!', 'error');
+        return;
+      }
     }
 
     // Tamamlama modalındaki bilgileri kaydet
+    const yapilanIslemText = buildYapilanIslem();
     const updatedData = {
       ...formData,
-      yapilan_islem: yapilanIslemText,
+      yapilan_islem: yapilanIslemText || formData.yapilan_islem,
       // is_durumu formData'dan alınacak (kullanıcının seçtiği değer)
     };
     
     try {
       if (islem) {
         await islemService.update(islem.id, updatedData);
-        const statusMessage = formData.is_durumu === 'tamamlandi' 
-          ? 'İşlem başarıyla tamamlandı!' 
-          : 'İşlem başarıyla güncellendi!';
+        const statusMessage = 
+          formData.is_durumu === 'tamamlandi' ? 'İşlem başarıyla tamamlandı!' :
+          formData.is_durumu === 'iptal' ? 'İşlem iptal edildi!' :
+          'İşlem başarıyla güncellendi!';
         showSnackbar(statusMessage, 'success');
       }
       setShowTamamlaConfirm(false);
@@ -752,6 +769,7 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
           </Grid>
           <Grid item xs={12} sm={6}>
             <Autocomplete
+              key={selectedIlceId || 'no-ilce'}
               size="small"
               options={mahalleler}
               getOptionLabel={(option) => option.isim}
@@ -1301,7 +1319,7 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
                 renderInput={(params) => (
                   <TextField
                     {...params}
-                    required
+                    required={formData.is_durumu !== 'iptal'}
                     fullWidth
                     size="small"
                     label="Teknisyen İsmi"
@@ -1343,10 +1361,10 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
               />
             </Grid>
 
-            {/* Yapılan İşlem - Zorunlu */}
+            {/* Yapılan İşlem - İptal değilse zorunlu */}
             <Grid item xs={12}>
               <TextField
-                required
+                required={formData.is_durumu !== 'iptal'}
                 fullWidth
                 size="small"
                 multiline
@@ -1370,6 +1388,7 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
                 <MenuItem value="acik">Açık</MenuItem>
                 <MenuItem value="parca_bekliyor">Parça Bekliyor</MenuItem>
                 <MenuItem value="tamamlandi">Tamamlandı</MenuItem>
+                <MenuItem value="iptal">İptal</MenuItem>
               </TextField>
             </Grid>
           </Grid>

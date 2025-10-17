@@ -14,7 +14,7 @@ import { useAuth } from '../context/AuthContext';
 interface IslemFiltersProps {
   islemler: Islem[];
   onFilterChange: (filtered: Islem[]) => void;
-  statusFilter?: 'all' | 'acik' | 'parca_bekliyor' | 'tamamlandi';
+  statusFilter?: 'all' | 'acik' | 'parca_bekliyor' | 'tamamlandi' | 'iptal';
   dateFilter?: string;
   showTodayOnly?: boolean;
   showYazdirilmamis?: boolean; // Yazdırılmamış işler filtresi
@@ -39,7 +39,6 @@ const IslemFilters: React.FC<IslemFiltersProps> = ({
   const [selectedMontajlar, setSelectedMontajlar] = useState<string[]>([]);
   const [selectedAksesuarlar, setSelectedAksesuarlar] = useState<string[]>([]);
   const [filteredTutar, setFilteredTutar] = useState<number>(0);
-  const [localDateFilter, setLocalDateFilter] = useState<string>('');
   
   // Tarih aralığı filtreleri (sadece admin için Montaj/Aksesuar ile birlikte)
   const [startDate, setStartDate] = useState<string>('');
@@ -68,7 +67,7 @@ const IslemFilters: React.FC<IslemFiltersProps> = ({
   useEffect(() => {
     applyFilters();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedMontajlar, selectedAksesuarlar, localDateFilter, islemler, statusFilter, dateFilter, showTodayOnly, showYazdirilmamis, startDate, endDate]);
+  }, [selectedMontajlar, selectedAksesuarlar, islemler, statusFilter, dateFilter, showTodayOnly, showYazdirilmamis, startDate, endDate]);
 
   const applyFilters = () => {
     let filtered = [...islemler];
@@ -152,24 +151,6 @@ const IslemFilters: React.FC<IslemFiltersProps> = ({
       console.log('✅ Tarih filtresinden geçen işlem sayısı:', filtered.length);
     }
 
-    // Yerel tarih filtresi (IslemFilters'daki tarih picker'dan)
-    if (localDateFilter) {
-      const selectedDate = new Date(localDateFilter);
-      selectedDate.setHours(0, 0, 0, 0);
-      
-      filtered = filtered.filter((islem) => {
-        try {
-          const islemDate = new Date(islem.full_tarih);
-          islemDate.setHours(0, 0, 0, 0);
-          
-          return islemDate.getTime() === selectedDate.getTime();
-        } catch (error) {
-          console.error('❌ Tarih parse hatası:', islem.full_tarih, error);
-          return false;
-        }
-      });
-    }
-
     // StatsCard'dan gelen durum filtresi
     if (statusFilter !== 'all') {
       filtered = filtered.filter((islem) => islem.is_durumu === statusFilter);
@@ -235,8 +216,8 @@ const IslemFilters: React.FC<IslemFiltersProps> = ({
                 {...params} 
                 placeholder="Montaj..." 
                 sx={{ 
-                  '& .MuiInputBase-root': { fontSize: '0.75rem' },
-                  '& .MuiInputBase-input': { py: 0.75, px: 1 }
+                  '& .MuiInputBase-root': { fontSize: '0.65rem' },
+                  '& .MuiInputBase-input': { py: 0.5, px: 0.7 }
                 }} 
               />
             )}
@@ -249,11 +230,11 @@ const IslemFilters: React.FC<IslemFiltersProps> = ({
                   size="small"
                   color="primary"
                   variant="outlined"
-                  sx={{ fontSize: '0.7rem', height: '18px' }}
+                  sx={{ fontSize: '0.6rem', height: '16px' }}
                 />
               ))
             }
-            sx={{ width: '180px' }}
+            sx={{ width: '140px' }}
           />
 
           <Autocomplete
@@ -267,8 +248,8 @@ const IslemFilters: React.FC<IslemFiltersProps> = ({
                 {...params} 
                 placeholder="Aksesuar..." 
                 sx={{ 
-                  '& .MuiInputBase-root': { fontSize: '0.75rem' },
-                  '& .MuiInputBase-input': { py: 0.75, px: 1 }
+                  '& .MuiInputBase-root': { fontSize: '0.65rem' },
+                  '& .MuiInputBase-input': { py: 0.5, px: 0.7 }
                 }} 
               />
             )}
@@ -281,40 +262,51 @@ const IslemFilters: React.FC<IslemFiltersProps> = ({
                   size="small"
                   color="secondary"
                   variant="outlined"
-                  sx={{ fontSize: '0.7rem', height: '18px' }}
+                  sx={{ fontSize: '0.6rem', height: '16px' }}
                 />
               ))
             }
-            sx={{ width: '180px' }}
+            sx={{ width: '140px' }}
           />
           
           {/* Tarih Aralığı Filtreleri - Montaj/Aksesuar için */}
-          <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center' }}>
-            <input
-              type="date"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-              style={{
-                fontSize: '0.65rem',
-                padding: '4px 6px',
-                border: '1px solid #0D3282',
-                borderRadius: '4px',
-                outline: 'none',
-              }}
-            />
-            <span style={{ fontSize: '0.7rem', color: '#666' }}>-</span>
-            <input
-              type="date"
-              value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
-              style={{
-                fontSize: '0.65rem',
-                padding: '4px 6px',
-                border: '1px solid #0D3282',
-                borderRadius: '4px',
-                outline: 'none',
-              }}
-            />
+          <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'flex-end' }}>
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.2 }}>
+              <Typography sx={{ fontSize: '0.6rem', color: '#0D3282', fontWeight: 600, lineHeight: 1 }}>
+                Başlangıç Tarihi
+              </Typography>
+              <input
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                style={{
+                  fontSize: '0.65rem',
+                  padding: '4px 6px',
+                  border: '1px solid #0D3282',
+                  borderRadius: '4px',
+                  outline: 'none',
+                  width: '115px',
+                }}
+              />
+            </Box>
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.2 }}>
+              <Typography sx={{ fontSize: '0.6rem', color: '#0D3282', fontWeight: 600, lineHeight: 1 }}>
+                Bitiş Tarihi
+              </Typography>
+              <input
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                style={{
+                  fontSize: '0.65rem',
+                  padding: '4px 6px',
+                  border: '1px solid #0D3282',
+                  borderRadius: '4px',
+                  outline: 'none',
+                  width: '115px',
+                }}
+              />
+            </Box>
             {(startDate || endDate) && (
               <Button
                 variant="text"
@@ -339,7 +331,7 @@ const IslemFilters: React.FC<IslemFiltersProps> = ({
       )}
       
       {/* Kayıt sayısı ve tutar */}
-      {(selectedMontajlar.length > 0 || selectedAksesuarlar.length > 0 || localDateFilter) && (
+      {(selectedMontajlar.length > 0 || selectedAksesuarlar.length > 0 || startDate || endDate) && (
         <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
           <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
             {filteredCount}/{islemler.length}

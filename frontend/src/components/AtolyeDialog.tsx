@@ -71,7 +71,11 @@ const AtolyeDialog: React.FC<AtolyeDialogProps> = ({ open, onClose, atolyeId }) 
     try {
       const response = await api.get('/atolye');
       const allAtolyeList = response.data;
-      setNextSiraNo(allAtolyeList.length + 1);
+      // En yüksek ID'yi bul ve +1 yap (silinen kayıtlar olabilir)
+      const maxId = allAtolyeList.length > 0 
+        ? Math.max(...allAtolyeList.map((item: Atolye) => item.id)) 
+        : 0;
+      setNextSiraNo(maxId + 1);
     } catch (error) {
       console.error('Sıra numarası alınamadı:', error);
     }
