@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -68,6 +68,8 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
   const [phoneNumber, setPhoneNumber] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [markaUyari, setMarkaUyari] = useState<string>(''); // Marka uyarı mesajı
+  const [ilceInputValue, setIlceInputValue] = useState('');
+  const [mahalleInputValue, setMahalleInputValue] = useState('');
   const [formData, setFormData] = useState<IslemUpdateDto>({
     ad_soyad: '',
     ilce: '',
@@ -156,6 +158,8 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
       // Düzenleme modu - formu direkt göster
       setShowForm(true);
       setShowPhoneQuery(false);
+      setIlceInputValue(islem.ilce);
+      setMahalleInputValue(islem.mahalle);
       setFormData({
         ad_soyad: islem.ad_soyad,
         ilce: islem.ilce,
@@ -190,6 +194,8 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
       setSelectedAksesuarlar([]);
       setSelectedIlceId(null); // İlçeyi de reset et
       setMahalleler([]); // Mahalleleri temizle
+      setIlceInputValue('');
+      setMahalleInputValue('');
       setFormData({
         ad_soyad: '',
         ilce: '',
@@ -361,20 +367,33 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
     }
   };
 
-  const handleUseExistingData = () => {
+  const handleUseExistingData = async () => {
     if (existingRecord) {
+      // Önce ilçeyi bul ve set et (mahalleler yüklensin diye)
+      const ilce = ilceler.find(i => i.isim === existingRecord.ilce);
+      if (ilce) {
+        setSelectedIlceId(ilce.ilce_id);
+        // Mahalleleri yükle
+        try {
+          const response = await api.get<{ mahalle_id: number; isim: string }[]>(`/ilceler/${ilce.ilce_id}/mahalleler`);
+          setMahalleler(response.data);
+        } catch (error) {
+          console.error('Mahalleler yüklenirken hata:', error);
+        }
+      }
+      
       setFormData({
-        ad_soyad: existingRecord.ad_soyad,
-        ilce: existingRecord.ilce,
-        mahalle: existingRecord.mahalle,
-        cadde: existingRecord.cadde,
-        sokak: existingRecord.sokak,
-        kapi_no: existingRecord.kapi_no,
+        ad_soyad: existingRecord.ad_soyad || '',
+        ilce: existingRecord.ilce || '',
+        mahalle: existingRecord.mahalle || '',
+        cadde: existingRecord.cadde || '',
+        sokak: existingRecord.sokak || '',
+        kapi_no: existingRecord.kapi_no || '',
         apartman_site: existingRecord.apartman_site || '',
         blok_no: existingRecord.blok_no || '',
         daire_no: existingRecord.daire_no || '',
         sabit_tel: existingRecord.sabit_tel || '',
-        cep_tel: existingRecord.cep_tel,
+        cep_tel: existingRecord.cep_tel || '',
         yedek_tel: existingRecord.yedek_tel || '',
         urun: existingRecord.urun || '',
         marka: existingRecord.marka || '',
@@ -693,6 +712,7 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
               label="Ad Soyad"
               value={formData.ad_soyad}
               onChange={handleChange('ad_soyad')}
+              autoFocus
             />
           </Grid>
           <Grid item xs={12} sm={6}>
@@ -701,6 +721,7 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
               options={ilceler}
               getOptionLabel={(option) => option.isim}
               value={ilceler.find(i => i.isim === formData.ilce) || null}
+              inputValue={ilceInputValue}
               filterOptions={(options, state) => {
                 // Eğer input boşsa tüm seçenekleri göster
                 if (!state.inputValue) return options;
@@ -714,6 +735,7 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
               onChange={(_, newValue) => {
                 setFormData({ ...formData, ilce: newValue?.isim || '', mahalle: '' });
                 setSelectedIlceId(newValue?.ilce_id || null);
+                setIlceInputValue(newValue?.isim || '');
               }}
               onInputChange={(_, value, reason) => {
                 // Kullanıcı yazarken filtrelenen seçenekleri kontrol et
@@ -721,11 +743,21 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
                   const filtered = ilceler.filter(ilce => 
                     ilce.isim.toLocaleLowerCase('tr-TR').includes(value.toLocaleLowerCase('tr-TR'))
                   );
-                  // Eğer tek bir seçenek kaldıysa otomatik seç (blur YAPMA - kullanıcı TAB ile geçecek)
+                  
+                  // Eğer eşleşme varsa ilk eşleşeni otomatik seç
                   if (filtered.length === 1 && value.length > 0) {
                     setFormData({ ...formData, ilce: filtered[0].isim, mahalle: '' });
                     setSelectedIlceId(filtered[0].ilce_id);
+                    setIlceInputValue(filtered[0].isim); // Input'u tamamlanmış haliyle set et
+                  } else if (filtered.length > 1) {
+                    // Birden fazla eşleşme varsa input'u kullanıcının yazdığı ile güncel tut
+                    setIlceInputValue(value);
+                  } else if (filtered.length === 0) {
+                    // Eşleşme yoksa input'u değiştirme, son geçerli değer kalsın
+                    // Hiçbir şey yapma
                   }
+                } else if (reason === 'reset') {
+                  setIlceInputValue(value);
                 }
               }}
               autoHighlight
@@ -774,6 +806,7 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
               options={mahalleler}
               getOptionLabel={(option) => option.isim}
               value={mahalleler.find(m => m.isim === formData.mahalle) || null}
+              inputValue={mahalleInputValue}
               filterOptions={(options, state) => {
                 // Eğer input boşsa tüm seçenekleri göster
                 if (!state.inputValue) return options;
@@ -786,6 +819,7 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
               }}
               onChange={(_, newValue) => {
                 setFormData({ ...formData, mahalle: newValue?.isim || '' });
+                setMahalleInputValue(newValue?.isim || '');
               }}
               onInputChange={(_, value, reason) => {
                 // Kullanıcı yazarken filtrelenen seçenekleri kontrol et
@@ -793,11 +827,20 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
                   const filtered = mahalleler.filter(mahalle => 
                     mahalle.isim.toLocaleLowerCase('tr-TR').includes(value.toLocaleLowerCase('tr-TR'))
                   );
-                  // Eğer tek bir seçenek kaldıysa otomatik seç (blur YAPMA - kullanıcı TAB ile geçecek)
+                  
+                  // Eğer eşleşme varsa ilk eşleşeni otomatik seç
                   if (filtered.length === 1 && value.length > 0) {
                     setFormData({ ...formData, mahalle: filtered[0].isim });
+                    setMahalleInputValue(filtered[0].isim); // Input'u tamamlanmış haliyle set et
+                  } else if (filtered.length > 1) {
+                    // Birden fazla eşleşme varsa input'u kullanıcının yazdığı ile güncel tut
+                    setMahalleInputValue(value);
+                  } else if (filtered.length === 0) {
+                    // Eşleşme yoksa input'u değiştirme, son geçerli değer kalsın
+                    // Hiçbir şey yapma
                   }
-                  // Eğer hiç eşleşme yoksa formData'dan mahalle'yi temizleme (kullanıcı hala yazıyor olabilir)
+                } else if (reason === 'reset') {
+                  setMahalleInputValue(value);
                 }
               }}
               autoHighlight

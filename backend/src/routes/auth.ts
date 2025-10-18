@@ -66,7 +66,7 @@ router.post('/login', async (req: Request, res: Response): Promise<void> => {
 
     // Token oluştur
     const token = jwt.sign(
-      { id: user.rows[0].id, username: user.rows[0].username },
+      { id: user.rows[0].id, username: user.rows[0].username, role: 'user' },
       process.env.JWT_SECRET || '',
       { expiresIn: '24h' }
     );
@@ -76,7 +76,8 @@ router.post('/login', async (req: Request, res: Response): Promise<void> => {
       token,
       user: {
         id: user.rows[0].id,
-        username: user.rows[0].username
+        username: user.rows[0].username,
+        role: 'user'
       }
     });
   } catch (error) {

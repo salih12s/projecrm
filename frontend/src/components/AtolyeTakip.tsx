@@ -655,15 +655,17 @@ const AtolyeTakip: React.FC = () => {
                   <Divider />
                   
                   <CardActions sx={{ justifyContent: 'flex-end', py: 0.5 }}>
-                    <Tooltip title="Düzenle">
-                      <IconButton 
-                        size="small" 
-                        onClick={() => handleEdit(atolye.id)}
-                        sx={{ bgcolor: 'primary.light' }}
-                      >
-                        <Edit sx={{ fontSize: '1rem', color: 'white' }} />
-                      </IconButton>
-                    </Tooltip>
+                    {!isBayi && (
+                      <Tooltip title="Düzenle">
+                        <IconButton 
+                          size="small" 
+                          onClick={() => handleEdit(atolye.id)}
+                          sx={{ bgcolor: 'primary.light' }}
+                        >
+                          <Edit sx={{ fontSize: '1rem', color: 'white' }} />
+                        </IconButton>
+                      </Tooltip>
+                    )}
                     {isAdmin && (
                       <Tooltip title="Sil">
                         <IconButton 

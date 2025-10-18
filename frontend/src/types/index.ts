@@ -1,7 +1,7 @@
 export interface User {
   id: number;
   username: string;
-  role?: 'admin' | 'bayi';
+  role?: 'admin' | 'user' | 'bayi';
   bayiIsim?: string;
 }
 

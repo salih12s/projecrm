@@ -78,8 +78,10 @@ const Dashboard: React.FC = () => {
   const [activeTab, setActiveTab] = useState(0);
   const [confirmDialog, setConfirmDialog] = useState<{ open: boolean; islem: Islem | null }>({ open: false, islem: null });
   
+  // Güvenli rol kontrolü - eğer user yoksa veya role tanımlı değilse en kısıtlı mod
   const isBayi = user?.role === 'bayi';
   const isAdmin = user?.role === 'admin';
+  const isKullanici = user?.role === 'user';
 
   useEffect(() => {
     // Socket.IO bağlantısı - Backend Railway'de, frontend Hostinger'da
@@ -288,11 +290,15 @@ const Dashboard: React.FC = () => {
     setMobileDrawerOpen(false);
   };
 
-  const adminMenuItems = [
+  // Kullanıcı rolüne göre menü öğeleri
+  const menuItems = [
     { label: 'Ana Sayfa', icon: <Home />, index: 0 },
-    { label: 'Atölye Takip', icon: <Build />, index: 1 },
-    { label: 'Müşteri Geçmişi', icon: <History />, index: 2 },
-    { label: 'Yönetim', icon: <AdminPanelSettings />, index: 3 },
+    { label: 'Müşteri Geçmişi', icon: <History />, index: 1 },
+    { label: 'Atölye Takip', icon: <Build />, index: 2 },
+    ...(isAdmin ? [
+      { label: 'Tanımlamalar', icon: <SettingsIcon />, index: 3 },
+      { label: 'Yönetim', icon: <AdminPanelSettings />, index: 4 }
+    ] : [])
   ];
 
   return (
@@ -385,7 +391,7 @@ const Dashboard: React.FC = () => {
           }}
         >
           <List>
-            {adminMenuItems.map((item) => (
+            {menuItems.map((item) => (
               <ListItem
                 button
                 key={item.index}
@@ -445,30 +451,37 @@ const Dashboard: React.FC = () => {
             }}
           >
             <Tab 
+              value={0}
               icon={<Home sx={{ fontSize: '1.1rem' }} />} 
               iconPosition="start" 
               label="Ana Sayfa" 
             />
             <Tab 
+              value={1}
               icon={<History sx={{ fontSize: '1.1rem' }} />} 
               iconPosition="start" 
               label="Müşteri Geçmişi" 
             />
             <Tab 
+              value={2}
               icon={<Build sx={{ fontSize: '1.1rem' }} />} 
               iconPosition="start" 
               label="Atölye Takip" 
             />
-            <Tab 
-              icon={<SettingsIcon sx={{ fontSize: '1.1rem' }} />} 
-              iconPosition="start" 
-              label="Tanımlamalar" 
-            />
             {isAdmin && (
               <Tab 
-                icon={<AccountCircle sx={{ fontSize: '1.1rem' }} />} 
+                value={3}
+                icon={<SettingsIcon sx={{ fontSize: '1.1rem' }} />} 
                 iconPosition="start" 
-                label="Kullanıcı Yönetimi" 
+                label="Tanımlamalar" 
+              />
+            )}
+            {isAdmin && (
+              <Tab 
+                value={4}
+                icon={<AdminPanelSettings sx={{ fontSize: '1.1rem' }} />} 
+                iconPosition="start" 
+                label="Yönetim" 
               />
             )}
           </Tabs>

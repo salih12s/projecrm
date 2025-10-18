@@ -4,15 +4,50 @@ import authMiddleware from '../middleware/auth';
 
 const router = Router();
 
+// Ortak marka grupları - her grup kendi içinde aynı config'i paylaşır
+const BRAND_GROUPS = [
+  // Grup 1: Ferre ailesi
+  { brands: ['Ferre', 'Femaş', 'General', 'Vorne'], master: 'Ferre' },
+  // Grup 2: Alveus ailesi
+  { brands: ['Alveus', 'Alpina', 'Cucinox', 'Exep', 'Goodwest', 'Newton', 'Punto', 'White daisy'], master: 'Alveus' },
+  // Grup 3: Daxom ailesi
+  { brands: ['Daxom', 'Termomex'], master: 'Daxom' },
+  // Grup 4: Çetintaş ailesi
+  { brands: ['Çetintaş', 'Evii'], master: 'Çetintaş' },
+  // Grup 5: Eminçelik ailesi
+  { brands: ['Eminçelik', 'Elleti'], master: 'Eminçelik' },
+  // Grup 6: Minisan ailesi
+  { brands: ['Minisan', 'Sunday', 'Maximus'], master: 'Minisan' },
+  // Grup 7: İtimat ailesi
+  { brands: ['İtimat', 'Woox'], master: 'İtimat' }
+];
+
+// Marka için master marka ismini bul (gruplardan birindeyse master'ını döndür)
+function getMasterBrand(marka: string): string {
+  const upperMarka = marka.toUpperCase();
+  
+  // Hangi grupta olduğunu kontrol et
+  for (const group of BRAND_GROUPS) {
+    const isInGroup = group.brands.some(b => b.toUpperCase() === upperMarka);
+    if (isInGroup) {
+      return group.master;
+    }
+  }
+  
+  // Hiçbir grupta değilse kendi adını kullan
+  return marka;
+}
+
 // Marka için yazıcı ayarlarını getir
 router.get('/:marka', authMiddleware, async (req: Request, res: Response): Promise<void> => {
   try {
     const { marka } = req.params;
-    console.log('📥 Yazıcı ayarları isteniyor:', marka);
+    const masterBrand = getMasterBrand(marka);
+    console.log('📥 Yazıcı ayarları isteniyor:', marka, '→ Master:', masterBrand);
     
     const result = await pool.query(
       'SELECT config FROM printer_settings WHERE marka = $1',
-      [marka]
+      [masterBrand]
     );
 
     if (result.rows.length > 0) {
@@ -32,9 +67,10 @@ router.get('/:marka', authMiddleware, async (req: Request, res: Response): Promi
 router.post('/:marka', authMiddleware, async (req: Request, res: Response): Promise<void> => {
   try {
     const { marka } = req.params;
+    const masterBrand = getMasterBrand(marka);
     const config = req.body;
 
-    console.log('📝 Yazıcı ayarları kaydediliyor:', { marka, config });
+    console.log('📝 Yazıcı ayarları kaydediliyor:', { marka, masterBrand, config });
 
     const result = await pool.query(
       `INSERT INTO printer_settings (marka, config, updated_at)
@@ -42,10 +78,10 @@ router.post('/:marka', authMiddleware, async (req: Request, res: Response): Prom
        ON CONFLICT (marka) 
        DO UPDATE SET config = $2, updated_at = CURRENT_TIMESTAMP
        RETURNING *`,
-      [marka, JSON.stringify(config)]
+      [masterBrand, JSON.stringify(config)]
     );
 
-    console.log('✅ Kaydedildi:', result.rows[0]);
+    console.log('✅ Kaydedildi (master brand):', result.rows[0]);
     res.json(result.rows[0]);
   } catch (error) {
     console.error('❌ Yazıcı ayarları kaydetme hatası:', error);
@@ -57,7 +93,8 @@ router.post('/:marka', authMiddleware, async (req: Request, res: Response): Prom
 router.delete('/:marka', authMiddleware, async (req: Request, res: Response): Promise<void> => {
   try {
     const { marka } = req.params;
-    await pool.query('DELETE FROM printer_settings WHERE marka = $1', [marka]);
+    const masterBrand = getMasterBrand(marka);
+    await pool.query('DELETE FROM printer_settings WHERE marka = $1', [masterBrand]);
     res.json({ message: 'Yazıcı ayarları silindi' });
   } catch (error) {
     console.error('Yazıcı ayarları silme hatası:', error);
