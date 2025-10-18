@@ -81,7 +81,6 @@ const Dashboard: React.FC = () => {
   // Güvenli rol kontrolü - eğer user yoksa veya role tanımlı değilse en kısıtlı mod
   const isBayi = user?.role === 'bayi';
   const isAdmin = user?.role === 'admin';
-  const isKullanici = user?.role === 'user';
 
   useEffect(() => {
     // Socket.IO bağlantısı - Backend Railway'de, frontend Hostinger'da
