@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, memo } from 'react';
 import {
   Table,
   TableBody,
@@ -57,6 +57,7 @@ interface IslemTableProps {
   onToggleDurum: (islem: Islem) => void;
   onDelete?: (islem: Islem) => void; // Silme işlemi (sadece admin)
   isAdminMode?: boolean; // Admin için tamamlanan işlemleri de düzenleme izni
+  isBayi?: boolean; // Bayi kullanıcıları için düzenleme/silme işlemlerini gizle
   onFilteredChange?: (filtered: Islem[]) => void; // Filtrelenmiş liste değiştiğinde callback
 }
 
@@ -73,11 +74,11 @@ const IslemTable: React.FC<IslemTableProps> = ({
   onToggleDurum,
   onDelete,
   isAdminMode = false,
+  isBayi = false,
   onFilteredChange,
 }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
-  const [filteredIslemler, setFilteredIslemler] = useState<Islem[]>(islemler);
   const [printEditorOpen, setPrintEditorOpen] = useState(false);
   const [selectedIslemForPrint, setSelectedIslemForPrint] = useState<Islem | null>(null);
   
@@ -129,12 +130,8 @@ const IslemTable: React.FC<IslemTableProps> = ({
     durum: '',
   });
 
-  // Apply filters whenever islemler or filters change
-  useEffect(() => {
-    applyFilters();
-  }, [islemler, filters]);
-
-  const applyFilters = () => {
+  // useMemo ile filtrelemeyi optimize et - sadece islemler veya filters değişince hesapla
+  const filteredIslemler = useMemo(() => {
     let filtered = [...islemler];
 
     // Filter by tarih
@@ -282,35 +279,37 @@ const IslemTable: React.FC<IslemTableProps> = ({
       });
     }
 
-    setFilteredIslemler(filtered);
-    
-    // Filtrelenmiş listeyi parent'a bildir (PDF export için)
+    return filtered;
+  }, [islemler, filters]);
+
+  // Filtrelenmiş liste değiştiğinde parent'a bildir
+  useEffect(() => {
     if (onFilteredChange) {
-      onFilteredChange(filtered);
+      onFilteredChange(filteredIslemler);
     }
-  };
+  }, [filteredIslemler, onFilteredChange]);
 
-  const handleFilterChange = (field: string, value: string) => {
+  const handleFilterChange = useCallback((field: string, value: string) => {
     setFilters((prev) => ({ ...prev, [field]: value }));
-  };
+  }, []);
 
-  const handlePrintClick = (islem: Islem) => {
+  const handlePrintClick = useCallback((islem: Islem) => {
     setSelectedIslemForPrint(islem);
     setPrintEditorOpen(true);
-  };
+  }, []);
 
-  const handlePrintClose = () => {
+  const handlePrintClose = useCallback(() => {
     setPrintEditorOpen(false);
     setSelectedIslemForPrint(null);
-  };
+  }, []);
 
-  const handleClosePrintEditor = () => {
+  const handleClosePrintEditor = useCallback(() => {
     setPrintEditorOpen(false);
     setSelectedIslemForPrint(null);
-  };
+  }, []);
 
   // Yazdırıldı durumunu toggle et
-  const handleToggleYazdirildi = async (islem: Islem, event: React.MouseEvent) => {
+  const handleToggleYazdirildi = useCallback(async (islem: Islem, event: React.MouseEvent) => {
     event.stopPropagation(); // Satır tıklamasını engelle
     try {
       const newYazdirildi = !islem.yazdirildi;
@@ -319,10 +318,10 @@ const IslemTable: React.FC<IslemTableProps> = ({
     } catch (error) {
       console.error('Yazdırıldı durumu güncellenirken hata:', error);
     }
-  };
+  }, []);
 
   // Müşteri Geçmişi fonksiyonları
-  const handleOpenCustomerHistory = async (customerName: string) => {
+  const handleOpenCustomerHistory = useCallback(async (customerName: string) => {
     if (!customerName || customerName.trim() === '') {
       return;
     }
@@ -346,9 +345,9 @@ const IslemTable: React.FC<IslemTableProps> = ({
     } finally {
       setHistoryLoading(false);
     }
-  };
+  }, [islemler]);
 
-  const handleCloseHistoryDialog = () => {
+  const handleCloseHistoryDialog = useCallback(() => {
     setHistoryDialogOpen(false);
     setCustomerHistory([]);
     setFilteredHistory([]);
@@ -370,10 +369,10 @@ const IslemTable: React.FC<IslemTableProps> = ({
       tutar: '',
       durum: '',
     });
-  };
+  }, []);
 
   // Müşteri geçmişi filtreleme fonksiyonu
-  const handleHistoryFilterChange = (field: string, value: string) => {
+  const handleHistoryFilterChange = useCallback((field: string, value: string) => {
     const newFilters = { ...historyFilters, [field]: value };
     setHistoryFilters(newFilters);
 
@@ -409,7 +408,7 @@ const IslemTable: React.FC<IslemTableProps> = ({
     });
 
     setFilteredHistory(filtered);
-  };
+  }, [historyFilters, customerHistory]);
 
   // Sütun sırasını localStorage'dan yükle
   const [columnOrder, setColumnOrder] = useState<string[]>(() => {
@@ -628,67 +627,71 @@ const IslemTable: React.FC<IslemTableProps> = ({
       render: (islem) => (
         <TableCell sx={{ py: 0.1, px: 0.2 }}>
           <Box sx={{ display: 'flex', gap: 0.15 }}>
-            <Tooltip title={
-              islem.is_durumu === 'acik' ? 'Tamamla' : 
-              islem.is_durumu === 'parca_bekliyor' ? (isAdminMode ? 'Parça Bekliyor (Düzenle)' : 'Parça Bekliyor') :
-              islem.is_durumu === 'iptal' ? (isAdminMode ? 'İptal Edildi (Düzenle)' : 'İptal Edildi') :
-              (isAdminMode ? 'Tamamlandı' : 'Tamamlandı - Durum değiştirilemez')
-            }>
-              <span>
-                <IconButton 
-                  size="small" 
-                  onClick={() => onToggleDurum(islem)}
-                  disabled={!isAdminMode && (islem.is_durumu === 'tamamlandi' || islem.is_durumu === 'iptal')}
-                  sx={{ 
-                    bgcolor: islem.is_durumu === 'acik' ? 'warning.light' : 
-                             islem.is_durumu === 'parca_bekliyor' ? 'info.light' :
-                             islem.is_durumu === 'iptal' ? 'error.light' :
-                             (isAdminMode ? 'success.light' : 'grey.300'),
-                    width: 20,
-                    height: 20,
-                    '&:hover': {
-                      bgcolor: islem.is_durumu === 'acik' ? 'warning.main' : 
-                               islem.is_durumu === 'parca_bekliyor' ? 'info.main' :
-                               islem.is_durumu === 'iptal' ? 'error.main' :
-                               (isAdminMode ? 'success.main' : 'grey.300'),
-                    },
-                    '&.Mui-disabled': {
-                      bgcolor: 'grey.300',
-                      opacity: 0.6,
-                    }
-                  }}
-                >
-                  <Check sx={{ color: islem.is_durumu === 'acik' || islem.is_durumu === 'parca_bekliyor' || islem.is_durumu === 'iptal' ? 'white' : (isAdminMode ? 'white' : 'grey.500'), fontSize: '0.7rem' }} />
-                </IconButton>
-              </span>
-            </Tooltip>
-            <Tooltip title={
-              islem.is_durumu === 'acik' || islem.is_durumu === 'parca_bekliyor' ? 'Düzenle' : 
-              islem.is_durumu === 'iptal' ? (isAdminMode ? 'Düzenle (Admin)' : 'İptal edilen işlem düzenlenemez') :
-              (isAdminMode ? 'Düzenle (Admin)' : 'Tamamlanan işlem düzenlenemez')
-            }>
-              <span>
-                <IconButton 
-                  size="small" 
-                  onClick={() => onEdit(islem)}
-                  disabled={!isAdminMode && (islem.is_durumu === 'tamamlandi' || islem.is_durumu === 'iptal')}
-                  sx={{ 
-                    bgcolor: (islem.is_durumu !== 'tamamlandi' && islem.is_durumu !== 'iptal') || isAdminMode ? 'primary.light' : 'grey.300',
-                    width: 20,
-                    height: 20,
-                    '&:hover': {
-                      bgcolor: (islem.is_durumu !== 'tamamlandi' && islem.is_durumu !== 'iptal') || isAdminMode ? 'primary.main' : 'grey.300',
-                    },
-                    '&.Mui-disabled': {
-                      bgcolor: 'grey.300',
-                      opacity: 0.6,
-                    }
-                  }}
-                >
-                  <Edit sx={{ color: (islem.is_durumu !== 'tamamlandi' || isAdminMode) ? 'white' : 'grey.500', fontSize: '0.7rem' }} />
-                </IconButton>
-              </span>
-            </Tooltip>
+            {!isBayi && (
+              <>
+                <Tooltip title={
+                  islem.is_durumu === 'acik' ? 'Tamamla' : 
+                  islem.is_durumu === 'parca_bekliyor' ? (isAdminMode ? 'Parça Bekliyor (Düzenle)' : 'Parça Bekliyor') :
+                  islem.is_durumu === 'iptal' ? (isAdminMode ? 'İptal Edildi (Düzenle)' : 'İptal Edildi') :
+                  (isAdminMode ? 'Tamamlandı' : 'Tamamlandı - Durum değiştirilemez')
+                }>
+                  <span>
+                    <IconButton 
+                      size="small" 
+                      onClick={() => onToggleDurum(islem)}
+                      disabled={!isAdminMode && (islem.is_durumu === 'tamamlandi' || islem.is_durumu === 'iptal')}
+                      sx={{ 
+                        bgcolor: islem.is_durumu === 'acik' ? 'warning.light' : 
+                                 islem.is_durumu === 'parca_bekliyor' ? 'info.light' :
+                                 islem.is_durumu === 'iptal' ? 'error.light' :
+                                 (isAdminMode ? 'success.light' : 'grey.300'),
+                        width: 20,
+                        height: 20,
+                        '&:hover': {
+                          bgcolor: islem.is_durumu === 'acik' ? 'warning.main' : 
+                                   islem.is_durumu === 'parca_bekliyor' ? 'info.main' :
+                                   islem.is_durumu === 'iptal' ? 'error.main' :
+                                   (isAdminMode ? 'success.main' : 'grey.300'),
+                        },
+                        '&.Mui-disabled': {
+                          bgcolor: 'grey.300',
+                          opacity: 0.6,
+                        }
+                      }}
+                    >
+                      <Check sx={{ color: islem.is_durumu === 'acik' || islem.is_durumu === 'parca_bekliyor' || islem.is_durumu === 'iptal' ? 'white' : (isAdminMode ? 'white' : 'grey.500'), fontSize: '0.7rem' }} />
+                    </IconButton>
+                  </span>
+                </Tooltip>
+                <Tooltip title={
+                  islem.is_durumu === 'acik' || islem.is_durumu === 'parca_bekliyor' ? 'Düzenle' : 
+                  islem.is_durumu === 'iptal' ? (isAdminMode ? 'Düzenle (Admin)' : 'İptal edilen işlem düzenlenemez') :
+                  (isAdminMode ? 'Düzenle (Admin)' : 'Tamamlanan işlem düzenlenemez')
+                }>
+                  <span>
+                    <IconButton 
+                      size="small" 
+                      onClick={() => onEdit(islem)}
+                      disabled={!isAdminMode && (islem.is_durumu === 'tamamlandi' || islem.is_durumu === 'iptal')}
+                      sx={{ 
+                        bgcolor: (islem.is_durumu !== 'tamamlandi' && islem.is_durumu !== 'iptal') || isAdminMode ? 'primary.light' : 'grey.300',
+                        width: 20,
+                        height: 20,
+                        '&:hover': {
+                          bgcolor: (islem.is_durumu !== 'tamamlandi' && islem.is_durumu !== 'iptal') || isAdminMode ? 'primary.main' : 'grey.300',
+                        },
+                        '&.Mui-disabled': {
+                          bgcolor: 'grey.300',
+                          opacity: 0.6,
+                        }
+                      }}
+                    >
+                      <Edit sx={{ color: (islem.is_durumu !== 'tamamlandi' || isAdminMode) ? 'white' : 'grey.500', fontSize: '0.7rem' }} />
+                    </IconButton>
+                  </span>
+                </Tooltip>
+              </>
+            )}
             <Tooltip title="Müşteri Geçmişi">
               <IconButton 
                 size="small" 
@@ -780,7 +783,7 @@ const IslemTable: React.FC<IslemTableProps> = ({
   }, [columnOrder]);
 
   // Sütun sürükle-bırak işlemi
-  const handleDragEnd = (result: DropResult) => {
+  const handleDragEnd = useCallback((result: DropResult) => {
     if (!result.destination) return;
 
     const items = Array.from(columnOrder);
@@ -788,7 +791,7 @@ const IslemTable: React.FC<IslemTableProps> = ({
     items.splice(result.destination.index, 0, reorderedItem);
 
     setColumnOrder(items);
-  };
+  }, [columnOrder]);
 
   if (loading) {
     return (
@@ -903,39 +906,43 @@ const IslemTable: React.FC<IslemTableProps> = ({
                 <Divider />
                 
                 <CardActions sx={{ justifyContent: 'space-around', py: 0.5 }}>
-                  <Tooltip title={
-                    islem.is_durumu === 'acik' ? 'Tamamla' : 
-                    islem.is_durumu === 'parca_bekliyor' ? (isAdminMode ? 'Parça Bekliyor (Düzenle)' : 'Parça Bekliyor') :
-                    (isAdminMode ? 'Durumu Değiştir (Admin)' : 'Tamamlandı')
-                  }>
-                    <span>
-                      <IconButton 
-                        size="small" 
-                        onClick={() => onToggleDurum(islem)}
-                        disabled={!isAdminMode && (islem.is_durumu === 'tamamlandi' || islem.is_durumu === 'iptal')}
-                        sx={{ 
-                          bgcolor: islem.is_durumu === 'acik' ? 'warning.light' : 
-                                   islem.is_durumu === 'parca_bekliyor' ? 'info.light' :
-                                   islem.is_durumu === 'iptal' ? 'error.light' :
-                                   (isAdminMode ? 'success.light' : 'grey.300'),
-                        }}
-                      >
-                        <CheckCircle sx={{ fontSize: '1rem' }} />
-                      </IconButton>
-                    </span>
-                  </Tooltip>
-                  <Tooltip title="Düzenle">
-                    <span>
-                      <IconButton 
-                        size="small" 
-                        onClick={() => onEdit(islem)}
-                        disabled={!isAdminMode && (islem.is_durumu === 'tamamlandi' || islem.is_durumu === 'iptal')}
-                        sx={{ bgcolor: 'primary.light' }}
-                      >
-                        <Edit sx={{ fontSize: '1rem' }} />
-                      </IconButton>
-                    </span>
-                  </Tooltip>
+                  {!isBayi && (
+                    <>
+                      <Tooltip title={
+                        islem.is_durumu === 'acik' ? 'Tamamla' : 
+                        islem.is_durumu === 'parca_bekliyor' ? (isAdminMode ? 'Parça Bekliyor (Düzenle)' : 'Parça Bekliyor') :
+                        (isAdminMode ? 'Durumu Değiştir (Admin)' : 'Tamamlandı')
+                      }>
+                        <span>
+                          <IconButton 
+                            size="small" 
+                            onClick={() => onToggleDurum(islem)}
+                            disabled={!isAdminMode && (islem.is_durumu === 'tamamlandi' || islem.is_durumu === 'iptal')}
+                            sx={{ 
+                              bgcolor: islem.is_durumu === 'acik' ? 'warning.light' : 
+                                       islem.is_durumu === 'parca_bekliyor' ? 'info.light' :
+                                       islem.is_durumu === 'iptal' ? 'error.light' :
+                                       (isAdminMode ? 'success.light' : 'grey.300'),
+                            }}
+                          >
+                            <CheckCircle sx={{ fontSize: '1rem' }} />
+                          </IconButton>
+                        </span>
+                      </Tooltip>
+                      <Tooltip title="Düzenle">
+                        <span>
+                          <IconButton 
+                            size="small" 
+                            onClick={() => onEdit(islem)}
+                            disabled={!isAdminMode && (islem.is_durumu === 'tamamlandi' || islem.is_durumu === 'iptal')}
+                            sx={{ bgcolor: 'primary.light' }}
+                          >
+                            <Edit sx={{ fontSize: '1rem' }} />
+                          </IconButton>
+                        </span>
+                      </Tooltip>
+                    </>
+                  )}
                   <Tooltip title="Müşteri Geçmişi">
                     <IconButton 
                       size="small" 
@@ -1475,4 +1482,4 @@ const IslemTable: React.FC<IslemTableProps> = ({
   );
 };
 
-export default IslemTable;
+export default memo(IslemTable);

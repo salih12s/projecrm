@@ -275,7 +275,7 @@ const AtolyeDialog: React.FC<AtolyeDialogProps> = ({ open, onClose, atolyeId }) 
       showSnackbar(message, 'error');
     }
   };
-
+  
   return (
     <Dialog open={open} onClose={() => onClose()} maxWidth="md" fullWidth fullScreen={isMobile}>
       <DialogTitle sx={{ textAlign: 'center' }}>

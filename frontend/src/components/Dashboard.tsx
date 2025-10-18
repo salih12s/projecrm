@@ -724,6 +724,7 @@ const Dashboard: React.FC = () => {
               onToggleDurum={handleToggleDurum}
               onDelete={handleDelete}
               isAdminMode={isAdmin}
+              isBayi={isBayi}
               onFilteredChange={handleTableFilterChange}
             />
           </>

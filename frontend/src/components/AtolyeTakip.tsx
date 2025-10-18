@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, memo } from 'react';
 import {
   Box,
   Paper,
@@ -34,7 +34,6 @@ const AtolyeTakip: React.FC = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const [atolyeList, setAtolyeList] = useState<Atolye[]>([]); // Görüntülenen liste (bayi için filtrelenmiş)
-  const [filteredList, setFilteredList] = useState<Atolye[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedAtolyeId, setSelectedAtolyeId] = useState<number | null>(null);
   const [activeStatusFilter, setActiveStatusFilter] = useState<string>(''); // Yeni state
@@ -128,12 +127,7 @@ const AtolyeTakip: React.FC = () => {
     };
   }, [isBayi, bayiIsim]);
 
-  // Apply filters whenever atolyeList or filters change
-  useEffect(() => {
-    applyFilters();
-  }, [atolyeList, filters, activeStatusFilter]);
-
-  const fetchAtolyeList = async () => {
+  const fetchAtolyeList = useCallback(async () => {
     try {
       const response = await api.get('/atolye');
       const allData = response.data;
@@ -151,9 +145,10 @@ const AtolyeTakip: React.FC = () => {
     } catch (error) {
       showSnackbar('Atölye kayıtları yüklenirken hata oluştu', 'error');
     }
-  };
+  }, [isBayi, bayiIsim, showSnackbar]);
 
-  const applyFilters = () => {
+  // useMemo ile filtrelemeyi optimize et - sadece atolyeList, filters veya activeStatusFilter değişince hesapla
+  const filteredList = useMemo(() => {
     let filtered = [...atolyeList];
 
     // Quick status filter (butonlar ile)
@@ -180,28 +175,28 @@ const AtolyeTakip: React.FC = () => {
     // Filter by bayi_adi
     if (filters.bayi_adi) {
       filtered = filtered.filter((item) =>
-        item.bayi_adi.toLowerCase().includes(filters.bayi_adi.toLowerCase())
+        item.bayi_adi?.toLowerCase().includes(filters.bayi_adi.toLowerCase())
       );
     }
 
     // Filter by musteri_ad_soyad
     if (filters.musteri_ad_soyad) {
       filtered = filtered.filter((item) =>
-        item.musteri_ad_soyad.toLowerCase().includes(filters.musteri_ad_soyad.toLowerCase())
+        item.musteri_ad_soyad?.toLowerCase().includes(filters.musteri_ad_soyad.toLowerCase())
       );
     }
 
     // Filter by tel_no
     if (filters.tel_no) {
       filtered = filtered.filter((item) =>
-        item.tel_no.includes(filters.tel_no.replace(/\D/g, ''))
+        item.tel_no?.includes(filters.tel_no.replace(/\D/g, ''))
       );
     }
 
     // Filter by marka
     if (filters.marka) {
       filtered = filtered.filter((item) =>
-        item.marka.toLowerCase().includes(filters.marka.toLowerCase())
+        item.marka?.toLowerCase().includes(filters.marka.toLowerCase())
       );
     }
 
@@ -222,7 +217,7 @@ const AtolyeTakip: React.FC = () => {
     // Filter by sikayet
     if (filters.sikayet) {
       filtered = filtered.filter((item) =>
-        item.sikayet.toLowerCase().includes(filters.sikayet.toLowerCase())
+        item.sikayet?.toLowerCase().includes(filters.sikayet.toLowerCase())
       );
     }
 
@@ -262,24 +257,24 @@ const AtolyeTakip: React.FC = () => {
       });
     }
 
-    setFilteredList(filtered);
-  };
+    return filtered;
+  }, [atolyeList, filters, activeStatusFilter]);
 
-  const handleFilterChange = (field: string, value: string) => {
+  const handleFilterChange = useCallback((field: string, value: string) => {
     setFilters((prev) => ({ ...prev, [field]: value }));
-  };
+  }, []);
 
-  const handleAdd = () => {
+  const handleAdd = useCallback(() => {
     setSelectedAtolyeId(null);
     setDialogOpen(true);
-  };
+  }, []);
 
-  const handleEdit = (id: number) => {
+  const handleEdit = useCallback((id: number) => {
     setSelectedAtolyeId(id);
     setDialogOpen(true);
-  };
+  }, []);
 
-  const handleDelete = async (id: number) => {
+  const handleDelete = useCallback(async (id: number) => {
     if (!window.confirm('Bu kaydı silmek istediğinize emin misiniz?')) return;
 
     try {
@@ -289,15 +284,15 @@ const AtolyeTakip: React.FC = () => {
     } catch (error) {
       showSnackbar('Kayıt silinirken hata oluştu', 'error');
     }
-  };
+  }, [showSnackbar, fetchAtolyeList]);
 
-  const handleDialogClose = (refresh?: boolean) => {
+  const handleDialogClose = useCallback((refresh?: boolean) => {
     setDialogOpen(false);
     setSelectedAtolyeId(null);
     if (refresh) {
       fetchAtolyeList();
     }
-  };
+  }, [fetchAtolyeList]);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -542,7 +537,7 @@ const AtolyeTakip: React.FC = () => {
             >
               Yeni Kayıt
             </Button>
-          )}
+          )}  
         </Box>
 
         {/* Mobil görünüm - Card layout */}
@@ -989,4 +984,4 @@ const AtolyeTakip: React.FC = () => {
   );
 };
 
-export default AtolyeTakip;
+export default memo(AtolyeTakip);
