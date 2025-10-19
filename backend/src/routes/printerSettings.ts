@@ -5,10 +5,17 @@ import authMiddleware from '../middleware/auth';
 const router = Router();
 
 // Türkçe karakterleri doğru normalize et (büyük/küçük harf duyarsız)
+// Tüm Latin harflerini ve Türkçe karakterleri standartlaştır
 function normalizeTurkish(str: string): string {
   return str
-    .toLocaleUpperCase('tr-TR')
-    .trim();
+    .trim()
+    .toUpperCase() // Önce standart büyük harfe çevir
+    .replace(/İ/g, 'I') // Türkçe İ'yi I'ya çevir (tutarlılık için)
+    .replace(/Ş/g, 'S')
+    .replace(/Ğ/g, 'G')
+    .replace(/Ü/g, 'U')
+    .replace(/Ö/g, 'O')
+    .replace(/Ç/g, 'C');
 }
 
 // Ortak marka grupları - her grup kendi içinde aynı config'i paylaşır
