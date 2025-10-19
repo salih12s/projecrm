@@ -4,12 +4,19 @@ import authMiddleware from '../middleware/auth';
 
 const router = Router();
 
+// Türkçe karakterleri doğru normalize et (büyük/küçük harf duyarsız)
+function normalizeTurkish(str: string): string {
+  return str
+    .toLocaleUpperCase('tr-TR')
+    .trim();
+}
+
 // Ortak marka grupları - her grup kendi içinde aynı config'i paylaşır
 const BRAND_GROUPS = [
   // Grup 1: Ferre ailesi
   { brands: ['Ferre', 'Femaş', 'General', 'Vorne'], master: 'Ferre' },
   // Grup 2: Alveus ailesi
-  { brands: ['Alveus', 'Alpina', 'Cucinox', 'Exep', 'Goodwest', 'Newton', 'Punto', 'White daisy'], master: 'Alveus' },
+  { brands: ['Alveus', 'Alpina', 'Cucinox', 'Exep', 'Goodwest', 'Newton', 'Punto', 'White Daisy'], master: 'Alveus' },
   // Grup 3: Daxom ailesi
   { brands: ['Daxom', 'Termomex'], master: 'Daxom' },
   // Grup 4: Çetintaş ailesi
@@ -24,17 +31,17 @@ const BRAND_GROUPS = [
 
 // Marka için master marka ismini bul (gruplardan birindeyse master'ını döndür)
 function getMasterBrand(marka: string): string {
-  const upperMarka = marka.toUpperCase();
+  const normalizedMarka = normalizeTurkish(marka);
   
   // Hangi grupta olduğunu kontrol et
   for (const group of BRAND_GROUPS) {
-    const isInGroup = group.brands.some(b => b.toUpperCase() === upperMarka);
+    const isInGroup = group.brands.some(b => normalizeTurkish(b) === normalizedMarka);
     if (isInGroup) {
       return group.master;
     }
   }
   
-  // Hiçbir grupta değilse kendi adını kullan
+  // Hiçbir grupta değilse kendi adını kullan (orijinal formatıyla)
   return marka;
 }
 

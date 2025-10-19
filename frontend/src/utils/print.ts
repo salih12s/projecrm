@@ -27,9 +27,10 @@ async function printWithPdfTemplate(islem: Islem, templateUrl: string) {
     // İlk sayfayı al
     const pages = pdfDoc.getPages();
     const firstPage = pages[0];
-    
-    // Monospace font yükle - Nokta vuruşlu yazıcılar için optimize (Courier New)
-    const fontUrl = '/fonts/CourierNew-Regular.ttf';
+
+    // Calibri font yükle
+    const fontUrl = '/fonts/Calibri-Regular.ttf';
+
     const fontBytes = await fetch(fontUrl).then(res => res.arrayBuffer());
     const font = await pdfDoc.embedFont(fontBytes);
     
@@ -46,7 +47,7 @@ async function printWithPdfTemplate(islem: Islem, templateUrl: string) {
       firstPage.drawText(islem.ad_soyad.toUpperCase(), {
         x: 365,
         y: height - 317,
-        size: 9,
+        size: 12,
         font: font,
         color: rgb(0, 0, 0),
       });
@@ -68,7 +69,7 @@ async function printWithPdfTemplate(islem: Islem, templateUrl: string) {
       firstPage.drawText(adres.substring(0, 60), {
         x: 365,
         y: height - 332,
-        size: 7,
+        size: 12,
         font: font,
         color: rgb(0, 0, 0),
       });
@@ -79,7 +80,7 @@ async function printWithPdfTemplate(islem: Islem, templateUrl: string) {
       firstPage.drawText(islem.sikayet.substring(0, 70), {
         x: 365,
         y: height - 347,
-        size: 9,
+        size: 12,
         font: font,
         color: rgb(0, 0, 0),
       });
@@ -91,7 +92,7 @@ async function printWithPdfTemplate(islem: Islem, templateUrl: string) {
       firstPage.drawText(tarih, {
         x: 365,
         y: height - 362,
-        size: 9,
+        size: 12,
         font: font,
         color: rgb(0, 0, 0),
       });
@@ -104,7 +105,7 @@ async function printWithPdfTemplate(islem: Islem, templateUrl: string) {
       firstPage.drawText(telefon, {
         x: 365,
         y: height - 376,
-        size: 9,
+        size: 12,
         font: font,
         color: rgb(0, 0, 0),
       });
@@ -118,7 +119,7 @@ async function printWithPdfTemplate(islem: Islem, templateUrl: string) {
       firstPage.drawText(cihaz, {
         x: 180,
         y: height - 340,
-        size: 9,
+        size: 12,
         font: font,
         color: rgb(0, 0, 0),
       });
@@ -135,7 +136,7 @@ async function printWithPdfTemplate(islem: Islem, templateUrl: string) {
       firstPage.drawText(islem.teknisyen_ismi.toUpperCase(), {
         x: 58,
         y: height - 532,
-        size: 9,
+        size: 12,
         font: font,
         color: rgb(0, 0, 0),
       });
