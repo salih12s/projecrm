@@ -9,13 +9,16 @@ const router = Router();
 function normalizeTurkish(str: string): string {
   return str
     .trim()
-    .toUpperCase() // Önce standart büyük harfe çevir
-    .replace(/İ/g, 'I') // Türkçe İ'yi I'ya çevir (tutarlılık için)
-    .replace(/Ş/g, 'S')
-    .replace(/Ğ/g, 'G')
-    .replace(/Ü/g, 'U')
-    .replace(/Ö/g, 'O')
-    .replace(/Ç/g, 'C');
+    .toLowerCase() // Önce küçük harfe çevir
+    .normalize('NFD') // Unicode normalizasyonu - aksanları ayır
+    .replace(/[\u0300-\u036f]/g, '') // Aksanları temizle
+    .replace(/ı/g, 'i') // Türkçe ı'yı i'ye çevir
+    .replace(/ş/g, 's')
+    .replace(/ğ/g, 'g')
+    .replace(/ü/g, 'u')
+    .replace(/ö/g, 'o')
+    .replace(/ç/g, 'c')
+    .toUpperCase(); // Sonunda büyük harfe çevir
 }
 
 // Ortak marka grupları - her grup kendi içinde aynı config'i paylaşır
