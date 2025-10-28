@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, lazy, Suspense } from 'react';
 import {
   Box,
   Container,
@@ -46,10 +46,12 @@ import { io } from 'socket.io-client';
 import IslemTable from './IslemTable.tsx';
 import IslemFilters from './IslemFilters.tsx';
 import IslemDialog from './IslemDialog.tsx';
-import Settings from './Settings';
-import MusteriGecmisi from './MusteriGecmisi.tsx';
-import AtolyeTakip from './AtolyeTakip.tsx';
-import AdminPanel from './AdminPanel.tsx';
+// ⚡ PERFORMANS: Büyük componentleri lazy loading ile yükle
+// Bu sayede initial bundle size küçülür, sayfa daha hızlı açılır
+const Settings = lazy(() => import('./Settings'));
+const MusteriGecmisi = lazy(() => import('./MusteriGecmisi.tsx'));
+const AtolyeTakip = lazy(() => import('./AtolyeTakip.tsx'));
+const AdminPanel = lazy(() => import('./AdminPanel.tsx'));
 import { exportToExcel } from '../utils/excel.ts';
 import Loading from './Loading';
 import ErrorMessage from './ErrorMessage';
@@ -178,9 +180,11 @@ const Dashboard: React.FC = () => {
     setOpenTamamlaModal(false); // Tamamlama modalını kapat
   };
 
+  // ⚡ PERFORMANS: Socket.IO zaten real-time güncelleme yapıyor, 
+  // gereksiz loadIslemler() çağrısını kaldırdık
   const handleSaveIslem = async () => {
-    await loadIslemler();
     handleCloseDialog();
+    // Socket.IO 'yeni-islem' veya 'islem-guncellendi' eventi ile otomatik güncellenecek
   };
 
   const handleToggleDurum = async (islem: Islem) => {
@@ -213,7 +217,8 @@ const Dashboard: React.FC = () => {
     try {
       await islemService.delete(islem.id);
       showSnackbar('İşlem başarıyla silindi!', 'success');
-      loadIslemler(); // Listeyi yenile
+      // ⚡ PERFORMANS: Socket.IO 'islem-silindi' eventi ile otomatik güncellenecek
+      // loadIslemler() çağrısına gerek yok
     } catch (error) {
       console.error('İşlem silinirken hata:', error);
       showSnackbar('İşlem silinirken hata oluştu!', 'error');
@@ -231,36 +236,41 @@ const Dashboard: React.FC = () => {
     showSnackbar(`${listToExport.length} kayıt Excel'e aktarıldı!`, 'success');
   };
   
-  const handleTableFilterChange = (filtered: Islem[]) => {
+  // ⚡ PERFORMANS: useCallback ile fonksiyonu cache'le, her render'da yeni fonksiyon oluşturma
+  const handleTableFilterChange = useCallback((filtered: Islem[]) => {
     setTableFilteredIslemler(filtered);
-  };
+  }, []);
 
-  const handleStatusFilterClick = (filter: 'all' | 'acik' | 'parca_bekliyor' | 'tamamlandi' | 'iptal') => {
+  const handleStatusFilterClick = useCallback((filter: 'all' | 'acik' | 'parca_bekliyor' | 'tamamlandi' | 'iptal') => {
     setStatusFilter(filter);
     // Diğer filtreleri kapat
     setShowTodayOnly(false);
     setShowYazdirilmamis(false);
-  };
+  }, []);
 
-  const handleTodayFilter = () => {
-    const newValue = !showTodayOnly;
-    setShowTodayOnly(newValue);
-    // Eğer aktif edildiyse diğerlerini kapat
-    if (newValue) {
-      setStatusFilter('all');
-      setShowYazdirilmamis(false);
-    }
-  };
+  const handleTodayFilter = useCallback(() => {
+    setShowTodayOnly(prev => {
+      const newValue = !prev;
+      // Eğer aktif edildiyse diğerlerini kapat
+      if (newValue) {
+        setStatusFilter('all');
+        setShowYazdirilmamis(false);
+      }
+      return newValue;
+    });
+  }, []);
 
-  const handleYazdirilmamisFilter = () => {
-    const newValue = !showYazdirilmamis;
-    setShowYazdirilmamis(newValue);
-    // Eğer aktif edildiyse diğerlerini kapat
-    if (newValue) {
-      setStatusFilter('all');
-      setShowTodayOnly(false);
-    }
-  };
+  const handleYazdirilmamisFilter = useCallback(() => {
+    setShowYazdirilmamis(prev => {
+      const newValue = !prev;
+      // Eğer aktif edildiyse diğerlerini kapat
+      if (newValue) {
+        setStatusFilter('all');
+        setShowTodayOnly(false);
+      }
+      return newValue;
+    });
+  }, []);
 
   const handleClearDateFilters = () => {
     setShowTodayOnly(false);
@@ -300,6 +310,30 @@ const Dashboard: React.FC = () => {
     ] : [])
   ];
 
+  // ⚡ PERFORMANS: İşlem istatistiklerini useMemo ile cache'le
+  // Her render'da yeniden hesaplamak yerine sadece islemler değişince hesapla
+  const stats = useMemo(() => {
+    const acikCount = islemler.filter(i => i.is_durumu === 'acik').length;
+    const parcaBekleCount = islemler.filter(i => i.is_durumu === 'parca_bekliyor').length;
+    const tamamlandiCount = islemler.filter(i => i.is_durumu === 'tamamlandi').length;
+    const iptalCount = islemler.filter(i => i.is_durumu === 'iptal').length;
+    const totalCount = islemler.length;
+    
+    const toplamTutar = isAdmin ? islemler.reduce((sum, i) => {
+      const tutar = typeof i.tutar === 'number' ? i.tutar : parseFloat(String(i.tutar || 0));
+      return sum + (isNaN(tutar) ? 0 : tutar);
+    }, 0) : 0;
+
+    return {
+      acikCount,
+      parcaBekleCount,
+      tamamlandiCount,
+      iptalCount,
+      totalCount,
+      toplamTutar
+    };
+  }, [islemler, isAdmin]);
+
   return (
     <Box sx={{ flexGrow: 1 }}>
       <AppBar position="static" sx={{ bgcolor: '#2C3E82' }}>
@@ -336,10 +370,7 @@ const Dashboard: React.FC = () => {
                 border: '2px solid rgba(255, 255, 255, 0.5)'
               }}
             >
-             TOPLAM TUTAR: {islemler.reduce((sum, i) => {
-                const tutar = typeof i.tutar === 'number' ? i.tutar : parseFloat(String(i.tutar || 0));
-                return sum + (isNaN(tutar) ? 0 : tutar);
-              }, 0).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ₺
+             TOPLAM TUTAR: {stats.toplamTutar.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ₺
             </Typography>
           )}
           
@@ -527,7 +558,7 @@ const Dashboard: React.FC = () => {
                       }
                     }}
                   >
-                    Toplam: {islemler.length}
+                    Toplam: {stats.totalCount}
                   </Button>
                   
                   <Button
@@ -547,7 +578,7 @@ const Dashboard: React.FC = () => {
                       }
                     }}
                   >
-                    Açık: {islemler.filter(i => i.is_durumu === 'acik').length}
+                    Açık: {stats.acikCount}
                   </Button>
                   
                   <Button
@@ -567,7 +598,7 @@ const Dashboard: React.FC = () => {
                       }
                     }}
                   >
-                    Parça Bekliyor: {islemler.filter(i => i.is_durumu === 'parca_bekliyor').length}
+                    Parça Bekliyor: {stats.parcaBekleCount}
                   </Button>
                   
                   <Button
@@ -587,7 +618,7 @@ const Dashboard: React.FC = () => {
                       }
                     }}
                   >
-                    Tamamlanan: {islemler.filter(i => i.is_durumu === 'tamamlandi').length}
+                    Tamamlanan: {stats.tamamlandiCount}
                   </Button>
 
                   <Button
@@ -607,7 +638,7 @@ const Dashboard: React.FC = () => {
                       }
                     }}
                   >
-                    İptal: {islemler.filter(i => i.is_durumu === 'iptal').length}
+                    İptal: {stats.iptalCount}
                   </Button>
 
                   {/* Yazdırılmamış İşler Filtresi */}
@@ -741,20 +772,30 @@ const Dashboard: React.FC = () => {
             />
           </>
         )) : activeTab === 1 ? (
-          // Müşteri Geçmişi Tab
-          <MusteriGecmisi />
+          // Müşteri Geçmişi Tab - Lazy loaded
+          <Suspense fallback={<Loading />}>
+            <MusteriGecmisi />
+          </Suspense>
         ) : activeTab === 2 ? (
-          // Atölye Takip Tab
-          <AtolyeTakip />
+          // Atölye Takip Tab - Lazy loaded
+          <Suspense fallback={<Loading />}>
+            <AtolyeTakip />
+          </Suspense>
         ) : activeTab === 3 ? (
-          // Tanımlamalar Tab
-          <Settings />
+          // Tanımlamalar Tab - Lazy loaded
+          <Suspense fallback={<Loading />}>
+            <Settings />
+          </Suspense>
         ) : activeTab === 4 && isAdmin ? (
-          // Kullanıcı Yönetimi (Sadece Admin)
-          <AdminPanel />
+          // Kullanıcı Yönetimi (Sadece Admin) - Lazy loaded
+          <Suspense fallback={<Loading />}>
+            <AdminPanel />
+          </Suspense>
         ) : (
           // Fallback
-          <Settings />
+          <Suspense fallback={<Loading />}>
+            <Settings />
+          </Suspense>
         )}
           </>
         )}

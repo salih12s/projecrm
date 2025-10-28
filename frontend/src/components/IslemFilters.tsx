@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, memo } from 'react';
 import {
   Box,
   TextField,
@@ -64,39 +64,21 @@ const IslemFilters: React.FC<IslemFiltersProps> = ({
     }
   };
 
-  useEffect(() => {
-    applyFilters();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedMontajlar, selectedAksesuarlar, islemler, statusFilter, dateFilter, showTodayOnly, showYazdirilmamis, startDate, endDate]);
+  // ⚡ PERFORMANS İYİLEŞTİRMESİ: useMemo ile filtreleme sonuçlarını cache'le
+  // Bu sayede sadece bağımlılıklar değiştiğinde yeniden hesaplanır
+  const filtered = useMemo(() => {
+    let result = islemler;
 
-  const applyFilters = () => {
-    let filtered = [...islemler];
-
-    // Tarih aralığı filtresi (Dashboard'dan gelen startDate ve endDate)
+    // Tarih aralığı filtresi
     if (startDate || endDate) {
-      filtered = filtered.filter((islem) => {
+      const start = startDate ? new Date(startDate).setHours(0, 0, 0, 0) : -Infinity;
+      const end = endDate ? new Date(endDate).setHours(23, 59, 59, 999) : Infinity;
+      
+      result = result.filter((islem) => {
         try {
-          const islemDate = new Date(islem.full_tarih);
-          islemDate.setHours(0, 0, 0, 0);
-          
-          if (startDate && endDate) {
-            const start = new Date(startDate);
-            start.setHours(0, 0, 0, 0);
-            const end = new Date(endDate);
-            end.setHours(0, 0, 0, 0);
-            return islemDate >= start && islemDate <= end;
-          } else if (startDate) {
-            const start = new Date(startDate);
-            start.setHours(0, 0, 0, 0);
-            return islemDate >= start;
-          } else if (endDate) {
-            const end = new Date(endDate);
-            end.setHours(0, 0, 0, 0);
-            return islemDate <= end;
-          }
-          return true;
-        } catch (error) {
-          console.error('❌ Tarih aralığı parse hatası:', islem.full_tarih, error);
+          const islemTime = new Date(islem.full_tarih).getTime();
+          return islemTime >= start && islemTime <= end;
+        } catch {
           return false;
         }
       });
@@ -104,66 +86,47 @@ const IslemFilters: React.FC<IslemFiltersProps> = ({
 
     // Bugün alınan işler filtresi
     if (showTodayOnly) {
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
+      const todayStart = new Date().setHours(0, 0, 0, 0);
+      const todayEnd = new Date().setHours(23, 59, 59, 999);
       
-      console.log('🔍 Bugün filtresi aktif - Bugünün tarihi:', today);
-      console.log('📋 Toplam işlem sayısı:', islemler.length);
-      
-      filtered = filtered.filter((islem) => {
+      result = result.filter((islem) => {
         try {
-          // full_tarih formatı: ISO string (2025-10-13T11:44:07.595Z)
-          const islemDate = new Date(islem.full_tarih);
-          islemDate.setHours(0, 0, 0, 0);
-          
-          const match = islemDate.getTime() === today.getTime();
-          console.log('📅 İşlem:', islem.full_tarih, '➡️ Parse:', islemDate.toLocaleDateString(), 'Eşleşme:', match);
-          return match;
-        } catch (error) {
-          console.error('❌ Tarih parse hatası:', islem.full_tarih, error);
+          const islemTime = new Date(islem.full_tarih).getTime();
+          return islemTime >= todayStart && islemTime <= todayEnd;
+        } catch {
           return false;
         }
       });
-      
-      console.log('✅ Filtrelenen işlem sayısı:', filtered.length);
     }
 
     // Tarih filtresi (Dashboard'dan gelen)
     if (dateFilter) {
-      const selectedDate = new Date(dateFilter);
-      selectedDate.setHours(0, 0, 0, 0);
+      const selectedStart = new Date(dateFilter).setHours(0, 0, 0, 0);
+      const selectedEnd = new Date(dateFilter).setHours(23, 59, 59, 999);
       
-      console.log('📅 Tarih filtresi aktif - Seçilen tarih:', selectedDate);
-      
-      filtered = filtered.filter((islem) => {
+      result = result.filter((islem) => {
         try {
-          // full_tarih formatı: ISO string (2025-10-13T11:44:07.595Z)
-          const islemDate = new Date(islem.full_tarih);
-          islemDate.setHours(0, 0, 0, 0);
-          
-          return islemDate.getTime() === selectedDate.getTime();
-        } catch (error) {
-          console.error('❌ Tarih parse hatası:', islem.full_tarih, error);
+          const islemTime = new Date(islem.full_tarih).getTime();
+          return islemTime >= selectedStart && islemTime <= selectedEnd;
+        } catch {
           return false;
         }
       });
-      
-      console.log('✅ Tarih filtresinden geçen işlem sayısı:', filtered.length);
     }
 
     // StatsCard'dan gelen durum filtresi
     if (statusFilter !== 'all') {
-      filtered = filtered.filter((islem) => islem.is_durumu === statusFilter);
+      result = result.filter((islem) => islem.is_durumu === statusFilter);
     }
 
     // Yazdırılmamış işler filtresi
     if (showYazdirilmamis) {
-      filtered = filtered.filter((islem) => !islem.yazdirildi);
+      result = result.filter((islem) => !islem.yazdirildi);
     }
 
-    // Montaj filtresi (sadece admin için)
+    // Montaj filtresi
     if (isAdmin && selectedMontajlar.length > 0) {
-      filtered = filtered.filter((islem) => {
+      result = result.filter((islem) => {
         const yapilanIslem = (islem.yapilan_islem || '').toLowerCase();
         return selectedMontajlar.some(montaj => 
           yapilanIslem.includes(montaj.toLowerCase())
@@ -171,9 +134,9 @@ const IslemFilters: React.FC<IslemFiltersProps> = ({
       });
     }
 
-    // Aksesuar filtresi (sadece admin için)
+    // Aksesuar filtresi
     if (isAdmin && selectedAksesuarlar.length > 0) {
-      filtered = filtered.filter((islem) => {
+      result = result.filter((islem) => {
         const yapilanIslem = (islem.yapilan_islem || '').toLowerCase();
         return selectedAksesuarlar.some(aksesuar => 
           yapilanIslem.includes(aksesuar.toLowerCase())
@@ -181,21 +144,25 @@ const IslemFilters: React.FC<IslemFiltersProps> = ({
       });
     }
 
-    // Filtrelenmiş kayıtları sırala (en yeni en üstte - id'ye göre büyükten küçüğe)
-    filtered.sort((a, b) => b.id - a.id);
+    // Sıralama (en yeni en üstte)
+    return [...result].sort((a, b) => b.id - a.id);
+  }, [islemler, statusFilter, dateFilter, showTodayOnly, showYazdirilmamis, startDate, endDate, selectedMontajlar, selectedAksesuarlar, isAdmin]);
 
-    // Filtrelenmiş kayıtların toplam tutarını hesapla (sadece admin için)
-    if (isAdmin) {
-      const tutar = filtered.reduce((sum, i) => {
-        const tutarVal = typeof i.tutar === 'number' ? i.tutar : parseFloat(String(i.tutar || 0));
-        return sum + (isNaN(tutarVal) ? 0 : tutarVal);
-      }, 0);
-      setFilteredTutar(tutar);
-    }
+  // Filtrelenmiş tutar hesaplama (sadece admin için)
+  const calculatedTutar = useMemo(() => {
+    if (!isAdmin) return 0;
+    return filtered.reduce((sum, i) => {
+      const tutarVal = typeof i.tutar === 'number' ? i.tutar : parseFloat(String(i.tutar || 0));
+      return sum + (isNaN(tutarVal) ? 0 : tutarVal);
+    }, 0);
+  }, [filtered, isAdmin]);
 
+  // Parent'a filtrelenmiş listeyi gönder
+  useEffect(() => {
     setFilteredCount(filtered.length);
+    setFilteredTutar(calculatedTutar);
     onFilterChange(filtered);
-  };
+  }, [filtered, calculatedTutar, onFilterChange]);
 
 
 
@@ -348,4 +315,6 @@ const IslemFilters: React.FC<IslemFiltersProps> = ({
   );
 };
 
-export default IslemFilters;
+// ⚡ PERFORMANS: React.memo ile gereksiz re-render'ları önle
+// Props değişmedikçe component yeniden render edilmeyecek
+export default memo(IslemFilters);
