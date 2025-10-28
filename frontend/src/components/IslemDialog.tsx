@@ -45,9 +45,11 @@ interface IslemDialogProps {
   onClose: () => void;
   onSave: () => void;
   openTamamlaModal?: boolean; // Tamamlama modalını direkt açmak için
+  onHold?: (isOnHold: boolean, formData?: any) => void; // Bekleme durumu değiştiğinde Dashboard'ı bilgilendir
+  restoreFormData?: any; // Beklemeden dönerken form verilerini geri yükle
 }
 
-const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave, openTamamlaModal = false }) => {
+const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave, openTamamlaModal = false, onHold, restoreFormData }) => {
   const { showSnackbar } = useSnackbar();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
@@ -70,6 +72,9 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
   const [markaUyari, setMarkaUyari] = useState<string>(''); // Marka uyarı mesajı
   const [ilceInputValue, setIlceInputValue] = useState('');
   const [mahalleInputValue, setMahalleInputValue] = useState('');
+  const [duplicateRecord, setDuplicateRecord] = useState<Islem | null>(null); // Duplicate kayıt için
+  const [showDuplicateDialog, setShowDuplicateDialog] = useState(false); // Duplicate modal
+  const [isOnHold, setIsOnHold] = useState(false); // Beklemeye alınma durumu
   const [formData, setFormData] = useState<IslemUpdateDto>({
     ad_soyad: '',
     ilce: '',
@@ -220,6 +225,7 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
       setShowConfirmDialog(false);
       setExistingRecord(null);
       setMarkaUyari(''); // Marka uyarısını temizle
+      setIsOnHold(false); // Bekleme durumunu sıfırla
     }
   }, [islem, open]);
 
@@ -229,6 +235,35 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
       setShowTamamlaConfirm(true);
     }
   }, [open, openTamamlaModal, islem]);
+
+  // Dialog kapandığında bekleme durumunu sıfırla
+  useEffect(() => {
+    if (!open) {
+      setIsOnHold(false);
+    }
+  }, [open]);
+
+  // Beklemeden dönerken form verilerini geri yükle
+  useEffect(() => {
+    if (restoreFormData && open && !islem) {
+      console.log('Form verileri geri yükleniyor:', restoreFormData);
+      setFormData(restoreFormData);
+      setShowForm(true);
+      setShowPhoneQuery(false);
+      // İlçe ve mahalle bilgilerini de set et
+      if (restoreFormData.ilce) {
+        setIlceInputValue(restoreFormData.ilce);
+        // İlçe ID'sini bul
+        const ilceItem = ilceler.find(i => i.isim === restoreFormData.ilce);
+        if (ilceItem) {
+          setSelectedIlceId(ilceItem.ilce_id);
+        }
+      }
+      if (restoreFormData.mahalle) {
+        setMahalleInputValue(restoreFormData.mahalle);
+      }
+    }
+  }, [restoreFormData, open, islem, ilceler]);
 
   // Yapılan işlem metninden montaj ve aksesuar ID'lerini çıkar
   const parseYapilanIslem = (yapilanIslem: string) => {
@@ -277,33 +312,12 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
   };
 
   // Seçili montaj ve aksesuarlardan yapılan işlem metnini oluştur
+  // NOT: updateYapilanIslem fonksiyonu zaten formData.yapilan_islem'i güncelliyor
+  // Bu yüzden burada sadece formData.yapilan_islem'i döndürüyoruz
   const buildYapilanIslem = () => {
-    const parts: string[] = [];
-    
-    // Montajlar
-    if (selectedMontajlar.length > 0) {
-      const montajIsimler = selectedMontajlar
-        .map(id => montajlar.find(m => m.id === id)?.isim)
-        .filter(Boolean);
-      if (montajIsimler.length > 0) {
-        parts.push(`${montajIsimler.join(', ')} montajı yapıldı`);
-      }
-    }
-    
-    // Aksesuarlar
-    if (selectedAksesuarlar.length > 0) {
-      const aksesuarIsimler = selectedAksesuarlar
-        .map(id => aksesuarlar.find(a => a.id === id)?.isim)
-        .filter(Boolean);
-      if (aksesuarIsimler.length > 0) {
-        parts.push(aksesuarIsimler.join(', '));
-      }
-    }
-    
-    // Manuel yapılan işlem ARTIK OTOMATİK EKLENMİYOR
-    // Sadece montaj ve aksesuar seçimleri yapılan işlem olarak kaydedilir
-    
-    return parts.join(' + ');
+    // formData.yapilan_islem zaten updateYapilanIslem tarafından güncelleniyor
+    // Checkbox'lar değiştiğinde otomatik olarak yapilan_islem alanı dolduruluyor
+    return formData.yapilan_islem || '';
   };
 
   const handleChange = (field: keyof IslemUpdateDto) => (
@@ -382,6 +396,7 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
         }
       }
       
+      // ✅ GÖREV 1: Teknisyen ismi, yapılan işlem, tutar getirme - sadece müşteri bilgileri
       setFormData({
         ad_soyad: existingRecord.ad_soyad || '',
         ilce: existingRecord.ilce || '',
@@ -398,9 +413,9 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
         urun: existingRecord.urun || '',
         marka: existingRecord.marka || '',
         sikayet: existingRecord.sikayet || '',
-        teknisyen_ismi: existingRecord.teknisyen_ismi || '',
-        yapilan_islem: existingRecord.yapilan_islem || '',
-        tutar: existingRecord.tutar || 0,
+        teknisyen_ismi: '', // Getirme
+        yapilan_islem: '', // Getirme
+        tutar: 0, // Getirme
         is_durumu: 'acik',
       });
       showSnackbar('Önceki kayıt bilgileri getirildi. Değişiklik yapabilir veya olduğu gibi kaydedebilirsiniz.', 'info');
@@ -474,10 +489,16 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
         return;
       }
 
-      const yapilanIslemText = buildYapilanIslem();
+      // Manuel yapılan işlem kontrolü
+      const manuelIslem = formData.yapilan_islem?.trim() || '';
       
-      if (!yapilanIslemText || yapilanIslemText.trim() === '') {
-        showSnackbar('Yapılan İşlem alanı zorunludur!', 'error');
+      // Montaj ve aksesuar kontrolü
+      const hasMontaj = selectedMontajlar.length > 0;
+      const hasAksesuar = selectedAksesuarlar.length > 0;
+      
+      // En az biri dolu olmalı
+      if (!manuelIslem && !hasMontaj && !hasAksesuar) {
+        showSnackbar('Yapılan İşlem alanı veya Montaj/Aksesuar seçimi zorunludur!', 'error');
         return;
       }
     }
@@ -486,7 +507,7 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
     const yapilanIslemText = buildYapilanIslem();
     const updatedData = {
       ...formData,
-      yapilan_islem: yapilanIslemText || formData.yapilan_islem,
+      yapilan_islem: yapilanIslemText, // buildYapilanIslem her zaman güncel değeri döner
       // is_durumu formData'dan alınacak (kullanıcının seçtiği değer)
     };
     
@@ -588,8 +609,47 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
       return;
     }
     
-    // Direkt kaydet (tamamlama kontrolü kaldırıldı)
+    // ✅ GÖREV 2: Yeni kayıt eklenirken duplicate kontrolü
+    // Aynı telefon + ürün + marka + açık/parça bekliyor durumunda kayıt var mı kontrol et
+    if (!islem) { // Sadece yeni kayıt eklerken kontrol et
+      try {
+        const allRecords = await islemService.getAll();
+        const cleanedPhone = cleanPhoneNumber(formData.cep_tel);
+        
+        const foundDuplicate = allRecords.find((record: Islem) => 
+          cleanPhoneNumber(record.cep_tel) === cleanedPhone &&
+          record.urun === formData.urun &&
+          record.marka === formData.marka &&
+          (record.is_durumu === 'acik' || record.is_durumu === 'parca_bekliyor')
+        );
+        
+        if (foundDuplicate) {
+          // Tamamlanmamış aynı kayıt var - modal göster
+          setDuplicateRecord(foundDuplicate);
+          setShowDuplicateDialog(true);
+          return; // Kaydetme, kullanıcı onay verirse devam edecek
+        }
+      } catch (error) {
+        console.error('Duplicate kontrolü hatası:', error);
+        // Hata olsa bile devam et
+      }
+    }
+    
+    // Direkt kaydet
     await saveIslem();
+  };
+
+  // Duplicate dialog'dan devam et
+  const handleContinueWithDuplicate = async () => {
+    setShowDuplicateDialog(false);
+    setDuplicateRecord(null);
+    await saveIslem();
+  };
+
+  // Duplicate dialog'dan iptal et
+  const handleCancelDuplicate = () => {
+    setShowDuplicateDialog(false);
+    setDuplicateRecord(null);
   };
 
   const saveIslem = async () => {
@@ -633,8 +693,39 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
 
   return (
     <>
-    <Dialog open={open && !showTamamlaConfirm} onClose={onClose} maxWidth="lg" fullWidth fullScreen={isMobile}>
-      <DialogTitle sx={{ py: 0.75, px: 2, fontSize: '1rem', fontWeight: 600 }}>{islem ? 'İşlem Düzenle' : 'Yeni İşlem Ekle'}</DialogTitle>
+    <Dialog 
+      open={open && !showTamamlaConfirm && !isOnHold} 
+      onClose={onClose} 
+      maxWidth="lg" 
+      fullWidth 
+      fullScreen={isMobile}
+    >
+      <DialogTitle sx={{ py: 0.75, px: 2, fontSize: '1rem', fontWeight: 600, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <span>{islem ? 'İşlem Düzenle' : 'Yeni İşlem Ekle'}</span>
+        {!islem && showForm && ( // Sadece yeni kayıt eklerken VE form görünürken göster
+          <Button
+            variant="outlined"
+            size="small"
+            onClick={() => {
+              setIsOnHold(true);
+              onHold?.(true, formData); // Dashboard'a form verilerini gönder
+            }}
+            sx={{
+              fontSize: '0.75rem',
+              py: 0.3,
+              px: 1,
+              borderColor: 'warning.main',
+              color: 'warning.main',
+              '&:hover': {
+                borderColor: 'warning.dark',
+                bgcolor: 'warning.light',
+              }
+            }}
+          >
+            Beklemeye Al
+          </Button>
+        )}
+      </DialogTitle>
       <DialogContent sx={{ py: 0.5, px: 2, maxHeight: '80vh', overflowY: 'auto' }}>
         {/* Telefon Numarası Sorgusu (Sadece yeni kayıt için) */}
         {showPhoneQuery && !islem && (
@@ -1442,6 +1533,82 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
           </Button>
           <Button onClick={handleConfirmTamamla} variant="contained" color="success" size="small" autoFocus>
             Tamamla
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Duplicate Kayıt Uyarı Modal */}
+      <Dialog
+        open={showDuplicateDialog}
+        onClose={handleCancelDuplicate}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle sx={{ bgcolor: 'warning.main', color: 'warning.contrastText', py: 1.5 }}>
+          ⚠️ UYARI - Benzer Kayıt Bulundu
+        </DialogTitle>
+        <DialogContent sx={{ mt: 2 }}>
+          <Alert severity="warning" sx={{ mb: 2 }}>
+            <AlertTitle>Bu müşteri için tamamlanmamış bir kayıt mevcut!</AlertTitle>
+            Aynı telefon numarası, ürün ve marka ile açık/parça bekliyor durumunda bir kayıt bulundu.
+          </Alert>
+          
+          {duplicateRecord && (
+            <Box sx={{ bgcolor: 'grey.100', p: 2, borderRadius: 1 }}>
+              <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                Mevcut Kayıt Bilgileri:
+              </Typography>
+              <Grid container spacing={1}>
+                <Grid item xs={6}>
+                  <Typography variant="body2">
+                    <strong>Kayıt ID:</strong> #{duplicateRecord.id}
+                  </Typography>
+                </Grid>
+                <Grid item xs={6}>
+                  <Typography variant="body2">
+                    <strong>Durum:</strong>{' '}
+                    <Box component="span" sx={{ 
+                      color: duplicateRecord.is_durumu === 'acik' ? 'warning.main' : 'info.main',
+                      fontWeight: 600 
+                    }}>
+                      {duplicateRecord.is_durumu === 'acik' ? 'Açık' : 'Parça Bekliyor'}
+                    </Box>
+                  </Typography>
+                </Grid>
+                <Grid item xs={6}>
+                  <Typography variant="body2">
+                    <strong>Ürün:</strong> {duplicateRecord.urun}
+                  </Typography>
+                </Grid>
+                <Grid item xs={6}>
+                  <Typography variant="body2">
+                    <strong>Marka:</strong> {duplicateRecord.marka}
+                  </Typography>
+                </Grid>
+                <Grid item xs={12}>
+                  <Typography variant="body2">
+                    <strong>Telefon:</strong> {formatPhoneNumber(duplicateRecord.cep_tel)}
+                  </Typography>
+                </Grid>
+              </Grid>
+            </Box>
+          )}
+
+          <Typography variant="body2" sx={{ mt: 2, color: 'text.secondary' }}>
+            Yine de yeni bir kayıt oluşturmak istiyor musunuz?
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ px: 2, py: 1.5 }}>
+          <Button onClick={handleCancelDuplicate} variant="outlined" size="small">
+            İptal Et
+          </Button>
+          <Button 
+            onClick={handleContinueWithDuplicate} 
+            variant="contained" 
+            color="warning" 
+            size="small"
+          >
+            Yeni Kayıt Oluştur
           </Button>
         </DialogActions>
       </Dialog>

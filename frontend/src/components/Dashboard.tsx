@@ -37,6 +37,7 @@ import {
   History,
   Menu as MenuIcon,
   AdminPanelSettings,
+  Close as CloseIcon,
 } from '@mui/icons-material';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
@@ -79,6 +80,8 @@ const Dashboard: React.FC = () => {
   // Bayi için tab değeri her zaman 0 (tek tab var)
   const [activeTab, setActiveTab] = useState(0);
   const [confirmDialog, setConfirmDialog] = useState<{ open: boolean; islem: Islem | null }>({ open: false, islem: null });
+  const [onHoldFormData, setOnHoldFormData] = useState<any>(null); // Beklemedeki form verileri
+  const [shouldRestoreForm, setShouldRestoreForm] = useState(false); // Beklemeden dönülüyor mu?
   
   // Güvenli rol kontrolü - eğer user yoksa veya role tanımlı değilse en kısıtlı mod
   const isBayi = user?.role === 'bayi';
@@ -172,18 +175,50 @@ const Dashboard: React.FC = () => {
   const handleOpenDialog = (islem?: Islem) => {
     setSelectedIslem(islem || null);
     setOpenDialog(true);
+    setShouldRestoreForm(false); // Yeni işlem açılıyor, restore yapma
+    // Bekleme verilerini temizleme - kart sol altta kalacak
   };
 
   const handleCloseDialog = () => {
     setOpenDialog(false);
     setSelectedIslem(null);
     setOpenTamamlaModal(false); // Tamamlama modalını kapat
+    setShouldRestoreForm(false); // Restore bayrağını sıfırla
+    // NOT: onHoldFormData'yı temizleme - kart sol altta kalacak
+  };
+
+  // Bekleme durumu değiştiğinde
+  const handleHoldChange = (isOnHold: boolean, formData?: any) => {
+    if (isOnHold) {
+      // Beklemeye alındığında form verilerini kaydet
+      console.log('Beklemeye alınan form verileri:', formData);
+      setOnHoldFormData(formData);
+      setOpenDialog(false); // Dialog'u kapat
+      setSelectedIslem(null); // Seçili işlemi temizle
+      setShouldRestoreForm(false); // Restore bayrağını sıfırla
+    } else {
+      // Beklemeden çıkıyorsa (karta tıklandı)
+      console.log('Beklemeden çıkılan form verileri:', onHoldFormData);
+      setShouldRestoreForm(true); // Restore yapılacak
+      setOpenDialog(true); // Dialog'u aç
+      // onHoldFormData restoreFormData prop'u olarak gönderilecek
+    }
+  };
+
+  // Bekleyen formu tamamen temizle (form kaydedildiğinde veya iptal edildiğinde)
+  const clearOnHoldData = () => {
+    setOnHoldFormData(null);
+    setShouldRestoreForm(false);
   };
 
   // ⚡ PERFORMANS: Socket.IO zaten real-time güncelleme yapıyor, 
   // gereksiz loadIslemler() çağrısını kaldırdık
   const handleSaveIslem = async () => {
     handleCloseDialog();
+    // Sadece beklemedeki form kaydedildiyse temizle
+    if (shouldRestoreForm) {
+      clearOnHoldData();
+    }
     // Socket.IO 'yeni-islem' veya 'islem-guncellendi' eventi ile otomatik güncellenecek
   };
 
@@ -806,6 +841,8 @@ const Dashboard: React.FC = () => {
           onClose={handleCloseDialog}
           onSave={handleSaveIslem}
           openTamamlaModal={openTamamlaModal}
+          onHold={handleHoldChange}
+          restoreFormData={shouldRestoreForm ? onHoldFormData : undefined}
         />
 
         {/* Tamamlama Onay Dialog */}
@@ -834,6 +871,82 @@ const Dashboard: React.FC = () => {
             </Button>
           </DialogActions>
         </Dialog>
+
+        {/* Beklemedeki Form - Sol Alt Köşede Mini Kart */}
+        {onHoldFormData && !openDialog && (
+          <Box
+            sx={{
+              position: 'fixed',
+              bottom: 16,
+              left: 16,
+              bgcolor: 'warning.light',
+              border: '2px solid',
+              borderColor: 'warning.main',
+              borderRadius: 2,
+              boxShadow: 3,
+              transition: 'all 0.2s',
+              zIndex: 1300,
+              minWidth: 200,
+              maxWidth: 300,
+            }}
+          >
+            {/* Kapatma Butonu */}
+            <IconButton
+              onClick={(e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                clearOnHoldData();
+              }}
+              size="small"
+              sx={{
+                position: 'absolute',
+                top: 4,
+                right: 4,
+                bgcolor: 'warning.main',
+                color: 'white',
+                width: 20,
+                height: 20,
+                zIndex: 1, // İçerideki Box'ın üstünde olsun
+                '&:hover': {
+                  bgcolor: 'warning.dark',
+                }
+              }}
+            >
+              <CloseIcon sx={{ fontSize: 14 }} />
+            </IconButton>
+
+            {/* Kart İçeriği - Tıklanabilir */}
+            <Box
+              onClick={(e) => {
+                // Kapatma butonuna tıklandıysa işlem yapma
+                if ((e.target as HTMLElement).closest('button')) {
+                  return;
+                }
+                handleHoldChange(false);
+              }}
+              sx={{
+                p: 1.5,
+                cursor: 'pointer',
+                '&:hover': {
+                  transform: 'scale(1.05)',
+                }
+              }}
+            >
+              <Typography variant="subtitle2" sx={{ fontWeight: 'bold', color: 'warning.dark', mb: 0.5 }}>
+                📋 Bekleyen Form
+              </Typography>
+              <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block' }}>
+                {onHoldFormData.ad_soyad || 'İsimsiz'} - {onHoldFormData.cep_tel || 'Telefon yok'}
+              </Typography>
+              <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mt: 0.5 }}>
+                {onHoldFormData.urun || 'Ürün belirtilmemiş'} {onHoldFormData.marka ? `- ${onHoldFormData.marka}` : ''}
+              </Typography>
+              <Typography variant="caption" sx={{ fontStyle: 'italic', color: 'warning.dark', mt: 1, display: 'block' }}>
+                Tıklayarak devam edin
+              </Typography>
+            </Box>
+          </Box>
+        )}
       </Container>
     </Box>
   );
