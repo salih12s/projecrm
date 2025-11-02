@@ -8,6 +8,12 @@ const router = express.Router();
 // GET all montajlar
 router.get('/', auth, async (_req: Request, res: Response) => {
   try {
+    // ⚡ CACHE: Montaj listesi 5 dakika tarayıcıda cache'lenir
+    res.set({
+      'Cache-Control': 'public, max-age=300',
+      'ETag': `montajlar-${Date.now()}`,
+    });
+    
     const result = await pool.query<Montaj>(
       'SELECT * FROM montajlar ORDER BY isim ASC'
     );

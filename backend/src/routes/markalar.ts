@@ -7,6 +7,12 @@ const router = express.Router();
 // Tüm markaları getir
 router.get('/', authMiddleware, async (_req: Request, res: Response): Promise<void> => {
   try {
+    // ⚡ CACHE: Marka listesi 5 dakika tarayıcıda cache'lenir
+    res.set({
+      'Cache-Control': 'public, max-age=300',
+      'ETag': `markalar-${Date.now()}`,
+    });
+    
     const result = await pool.query(
       'SELECT * FROM markalar ORDER BY isim ASC'
     );

@@ -8,6 +8,12 @@ const router = Router();
 // Tüm ürünleri getir
 router.get('/', authenticateToken, async (_req, res) => {
   try {
+    // ⚡ CACHE: Ürün listesi 5 dakika tarayıcıda cache'lenir
+    res.set({
+      'Cache-Control': 'public, max-age=300',
+      'ETag': `urunler-${Date.now()}`,
+    });
+    
     const result = await pool.query<Urun>(
       'SELECT * FROM urunler ORDER BY isim ASC'
     );

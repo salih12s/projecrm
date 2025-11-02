@@ -7,6 +7,12 @@ const router = express.Router();
 // Tüm teknisyenleri getir
 router.get('/', authMiddleware, async (_req: Request, res: Response): Promise<void> => {
   try {
+    // ⚡ CACHE: Teknisyen listesi 5 dakika tarayıcıda cache'lenir
+    res.set({
+      'Cache-Control': 'public, max-age=300', // 5 dakika
+      'ETag': `teknisyenler-${Date.now()}`, // Her 5 dakikada yeni ETag
+    });
+    
     const result = await pool.query(
       'SELECT * FROM teknisyenler ORDER BY isim ASC'
     );

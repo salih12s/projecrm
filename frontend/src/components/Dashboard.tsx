@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo, lazy, Suspense } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, lazy, Suspense, useTransition } from 'react';
 import {
   Box,
   Container,
@@ -82,6 +82,9 @@ const Dashboard: React.FC = () => {
   const [confirmDialog, setConfirmDialog] = useState<{ open: boolean; islem: Islem | null }>({ open: false, islem: null });
   const [onHoldFormData, setOnHoldFormData] = useState<any>(null); // Beklemedeki form verileri
   const [shouldRestoreForm, setShouldRestoreForm] = useState(false); // Beklemeden dönülüyor mu?
+  
+  // ⚡ PERFORMANS: useTransition ile durum geçişlerini optimize et
+  const [_, startTransition] = useTransition();
   
   // Güvenli rol kontrolü - eğer user yoksa veya role tanımlı değilse en kısıtlı mod
   const isBayi = user?.role === 'bayi';
@@ -277,35 +280,42 @@ const Dashboard: React.FC = () => {
   }, []);
 
   const handleStatusFilterClick = useCallback((filter: 'all' | 'acik' | 'parca_bekliyor' | 'tamamlandi' | 'iptal') => {
-    setStatusFilter(filter);
-    // Diğer filtreleri kapat
-    setShowTodayOnly(false);
-    setShowYazdirilmamis(false);
-  }, []);
+    // ⚡ PERFORMANS: Filtrelemeyi non-blocking yaparak UI donmasını engelle
+    startTransition(() => {
+      setStatusFilter(filter);
+      // Diğer filtreleri kapat
+      setShowTodayOnly(false);
+      setShowYazdirilmamis(false);
+    });
+  }, [startTransition]);
 
   const handleTodayFilter = useCallback(() => {
-    setShowTodayOnly(prev => {
-      const newValue = !prev;
-      // Eğer aktif edildiyse diğerlerini kapat
-      if (newValue) {
-        setStatusFilter('all');
-        setShowYazdirilmamis(false);
-      }
-      return newValue;
+    startTransition(() => {
+      setShowTodayOnly(prev => {
+        const newValue = !prev;
+        // Eğer aktif edildiyse diğerlerini kapat
+        if (newValue) {
+          setStatusFilter('all');
+          setShowYazdirilmamis(false);
+        }
+        return newValue;
+      });
     });
-  }, []);
+  }, [startTransition]);
 
   const handleYazdirilmamisFilter = useCallback(() => {
-    setShowYazdirilmamis(prev => {
-      const newValue = !prev;
-      // Eğer aktif edildiyse diğerlerini kapat
-      if (newValue) {
-        setStatusFilter('all');
-        setShowTodayOnly(false);
-      }
-      return newValue;
+    startTransition(() => {
+      setShowYazdirilmamis(prev => {
+        const newValue = !prev;
+        // Eğer aktif edildiyse diğerlerini kapat
+        if (newValue) {
+          setStatusFilter('all');
+          setShowTodayOnly(false);
+        }
+        return newValue;
+      });
     });
-  }, []);
+  }, [startTransition]);
 
   const handleClearDateFilters = () => {
     setShowTodayOnly(false);

@@ -220,6 +220,45 @@ const createTables = async (): Promise<void> => {
       WHERE is_durumu != LOWER(is_durumu);
     `);
 
+    // ⚡ PERFORMANCE INDEXES - Production için otomatik eklensin
+    console.log('⚡ Performance index\'leri kontrol ediliyor...');
+    
+    await pool.query(`
+      -- İş durumu filtresi (en sık kullanılan)
+      CREATE INDEX IF NOT EXISTS idx_is_durumu ON islemler(is_durumu);
+    `);
+    
+    await pool.query(`
+      -- Tarih sıralaması (en yeni en üstte)
+      CREATE INDEX IF NOT EXISTS idx_full_tarih ON islemler(full_tarih DESC);
+    `);
+    
+    await pool.query(`
+      -- Teknisyen bazlı sorgular
+      CREATE INDEX IF NOT EXISTS idx_teknisyen_ismi ON islemler(teknisyen_ismi);
+    `);
+    
+    await pool.query(`
+      -- Telefon aramaları (müşteri geçmişi için)
+      CREATE INDEX IF NOT EXISTS idx_cep_tel ON islemler(cep_tel);
+    `);
+    
+    await pool.query(`
+      -- Composite index (durum + tarih birlikte filtre için)
+      CREATE INDEX IF NOT EXISTS idx_durum_tarih ON islemler(is_durumu, full_tarih DESC);
+    `);
+    
+    await pool.query(`
+      -- Ad soyad araması için
+      CREATE INDEX IF NOT EXISTS idx_ad_soyad ON islemler(ad_soyad);
+    `);
+    
+    await pool.query(`
+      -- Yazdırılmamış işler filtresi
+      CREATE INDEX IF NOT EXISTS idx_yazdirildi ON islemler(yazdirildi);
+    `);
+
+    console.log('✅ Performance index\'leri hazır');
     console.log('Tablolar ve migration\'lar başarıyla oluşturuldu');
   } catch (error) {
     console.error('Tablo oluşturma hatası:', error);

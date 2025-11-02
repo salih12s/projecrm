@@ -24,6 +24,8 @@ import {
   useMediaQuery,
   useTheme,
   Divider,
+  Skeleton,
+  Button,
 } from '@mui/material';
 import {
   Edit,
@@ -81,6 +83,9 @@ const IslemTable: React.FC<IslemTableProps> = ({
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const [printEditorOpen, setPrintEditorOpen] = useState(false);
   const [selectedIslemForPrint, setSelectedIslemForPrint] = useState<Islem | null>(null);
+  
+  // ⚡ PAGINATION: Sayfa başına 100 kayıt göster
+  const [displayLimit, setDisplayLimit] = useState(100);
   
   // Müşteri Geçmişi Dialog states
   const [historyDialogOpen, setHistoryDialogOpen] = useState(false);
@@ -282,11 +287,13 @@ const IslemTable: React.FC<IslemTableProps> = ({
     return filtered;
   }, [islemler, filters]);
 
-  // Filtrelenmiş liste değiştiğinde parent'a bildir
+  // Filtrelenmiş liste değiştiğinde parent'a bildir ve displayLimit'i resetle
   useEffect(() => {
     if (onFilteredChange) {
       onFilteredChange(filteredIslemler);
     }
+    // Filtre değiştiğinde limit'i resetle
+    setDisplayLimit(100);
   }, [filteredIslemler, onFilteredChange]);
 
   const handleFilterChange = useCallback((field: string, value: string) => {
@@ -794,10 +801,34 @@ const IslemTable: React.FC<IslemTableProps> = ({
   }, [columnOrder]);
 
   if (loading) {
+    // ⚡ SKELETON LOADER: Boş ekran yerine loading animasyonu
     return (
-      <Box display="flex" justifyContent="center" p={4}>
-        <CircularProgress />
-      </Box>
+      <TableContainer component={Paper} elevation={3}>
+        <Table size="small">
+          <TableHead>
+            <TableRow sx={{ bgcolor: 'primary.main' }}>
+              <TableCell sx={{ color: 'white', py: 1 }}>Sıra</TableCell>
+              {columnOrder.map((colId) => (
+                <TableCell key={colId} sx={{ color: 'white', py: 1 }}>
+                  {columnConfigs[colId]?.label || colId}
+                </TableCell>
+              ))}
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {[...Array(8)].map((_, index) => (
+              <TableRow key={index}>
+                <TableCell><Skeleton variant="text" width={40} /></TableCell>
+                {columnOrder.map((_, colIndex) => (
+                  <TableCell key={colIndex}>
+                    <Skeleton variant="text" width="80%" />
+                  </TableCell>
+                ))}
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </TableContainer>
     );
   }
 
@@ -1182,9 +1213,9 @@ const IslemTable: React.FC<IslemTableProps> = ({
             ))}
           </TableRow>
         </TableHead>
+        {/* ⚡ OPTIMIZED RENDERING: Sadece ilk 100 satırı göster, daha fazlası için scroll */}
         <TableBody>
-          {filteredIslemler.map((islem) => {
-            // Sabit ID bazlı sıra - silince kaymasın
+          {filteredIslemler.slice(0, displayLimit).map((islem) => {
             const siraNo = islem.id;
             
             return (
@@ -1197,7 +1228,6 @@ const IslemTable: React.FC<IslemTableProps> = ({
                 }
               }}
             >
-              {/* Sıra No - ID bazlı sabit sıra (silince kaymasın) */}
               <TableCell sx={{ fontWeight: 500, fontSize: '0.65rem', py: 0.1, px: 0.2, textAlign: 'center' }}>
                 {siraNo}
               </TableCell>
@@ -1208,6 +1238,20 @@ const IslemTable: React.FC<IslemTableProps> = ({
             </TableRow>
             );
           })}
+          {/* Daha fazla göster satırı */}
+          {filteredIslemler.length > displayLimit && (
+            <TableRow>
+              <TableCell colSpan={columnOrder.length + 1} sx={{ textAlign: 'center', py: 2 }}>
+                <Button 
+                  variant="outlined" 
+                  size="small"
+                  onClick={() => setDisplayLimit(prev => prev + 100)}
+                >
+                  Daha Fazla Göster ({filteredIslemler.length - displayLimit} kayıt daha)
+                </Button>
+              </TableCell>
+            </TableRow>
+          )}
         </TableBody>
       </Table>
     </TableContainer>

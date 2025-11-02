@@ -98,9 +98,28 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
   });
 
   // Teknisyen, marka, montaj, aksesuar, ürün ve ilçe listelerini yükle
+  // ⚡ PERFORMANS: Verileri localStorage'dan cache'le, her açılışta API'ye gitme
   useEffect(() => {
     const loadData = async () => {
       try {
+        // Önce cache'den dene
+        const cachedData = localStorage.getItem('islemDialogData');
+        const cacheTime = localStorage.getItem('islemDialogDataTime');
+        const now = Date.now();
+        
+        // Cache 5 dakikadan eskiyse yenile
+        if (cachedData && cacheTime && (now - parseInt(cacheTime)) < 5 * 60 * 1000) {
+          const parsed = JSON.parse(cachedData);
+          setTeknisyenler(parsed.teknisyenler);
+          setMarkalar(parsed.markalar);
+          setMontajlar(parsed.montajlar);
+          setAksesuarlar(parsed.aksesuarlar);
+          setUrunler(parsed.urunler);
+          setIlceler(parsed.ilceler);
+          return; // Cache'den yüklendi, API'ye gitme
+        }
+        
+        // Cache yoksa veya eskiyse API'den yükle
         const [teknisyenResponse, markaResponse, montajResponse, aksesuarResponse, urunResponse, ilcelerResponse] = await Promise.all([
           api.get<Teknisyen[]>('/teknisyenler'),
           api.get<Marka[]>('/markalar'),
@@ -109,12 +128,26 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
           api.get<Urun[]>('/urunler'),
           api.get<{ ilce_id: number; isim: string }[]>('/ilceler'),
         ]);
-        setTeknisyenler(teknisyenResponse.data);
-        setMarkalar(markaResponse.data);
-        setMontajlar(montajResponse.data);
-        setAksesuarlar(aksesuarResponse.data);
-        setUrunler(urunResponse.data);
-        setIlceler(ilcelerResponse.data);
+        
+        const data = {
+          teknisyenler: teknisyenResponse.data,
+          markalar: markaResponse.data,
+          montajlar: montajResponse.data,
+          aksesuarlar: aksesuarResponse.data,
+          urunler: urunResponse.data,
+          ilceler: ilcelerResponse.data,
+        };
+        
+        setTeknisyenler(data.teknisyenler);
+        setMarkalar(data.markalar);
+        setMontajlar(data.montajlar);
+        setAksesuarlar(data.aksesuarlar);
+        setUrunler(data.urunler);
+        setIlceler(data.ilceler);
+        
+        // Cache'e kaydet
+        localStorage.setItem('islemDialogData', JSON.stringify(data));
+        localStorage.setItem('islemDialogDataTime', now.toString());
       } catch (error) {
         console.error('Veri yükleme hatası:', error);
       }

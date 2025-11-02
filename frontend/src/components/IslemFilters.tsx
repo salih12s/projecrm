@@ -7,6 +7,7 @@ import {
   Autocomplete,
   Chip,
 } from '@mui/material';
+import debounce from 'lodash.debounce';
 import { Islem, Montaj, Aksesuar } from '../types';
 import { api } from '../services/api';
 import { useAuth } from '../context/AuthContext';
@@ -157,12 +158,25 @@ const IslemFilters: React.FC<IslemFiltersProps> = ({
     }, 0);
   }, [filtered, isAdmin]);
 
-  // Parent'a filtrelenmiş listeyi gönder
+  // Parent'a filtrelenmiş listeyi gönder (debounced)
+  // ⚡ PERFORMANS: onFilterChange çağrısını 300ms geciktir, hızlı filtre değişimlerinde gereksiz render'ları önle
+  const debouncedFilterChange = useMemo(
+    () => debounce((filteredList: Islem[]) => {
+      onFilterChange(filteredList);
+    }, 300),
+    [onFilterChange]
+  );
+
   useEffect(() => {
     setFilteredCount(filtered.length);
     setFilteredTutar(calculatedTutar);
-    onFilterChange(filtered);
-  }, [filtered, calculatedTutar, onFilterChange]);
+    debouncedFilterChange(filtered);
+    
+    // Cleanup debounce on unmount
+    return () => {
+      debouncedFilterChange.cancel();
+    };
+  }, [filtered, calculatedTutar, debouncedFilterChange]);
 
 
 

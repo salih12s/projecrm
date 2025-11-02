@@ -6,6 +6,12 @@ const router = Router();
 // Tüm ilçeleri getir
 router.get('/', async (_req, res) => {
   try {
+    // ⚡ CACHE: İlçe listesi değişmez, 1 saat cache
+    res.set({
+      'Cache-Control': 'public, max-age=3600', // 1 saat
+      'ETag': 'ilceler-v1',
+    });
+    
     const result = await pool.query('SELECT * FROM ilceler ORDER BY isim ASC');
     res.json(result.rows);
   } catch (error) {

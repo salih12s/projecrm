@@ -1,5 +1,6 @@
 import express from 'express';
 import cors from 'cors';
+import compression from 'compression';
 import http from 'http';
 import { Server } from 'socket.io';
 import dotenv from 'dotenv';
@@ -45,6 +46,12 @@ const io = new Server(server, {
 });
 
 // Middleware
+// ⚡ COMPRESSION: Tüm API response'ları gzip ile sıkıştır (%60-80 daha az veri transferi)
+app.use(compression({
+  threshold: 1024, // 1KB'dan büyük response'ları sıkıştır
+  level: 6, // Sıkıştırma seviyesi (1-9, 6 optimal hız/boyut dengesi)
+}));
+
 app.use(cors({
   origin: (origin, callback) => {
     // Allow requests with no origin (mobile apps, Postman, etc.)

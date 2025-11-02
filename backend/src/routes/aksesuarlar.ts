@@ -8,6 +8,12 @@ const router = express.Router();
 // GET all aksesuarlar
 router.get('/', auth, async (_req: Request, res: Response) => {
   try {
+    // ⚡ CACHE: Aksesuar listesi 5 dakika tarayıcıda cache'lenir
+    res.set({
+      'Cache-Control': 'public, max-age=300',
+      'ETag': `aksesuarlar-${Date.now()}`,
+    });
+    
     const result = await pool.query<Aksesuar>(
       'SELECT * FROM aksesuarlar ORDER BY isim ASC'
     );
