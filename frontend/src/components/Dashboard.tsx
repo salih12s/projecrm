@@ -80,7 +80,8 @@ const Dashboard: React.FC = () => {
   // Bayi için tab değeri her zaman 0 (tek tab var)
   const [activeTab, setActiveTab] = useState(0);
   const [confirmDialog, setConfirmDialog] = useState<{ open: boolean; islem: Islem | null }>({ open: false, islem: null });
-  const [onHoldFormData, setOnHoldFormData] = useState<any>(null); // Beklemedeki form verileri
+  const [onHoldFormData, setOnHoldFormData] = useState<any[]>([]); // Beklemedeki formlar (array)
+  const [activeHoldIndex, setActiveHoldIndex] = useState<number | null>(null); // Hangi hold form aktif
   const [shouldRestoreForm, setShouldRestoreForm] = useState(false); // Beklemeden dönülüyor mu?
   
   // ⚡ PERFORMANS: useTransition ile durum geçişlerini optimize et
@@ -191,26 +192,38 @@ const Dashboard: React.FC = () => {
   };
 
   // Bekleme durumu değiştiğinde
-  const handleHoldChange = (isOnHold: boolean, formData?: any) => {
+  const handleHoldChange = (isOnHold: boolean, formData?: any, holdIndex?: number) => {
     if (isOnHold) {
-      // Beklemeye alındığında form verilerini kaydet
+      // Beklemeye alındığında form verilerini array'e ekle
       console.log('Beklemeye alınan form verileri:', formData);
-      setOnHoldFormData(formData);
+      setOnHoldFormData(prev => [...prev, formData]); // Array'e ekle
       setOpenDialog(false); // Dialog'u kapat
       setSelectedIslem(null); // Seçili işlemi temizle
       setShouldRestoreForm(false); // Restore bayrağını sıfırla
     } else {
       // Beklemeden çıkıyorsa (karta tıklandı)
-      console.log('Beklemeden çıkılan form verileri:', onHoldFormData);
-      setShouldRestoreForm(true); // Restore yapılacak
-      setOpenDialog(true); // Dialog'u aç
-      // onHoldFormData restoreFormData prop'u olarak gönderilecek
+      if (holdIndex !== undefined && holdIndex !== null) {
+        const selectedHoldData = onHoldFormData[holdIndex];
+        console.log('Beklemeden çıkılan form verileri:', selectedHoldData);
+        setActiveHoldIndex(holdIndex); // Hangi hold aktif
+        setShouldRestoreForm(true); // Restore yapılacak
+        setOpenDialog(true); // Dialog'u aç
+      }
     }
   };
 
   // Bekleyen formu tamamen temizle (form kaydedildiğinde veya iptal edildiğinde)
-  const clearOnHoldData = () => {
-    setOnHoldFormData(null);
+  const clearOnHoldData = (holdIndex?: number) => {
+    if (holdIndex !== undefined && holdIndex !== null) {
+      // Belirli bir hold'u sil
+      setOnHoldFormData(prev => prev.filter((_, i) => i !== holdIndex));
+    } else {
+      // Aktif olan hold'u sil
+      if (activeHoldIndex !== null) {
+        setOnHoldFormData(prev => prev.filter((_, i) => i !== activeHoldIndex));
+        setActiveHoldIndex(null);
+      }
+    }
     setShouldRestoreForm(false);
   };
 
@@ -852,7 +865,7 @@ const Dashboard: React.FC = () => {
           onSave={handleSaveIslem}
           openTamamlaModal={openTamamlaModal}
           onHold={handleHoldChange}
-          restoreFormData={shouldRestoreForm ? onHoldFormData : undefined}
+          restoreFormData={shouldRestoreForm && activeHoldIndex !== null ? onHoldFormData[activeHoldIndex] : undefined}
         />
 
         {/* Tamamlama Onay Dialog */}
@@ -882,79 +895,92 @@ const Dashboard: React.FC = () => {
           </DialogActions>
         </Dialog>
 
-        {/* Beklemedeki Form - Sol Alt Köşede Mini Kart */}
-        {onHoldFormData && !openDialog && (
+        {/* Beklemedeki Formlar - Sol Alt Köşede Yan Yana Kartlar */}
+        {onHoldFormData.length > 0 && !openDialog && (
           <Box
             sx={{
               position: 'fixed',
               bottom: 16,
               left: 16,
-              bgcolor: 'warning.light',
-              border: '2px solid',
-              borderColor: 'warning.main',
-              borderRadius: 2,
-              boxShadow: 3,
-              transition: 'all 0.2s',
+              display: 'flex',
+              gap: 2,
+              flexWrap: 'wrap',
+              maxWidth: '50vw',
               zIndex: 1300,
-              minWidth: 200,
-              maxWidth: 300,
             }}
           >
-            {/* Kapatma Butonu */}
-            <IconButton
-              onClick={(e) => {
-                e.stopPropagation();
-                e.preventDefault();
-                clearOnHoldData();
-              }}
-              size="small"
-              sx={{
-                position: 'absolute',
-                top: 4,
-                right: 4,
-                bgcolor: 'warning.main',
-                color: 'white',
-                width: 20,
-                height: 20,
-                zIndex: 1, // İçerideki Box'ın üstünde olsun
-                '&:hover': {
-                  bgcolor: 'warning.dark',
-                }
-              }}
-            >
-              <CloseIcon sx={{ fontSize: 14 }} />
-            </IconButton>
+            {onHoldFormData.map((holdData, index) => (
+              <Box
+                key={index}
+                sx={{
+                  bgcolor: 'warning.light',
+                  border: '2px solid',
+                  borderColor: 'warning.main',
+                  borderRadius: 2,
+                  boxShadow: 3,
+                  transition: 'all 0.2s',
+                  minWidth: 200,
+                  maxWidth: 250,
+                  position: 'relative',
+                }}
+              >
+                {/* Kapatma Butonu */}
+                <IconButton
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    clearOnHoldData(index);
+                  }}
+                  size="small"
+                  sx={{
+                    position: 'absolute',
+                    top: 4,
+                    right: 4,
+                    bgcolor: 'warning.main',
+                    color: 'white',
+                    width: 20,
+                    height: 20,
+                    zIndex: 1,
+                    '&:hover': {
+                      bgcolor: 'warning.dark',
+                    }
+                  }}
+                >
+                  <CloseIcon sx={{ fontSize: 14 }} />
+                </IconButton>
 
-            {/* Kart İçeriği - Tıklanabilir */}
-            <Box
-              onClick={(e) => {
-                // Kapatma butonuna tıklandıysa işlem yapma
-                if ((e.target as HTMLElement).closest('button')) {
-                  return;
-                }
-                handleHoldChange(false);
-              }}
-              sx={{
-                p: 1.5,
-                cursor: 'pointer',
-                '&:hover': {
-                  transform: 'scale(1.05)',
-                }
-              }}
-            >
-              <Typography variant="subtitle2" sx={{ fontWeight: 'bold', color: 'warning.dark', mb: 0.5 }}>
-                📋 Bekleyen Form
-              </Typography>
-              <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block' }}>
-                {onHoldFormData.ad_soyad || 'İsimsiz'} - {onHoldFormData.cep_tel || 'Telefon yok'}
-              </Typography>
-              <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mt: 0.5 }}>
-                {onHoldFormData.urun || 'Ürün belirtilmemiş'} {onHoldFormData.marka ? `- ${onHoldFormData.marka}` : ''}
-              </Typography>
-              <Typography variant="caption" sx={{ fontStyle: 'italic', color: 'warning.dark', mt: 1, display: 'block' }}>
-                Tıklayarak devam edin
-              </Typography>
-            </Box>
+                {/* Kart İçeriği - Tıklanabilir */}
+                <Box
+                  onClick={(e) => {
+                    // Kapatma butonuna tıklandıysa işlem yapma
+                    if ((e.target as HTMLElement).closest('button')) {
+                      return;
+                    }
+                    handleHoldChange(false, undefined, index);
+                  }}
+                  sx={{
+                    p: 1.5,
+                    cursor: 'pointer',
+                    '&:hover': {
+                      transform: 'scale(1.05)',
+                    }
+                  }}
+                >
+                  <Typography variant="subtitle2" sx={{ fontWeight: 'bold', color: 'warning.dark', mb: 0.5 }}>
+                    📋 Bekleyen Form {onHoldFormData.length > 1 && `(${index + 1})`}
+                  </Typography>
+                  <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block' }}>
+                    {holdData.ad_soyad || 'İsimsiz'} - {holdData.cep_tel || 'Telefon yok'}
+                  </Typography>
+                  <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mt: 0.5 }}>
+                    {holdData.urun || 'Ürün belirtilmemiş'} {holdData.marka ? `- ${holdData.marka}` : ''}
+                  </Typography>
+                  <Typography variant="caption" sx={{ fontStyle: 'italic', color: 'warning.dark', mt: 1, display: 'block' }}>
+                    Tıklayarak devam edin
+                  </Typography>
+                </Box>
+              </Box>
+            ))}
           </Box>
         )}
       </Container>

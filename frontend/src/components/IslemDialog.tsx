@@ -91,6 +91,9 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
     urun: '',
     marka: '',
     sikayet: '',
+    montaj: '',
+    aksesuar: '',
+    atolye: '',
     teknisyen_ismi: '',
     yapilan_islem: '',
     tutar: 0,
@@ -394,6 +397,22 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
     try {
       const response = await islemService.getAll();
       const cleanedPhone = cleanPhoneNumber(phoneNumber);
+      
+      // 1. Tamamlanmamış kayıt kontrolü (açık veya parça bekliyor)
+      const incompleteRecord = response.find((item: Islem) => 
+        cleanPhoneNumber(item.cep_tel) === cleanedPhone &&
+        (item.is_durumu === 'acik' || item.is_durumu === 'parca_bekliyor')
+      );
+      
+      if (incompleteRecord) {
+        // Tamamlanmamış kayıt var - duplicate uyarısı göster
+        setDuplicateRecord(incompleteRecord);
+        setShowDuplicateDialog(true);
+        setShowPhoneQuery(false);
+        return;
+      }
+      
+      // 2. Normal kayıt kontrolü (tamamlanmış kayıt)
       const existing = response.find((item: Islem) => cleanPhoneNumber(item.cep_tel) === cleanedPhone);
       
       if (existing) {
@@ -672,17 +691,116 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
     await saveIslem();
   };
 
-  // Duplicate dialog'dan devam et
-  const handleContinueWithDuplicate = async () => {
+  // Duplicate dialog'dan mevcut kaydı getir
+  const handleLoadExistingRecord = () => {
+    if (duplicateRecord) {
+      // Mevcut kaydın TÜM bilgilerini forma yükle
+      setFormData({
+        ad_soyad: duplicateRecord.ad_soyad || '',
+        cep_tel: duplicateRecord.cep_tel || '',
+        yedek_tel: duplicateRecord.yedek_tel || '',
+        sabit_tel: duplicateRecord.sabit_tel || '',
+        ilce: duplicateRecord.ilce || '',
+        mahalle: duplicateRecord.mahalle || '',
+        cadde: duplicateRecord.cadde || '',
+        sokak: duplicateRecord.sokak || '',
+        kapi_no: duplicateRecord.kapi_no || '',
+        apartman_site: duplicateRecord.apartman_site || '',
+        blok_no: duplicateRecord.blok_no || '',
+        daire_no: duplicateRecord.daire_no || '',
+        urun: duplicateRecord.urun || '',
+        marka: duplicateRecord.marka || '',
+        sikayet: duplicateRecord.sikayet || '',
+        montaj: duplicateRecord.montaj || '',
+        aksesuar: duplicateRecord.aksesuar || '',
+        teknisyen_ismi: duplicateRecord.teknisyen_ismi || duplicateRecord.teknisyen || '',
+        atolye: duplicateRecord.atolye || '',
+        is_durumu: duplicateRecord.is_durumu || 'acik',
+        yapilan_islem: duplicateRecord.yapilan_islem || '',
+        tutar: duplicateRecord.tutar || 0,
+      });
+      
+      // Montaj ve aksesuar seçimlerini de yükle
+      if (duplicateRecord.montaj) {
+        const montajIds = duplicateRecord.montaj.split(',').map(m => {
+          const montaj = montajlar.find(mt => mt.isim === m.trim());
+          return montaj?.id;
+        }).filter((id): id is number => id !== undefined);
+        setSelectedMontajlar(montajIds);
+      }
+      
+      if (duplicateRecord.aksesuar) {
+        const aksesuarIds = duplicateRecord.aksesuar.split(',').map(a => {
+          const aksesuar = aksesuarlar.find(ak => ak.isim === a.trim());
+          return aksesuar?.id;
+        }).filter((id): id is number => id !== undefined);
+        setSelectedAksesuarlar(aksesuarIds);
+      }
+      
+      // İlçe seçiliyse mahalle listesini yükle
+      if (duplicateRecord.ilce) {
+        const ilce = ilceler.find(i => i.isim === duplicateRecord.ilce);
+        if (ilce) {
+          setSelectedIlceId(ilce.ilce_id);
+          // Mahalle listesini API'den yükle
+          api.get(`/locations/mahalleler/${ilce.ilce_id}`)
+            .then(response => setMahalleler(response.data))
+            .catch(err => console.error('Mahalle yükleme hatası:', err));
+        }
+      }
+      
+      setShowForm(true);
+    }
     setShowDuplicateDialog(false);
     setDuplicateRecord(null);
-    await saveIslem();
   };
 
-  // Duplicate dialog'dan iptal et
+  // Duplicate dialog'dan yeni kayıt oluştur - telefon numarasını koru
+  const handleContinueWithDuplicate = async () => {
+    // Sadece telefon numarasını koru, diğer her şeyi temizle
+    const phoneToKeep = formData.cep_tel || (duplicateRecord?.cep_tel || '');
+    
+    setFormData({
+      ad_soyad: '',
+      ilce: '',
+      mahalle: '',
+      cadde: '',
+      sokak: '',
+      kapi_no: '',
+      apartman_site: '',
+      blok_no: '',
+      daire_no: '',
+      sabit_tel: '',
+      cep_tel: phoneToKeep, // Telefonu koru
+      yedek_tel: '',
+      urun: '',
+      marka: '',
+      sikayet: '',
+      montaj: '',
+      aksesuar: '',
+      atolye: '',
+      teknisyen_ismi: '',
+      yapilan_islem: '',
+      tutar: 0,
+      is_durumu: 'acik',
+    });
+    
+    setSelectedMontajlar([]);
+    setSelectedAksesuarlar([]);
+    setSelectedIlceId(null);
+    setMahalleler([]);
+    
+    setShowDuplicateDialog(false);
+    setDuplicateRecord(null);
+    setShowForm(true);
+  };
+
+  // Duplicate dialog'dan iptal et - Her şeyi kapat
   const handleCancelDuplicate = () => {
     setShowDuplicateDialog(false);
     setDuplicateRecord(null);
+    setShowForm(false);
+    onClose(); // Ana dialog'u da kapat
   };
 
   const saveIslem = async () => {
@@ -1229,7 +1347,7 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
                     sx: markaUyari ? { color: 'warning.main', fontWeight: 500 } : undefined
                   }}
                   onKeyDown={(e) => {
-                    if (e.key === 'Tab') {
+                    if (e.key === 'Tab' && !e.shiftKey) {
                       e.preventDefault(); // Default davranışı engelle
                       // Eğer popup açıksa ve vurgulanan bir seçenek varsa onu seç
                       const popup = document.querySelector('[role="listbox"]');
@@ -1243,11 +1361,11 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
                           }
                         }
                       }
-                      // Her durumda şikayet alanına geç (textarea olabilir)
+                      // İlk checkbox'a (MONTAJ) geç
                       setTimeout(() => {
-                        const sikayetInput = document.querySelector('textarea[name="sikayet"], input[name="sikayet"]') as HTMLInputElement | HTMLTextAreaElement;
-                        if (sikayetInput) {
-                          sikayetInput.focus();
+                        const firstCheckbox = document.querySelector('[data-checkbox="montaj"]') as HTMLElement;
+                        if (firstCheckbox) {
+                          firstCheckbox.focus();
                         }
                       }, 100);
                     }
@@ -1276,6 +1394,22 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
                           setFormData({ ...formData, sikayet: '' });
                         }
                       }}
+                      onKeyDown={(e) => {
+                        // Space ile seçim yap ve bir sonraki elemana geç
+                        if (e.key === ' ') {
+                          e.preventDefault();
+                          setFormData({ ...formData, sikayet: formData.sikayet === 'MONTAJ' ? '' : 'MONTAJ' });
+                          // Sonraki checkbox'a focus
+                          setTimeout(() => {
+                            const nextCheckbox = document.querySelector('[data-checkbox="ariza"]') as HTMLElement;
+                            nextCheckbox?.focus();
+                          }, 50);
+                        }
+                      }}
+                      inputProps={{ 
+                        'data-checkbox': 'montaj',
+                        tabIndex: 0
+                      } as any}
                       sx={{
                         color: '#0D3282',
                         '&.Mui-checked': { color: '#0D3282' },
@@ -1298,6 +1432,22 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
                           setFormData({ ...formData, sikayet: '' });
                         }
                       }}
+                      onKeyDown={(e) => {
+                        // Space ile seçim yap ve bir sonraki elemana geç
+                        if (e.key === ' ') {
+                          e.preventDefault();
+                          setFormData({ ...formData, sikayet: formData.sikayet === 'ARIZA' ? '' : 'ARIZA' });
+                          // Sonraki checkbox'a focus
+                          setTimeout(() => {
+                            const nextCheckbox = document.querySelector('[data-checkbox="diger"]') as HTMLElement;
+                            nextCheckbox?.focus();
+                          }, 50);
+                        }
+                      }}
+                      inputProps={{ 
+                        'data-checkbox': 'ariza',
+                        tabIndex: 0
+                      } as any}
                       sx={{
                         color: '#0D3282',
                         '&.Mui-checked': { color: '#0D3282' },
@@ -1320,6 +1470,22 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
                           setFormData({ ...formData, sikayet: '' });
                         }
                       }}
+                      onKeyDown={(e) => {
+                        // Space ile seçim yap ve şikayet detay alanına geç
+                        if (e.key === ' ') {
+                          e.preventDefault();
+                          setFormData({ ...formData, sikayet: formData.sikayet === 'DİĞER' ? '' : 'DİĞER' });
+                          // Şikayet detay alanına focus
+                          setTimeout(() => {
+                            const sikayetField = document.querySelector('[name="sikayet-detay"]') as HTMLElement;
+                            sikayetField?.focus();
+                          }, 50);
+                        }
+                      }}
+                      inputProps={{ 
+                        'data-checkbox': 'diger',
+                        tabIndex: 0
+                      } as any}
                       sx={{
                         color: '#0D3282',
                         '&.Mui-checked': { color: '#0D3282' },
@@ -1339,7 +1505,7 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
               fullWidth
               required
               size="small"
-              name="sikayet"
+              name="sikayet-detay"
               multiline
               rows={1}
               label="Şikayet"
@@ -1628,12 +1794,21 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
           )}
 
           <Typography variant="body2" sx={{ mt: 2, color: 'text.secondary' }}>
-            Yine de yeni bir kayıt oluşturmak istiyor musunuz?
+            Mevcut kaydın bilgilerini getirmek veya yeni bir kayıt oluşturmak istiyor musunuz?
           </Typography>
         </DialogContent>
         <DialogActions sx={{ px: 2, py: 1.5 }}>
-          <Button onClick={handleCancelDuplicate} variant="outlined" size="small">
+          <Button onClick={handleCancelDuplicate} variant="outlined" size="small" color="error">
             İptal Et
+          </Button>
+          <Button 
+            onClick={handleLoadExistingRecord} 
+            variant="contained" 
+            color="primary" 
+            size="small"
+            autoFocus
+          >
+            Bilgileri Getir
           </Button>
           <Button 
             onClick={handleContinueWithDuplicate} 

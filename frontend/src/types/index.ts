@@ -29,6 +29,9 @@ export interface Islem {
   urun: string;
   marka: string;
   sikayet: string;
+  montaj?: string; // Montaj listesi (virgülle ayrılmış)
+  aksesuar?: string; // Aksesuar listesi (virgülle ayrılmış)
+  atolye?: string; // Atölye ismi
   is_durumu: 'acik' | 'parca_bekliyor' | 'tamamlandi' | 'iptal';
   created_by?: string;
   updated_at: string;
@@ -51,6 +54,9 @@ export interface IslemCreateDto {
   urun: string;
   marka: string;
   sikayet: string;
+  montaj?: string; // Montaj listesi (virgülle ayrılmış)
+  aksesuar?: string; // Aksesuar listesi (virgülle ayrılmış)
+  atolye?: string; // Atölye ismi
   teknisyen_ismi?: string;
   yapilan_islem?: string;
   tutar?: number;
@@ -76,6 +82,9 @@ export interface IslemUpdateDto {
   urun: string;
   marka: string;
   sikayet: string;
+  montaj?: string; // Montaj listesi (virgülle ayrılmış)
+  aksesuar?: string; // Aksesuar listesi (virgülle ayrılmış)
+  atolye?: string; // Atölye ismi
   is_durumu: 'acik' | 'parca_bekliyor' | 'tamamlandi' | 'iptal';
 }
 

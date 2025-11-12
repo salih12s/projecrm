@@ -12,6 +12,7 @@ import {
   Button,
   Chip,
   TextField,
+  MenuItem,
   Tooltip,
   Card,
   CardContent,
@@ -156,20 +157,22 @@ const AtolyeTakip: React.FC = () => {
       filtered = filtered.filter((item) => item.teslim_durumu === activeStatusFilter);
     }
 
-    // Filter by teslim_durumu (text input)
+    // Filter by teslim_durumu (select dropdown - exact match)
     if (filters.teslim_durumu) {
-      filtered = filtered.filter((item) =>
-        getStatusLabel(item.teslim_durumu)
-          .toLowerCase()
-          .includes(filters.teslim_durumu.toLowerCase())
-      );
+      filtered = filtered.filter((item) => item.teslim_durumu === filters.teslim_durumu);
     }
 
-    // Filter by tarih (kayit_tarihi or created_at)
+    // Filter by tarih (kayit_tarihi or created_at) - Ana sayfa mantığıyla
     if (filters.tarih) {
-      filtered = filtered.filter((item) =>
-        formatDate(item.kayit_tarihi || item.created_at).includes(filters.tarih)
-      );
+      filtered = filtered.filter((item) => {
+        const dateValue = item.kayit_tarihi || item.created_at;
+        if (!dateValue) return false;
+        try {
+          return new Date(dateValue).toLocaleDateString('tr-TR').includes(filters.tarih);
+        } catch (error) {
+          return false;
+        }
+      });
     }
 
     // Filter by bayi_adi
@@ -242,11 +245,16 @@ const AtolyeTakip: React.FC = () => {
       );
     }
 
-    // Filter by yapilma_tarihi
+    // Filter by yapilma_tarihi - Ana sayfa mantığıyla
     if (filters.yapilma_tarihi) {
-      filtered = filtered.filter((item) =>
-        item.yapilma_tarihi ? formatDate(item.yapilma_tarihi).includes(filters.yapilma_tarihi) : false
-      );
+      filtered = filtered.filter((item) => {
+        if (!item.yapilma_tarihi) return false;
+        try {
+          return new Date(item.yapilma_tarihi).toLocaleDateString('tr-TR').includes(filters.yapilma_tarihi);
+        } catch (error) {
+          return false;
+        }
+      });
     }
 
     // Filter by sira (ID bazlı - kalıcı sıra numarası)
@@ -351,13 +359,20 @@ const AtolyeTakip: React.FC = () => {
     }
   };
 
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('tr-TR', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-    });
+  const formatDate = (dateString: string | undefined | null): string => {
+    if (!dateString) return '';
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) return ''; // Invalid date
+      return date.toLocaleDateString('tr-TR', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+      });
+    } catch (error) {
+      console.error('Date formatting error:', error);
+      return '';
+    }
   };
 
   const formatPhoneNumber = (phone: string) => {
@@ -582,7 +597,7 @@ const AtolyeTakip: React.FC = () => {
                       <Grid item xs={6}>
                         <Typography variant="caption" color="text.secondary">Tarih:</Typography>
                         <Typography variant="body2" sx={{ fontSize: '0.75rem' }}>
-                          {atolye.kayit_tarihi ? new Date(atolye.kayit_tarihi).toLocaleDateString('tr-TR') : (atolye.created_at ? new Date(atolye.created_at).toLocaleDateString('tr-TR') : '-')}
+                          {formatDate(atolye.kayit_tarihi || atolye.created_at) || '-'}
                         </Typography>
                       </Grid>
                       {!isBayi && atolye.bayi_adi && (
@@ -645,7 +660,7 @@ const AtolyeTakip: React.FC = () => {
                         <Grid item xs={6}>
                           <Typography variant="caption" color="text.secondary">Yapılma Tarihi:</Typography>
                           <Typography variant="body2" sx={{ fontSize: '0.75rem' }}>
-                            {new Date(atolye.yapilma_tarihi).toLocaleDateString('tr-TR')}
+                            {formatDate(atolye.yapilma_tarihi) || '-'}
                           </Typography>
                         </Grid>
                       )}
@@ -704,6 +719,7 @@ const AtolyeTakip: React.FC = () => {
                 </TableCell>
                 <TableCell sx={{ width: '100px', padding: '3px', position: 'sticky', top: 0, backgroundColor: '#f5f5f5', zIndex: 10 }}>
                   <TextField
+                    select
                     size="small"
                     placeholder="Durum..."
                     value={filters.teslim_durumu}
@@ -713,12 +729,20 @@ const AtolyeTakip: React.FC = () => {
                       backgroundColor: 'white',
                       '& .MuiInputBase-input': { padding: '3px 6px', fontSize: '0.75rem' }
                     }}
-                  />
+                  >
+                    <MenuItem value="">Tümü</MenuItem>
+                    <MenuItem value="beklemede">Beklemede</MenuItem>
+                    <MenuItem value="siparis_verildi">Sipariş Verildi</MenuItem>
+                    <MenuItem value="yapildi">Yapıldı</MenuItem>
+                    <MenuItem value="fabrika_gitti">Fabrika Gitti</MenuItem>
+                    <MenuItem value="odeme_bekliyor">Ödeme Bekliyor</MenuItem>
+                    <MenuItem value="teslim_edildi">Teslim Edildi</MenuItem>
+                  </TextField>
                 </TableCell>
                 <TableCell sx={{ width: '85px', padding: '3px', position: 'sticky', top: 0, backgroundColor: '#f5f5f5', zIndex: 10 }}>
                   <TextField
                     size="small"
-                    placeholder="Tarih..."
+                    placeholder="GG.AA.YYYY"
                     value={filters.tarih}
                     onChange={(e) => handleFilterChange('tarih', e.target.value)}
                     sx={{ 
@@ -861,7 +885,7 @@ const AtolyeTakip: React.FC = () => {
                 <TableCell sx={{ width: '85px', padding: '3px', position: 'sticky', top: 0, backgroundColor: '#f5f5f5', zIndex: 10 }}>
                   <TextField
                     size="small"
-                    placeholder="Tarih..."
+                    placeholder="GG.AA.YYYY"
                     value={filters.yapilma_tarihi}
                     onChange={(e) => handleFilterChange('yapilma_tarihi', e.target.value)}
                     sx={{ 
