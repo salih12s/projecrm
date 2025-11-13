@@ -47,12 +47,14 @@ interface IslemDialogProps {
   openTamamlaModal?: boolean; // Tamamlama modalını direkt açmak için
   onHold?: (isOnHold: boolean, formData?: any) => void; // Bekleme durumu değiştiğinde Dashboard'ı bilgilendir
   restoreFormData?: any; // Beklemeden dönerken form verilerini geri yükle
+  cloneFromRecord?: Islem; // Ad soyada çift tık ile klonlama için
 }
 
-const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave, openTamamlaModal = false, onHold, restoreFormData }) => {
+const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave, openTamamlaModal = false, onHold, restoreFormData, cloneFromRecord }) => {
   const { showSnackbar } = useSnackbar();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const [isCloneMode, setIsCloneMode] = useState(false); // Çift tıklama ile klonlama modu
   const [teknisyenler, setTeknisyenler] = useState<Teknisyen[]>([]);
   const [markalar, setMarkalar] = useState<Marka[]>([]);
   const [montajlar, setMontajlar] = useState<Montaj[]>([]);
@@ -273,6 +275,59 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
     }
   }, [open, openTamamlaModal, islem]);
 
+  // Çift tıklama ile klonlama modu
+  useEffect(() => {
+    if (cloneFromRecord && open && !islem) {
+      setIsCloneMode(true);
+      setShowPhoneQuery(false);
+      setShowForm(true);
+      
+      // Sadece müşteri bilgilerini getir, tamamlama bilgileri boş
+      setFormData({
+        ad_soyad: cloneFromRecord.ad_soyad || '',
+        ilce: cloneFromRecord.ilce || '',
+        mahalle: cloneFromRecord.mahalle || '',
+        cadde: cloneFromRecord.cadde || '',
+        sokak: cloneFromRecord.sokak || '',
+        kapi_no: cloneFromRecord.kapi_no || '',
+        apartman_site: cloneFromRecord.apartman_site || '',
+        blok_no: cloneFromRecord.blok_no || '',
+        daire_no: cloneFromRecord.daire_no || '',
+        sabit_tel: cloneFromRecord.sabit_tel || '',
+        cep_tel: cloneFromRecord.cep_tel || '',
+        yedek_tel: cloneFromRecord.yedek_tel || '',
+        urun: cloneFromRecord.urun || '',
+        marka: cloneFromRecord.marka || '',
+        sikayet: cloneFromRecord.sikayet || '',
+        teknisyen_ismi: '', // Tamamlama bilgisi - boş
+        yapilan_islem: '', // Tamamlama bilgisi - boş
+        tutar: 0, // Tamamlama bilgisi - boş
+        montaj: '', // Tamamlama bilgisi - boş
+        aksesuar: '', // Tamamlama bilgisi - boş
+        atolye: cloneFromRecord.atolye || '',
+        is_durumu: 'acik',
+      });
+      
+      // İlçe ve mahalle set et
+      if (cloneFromRecord.ilce) {
+        setIlceInputValue(cloneFromRecord.ilce);
+        const ilce = ilceler.find(i => i.isim === cloneFromRecord.ilce);
+        if (ilce) {
+          setSelectedIlceId(ilce.ilce_id);
+        }
+      }
+      if (cloneFromRecord.mahalle) {
+        setMahalleInputValue(cloneFromRecord.mahalle);
+      }
+      
+      // Montaj ve aksesuar seçimlerini BOŞ bırak (tamamlama bilgileri)
+      setSelectedMontajlar([]);
+      setSelectedAksesuarlar([]);
+    } else if (!cloneFromRecord) {
+      setIsCloneMode(false);
+    }
+  }, [cloneFromRecord, open, islem, ilceler, montajlar, aksesuarlar]);
+
   // Dialog kapandığında bekleme durumunu sıfırla
   useEffect(() => {
     if (!open) {
@@ -374,6 +429,9 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
     } else if (field === 'is_durumu') {
       // İş durumu için büyük harf dönüşümü YAPMA (küçük harf kalmalı)
       setFormData({ ...formData, [field]: value as 'acik' | 'parca_bekliyor' | 'tamamlandi' | 'iptal' });
+    } else if (field === 'yapilan_islem' || field === 'sikayet') {
+      // yapilan_islem ve sikayet alanları için büyük harf dönüşümü YAPMA (cursor sorunu olmaması için)
+      setFormData({ ...formData, [field]: value });
     } else {
       // Tüm text inputlar için büyük harf dönüşümü
       value = value.toLocaleUpperCase('tr-TR');
@@ -683,8 +741,8 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
     
     // ✅ GÖREV 2: Yeni kayıt eklenirken duplicate kontrolü
     // Aynı telefon + ürün + marka + açık/parça bekliyor durumunda kayıt var mı kontrol et
-    // "BİLGİLERİ GETİR" kullanıldıysa duplicate kontrolü yapma
-    if (!islem && !usedExistingData) { // Sadece yeni kayıt eklerken ve mevcut kayıt kullanılmadıysa kontrol et
+    // "BİLGİLERİ GETİR" kullanıldıysa veya clone mode'daysa duplicate kontrolü yapma
+    if (!islem && !usedExistingData && !isCloneMode) { // Sadece yeni kayıt eklerken, mevcut kayıt kullanılmadıysa ve clone mode değilse kontrol et
       try {
         const allRecords = await islemService.getAll();
         const cleanedPhone = cleanPhoneNumber(formData.cep_tel);
@@ -1529,7 +1587,7 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
         <Button onClick={onClose} size="small">İptal</Button>
         {showForm && (
           <Button onClick={handleSubmit} variant="contained" size="small">
-            Kaydet
+            {isCloneMode ? 'Yeni Kayıt Oluştur' : 'Kaydet'}
           </Button>
         )}
       </DialogActions>

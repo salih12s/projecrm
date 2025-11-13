@@ -70,6 +70,7 @@ const Dashboard: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [openDialog, setOpenDialog] = useState(false);
   const [selectedIslem, setSelectedIslem] = useState<Islem | null>(null);
+  const [cloneFromRecord, setCloneFromRecord] = useState<Islem | null>(null); // Çift tıklama ile klonlama
   const [openTamamlaModal, setOpenTamamlaModal] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
@@ -178,17 +179,32 @@ const Dashboard: React.FC = () => {
 
   const handleOpenDialog = (islem?: Islem) => {
     setSelectedIslem(islem || null);
+    setCloneFromRecord(null); // Klonlama modunu sıfırla
     setOpenDialog(true);
     setShouldRestoreForm(false); // Yeni işlem açılıyor, restore yapma
     // Bekleme verilerini temizleme - kart sol altta kalacak
   };
 
+  // Çift tıklama ile klonlama
+  const handleCloneRecord = (islem: Islem) => {
+    setCloneFromRecord(islem);
+    setSelectedIslem(null); // Düzenleme modu değil
+    setOpenDialog(true);
+    setShouldRestoreForm(false);
+  };
+
   const handleCloseDialog = () => {
     setOpenDialog(false);
     setSelectedIslem(null);
+    setCloneFromRecord(null); // Klonlama modunu sıfırla
     setOpenTamamlaModal(false); // Tamamlama modalını kapat
+    
+    // Eğer beklemeye alınmış bir form açıldıysa ve iptal ediliyorsa, kartı da sil
+    if (shouldRestoreForm && activeHoldIndex !== null) {
+      clearOnHoldData(activeHoldIndex);
+    }
+    
     setShouldRestoreForm(false); // Restore bayrağını sıfırla
-    // NOT: onHoldFormData'yı temizleme - kart sol altta kalacak
   };
 
   // Bekleme durumu değiştiğinde
@@ -822,6 +838,7 @@ const Dashboard: React.FC = () => {
               islemler={filteredIslemler}
               loading={loading}
               onEdit={handleOpenDialog}
+              onClone={handleCloneRecord}
               onToggleDurum={handleToggleDurum}
               onDelete={handleDelete}
               isAdminMode={isAdmin}
@@ -866,6 +883,7 @@ const Dashboard: React.FC = () => {
           openTamamlaModal={openTamamlaModal}
           onHold={handleHoldChange}
           restoreFormData={shouldRestoreForm && activeHoldIndex !== null ? onHoldFormData[activeHoldIndex] : undefined}
+          cloneFromRecord={cloneFromRecord || undefined}
         />
 
         {/* Tamamlama Onay Dialog */}

@@ -56,6 +56,7 @@ interface IslemTableProps {
   islemler: Islem[];
   loading: boolean;
   onEdit: (islem: Islem) => void;
+  onClone?: (islem: Islem) => void; // Çift tıklama ile klonlama
   onToggleDurum: (islem: Islem) => void;
   onDelete?: (islem: Islem) => void; // Silme işlemi (sadece admin)
   isAdminMode?: boolean; // Admin için tamamlanan işlemleri de düzenleme izni
@@ -73,6 +74,7 @@ const IslemTable: React.FC<IslemTableProps> = ({
   islemler,
   loading,
   onEdit,
+  onClone,
   onToggleDurum,
   onDelete,
   isAdminMode = false,
@@ -538,7 +540,21 @@ const IslemTable: React.FC<IslemTableProps> = ({
       id: 'ad_soyad',
       label: 'Ad Soyad',
       render: (islem) => (
-        <TableCell sx={{ fontWeight: 500, fontSize: '0.65rem', py: 0.1, px: 0.2, textTransform: 'uppercase', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+        <TableCell 
+          sx={{ 
+            fontWeight: 500, 
+            fontSize: '0.65rem', 
+            py: 0.1, 
+            px: 0.2, 
+            textTransform: 'uppercase', 
+            overflow: 'hidden', 
+            textOverflow: 'ellipsis', 
+            whiteSpace: 'nowrap',
+            cursor: 'pointer',
+            '&:hover': { bgcolor: 'action.hover' }
+          }}
+          onDoubleClick={() => onClone?.(islem)}
+        >
           <Tooltip title={islem.ad_soyad || '-'} arrow>
             <span>{islem.ad_soyad || '-'}</span>
           </Tooltip>
@@ -831,30 +847,21 @@ const IslemTable: React.FC<IslemTableProps> = ({
                     </IconButton>
                   </span>
                 </Tooltip>
-                <Tooltip title={
-                  islem.is_durumu === 'acik' || islem.is_durumu === 'parca_bekliyor' ? 'Düzenle' : 
-                  islem.is_durumu === 'iptal' ? (isAdminMode ? 'Düzenle (Admin)' : 'İptal edilen işlem düzenlenemez') :
-                  (isAdminMode ? 'Düzenle (Admin)' : 'Tamamlanan işlem düzenlenemez')
-                }>
+                <Tooltip title='Düzenle'>
                   <span>
                     <IconButton 
                       size="small" 
                       onClick={() => onEdit(islem)}
-                      disabled={!isAdminMode && (islem.is_durumu === 'tamamlandi' || islem.is_durumu === 'iptal')}
                       sx={{ 
-                        bgcolor: (islem.is_durumu !== 'tamamlandi' && islem.is_durumu !== 'iptal') || isAdminMode ? 'primary.light' : 'grey.300',
+                        bgcolor: 'primary.light',
                         width: 20,
                         height: 20,
                         '&:hover': {
-                          bgcolor: (islem.is_durumu !== 'tamamlandi' && islem.is_durumu !== 'iptal') || isAdminMode ? 'primary.main' : 'grey.300',
+                          bgcolor: 'primary.main',
                         },
-                        '&.Mui-disabled': {
-                          bgcolor: 'grey.300',
-                          opacity: 0.6,
-                        }
                       }}
                     >
-                      <Edit sx={{ color: (islem.is_durumu !== 'tamamlandi' || isAdminMode) ? 'white' : 'grey.500', fontSize: '0.7rem' }} />
+                      <Edit sx={{ color: 'white', fontSize: '0.7rem' }} />
                     </IconButton>
                   </span>
                 </Tooltip>
@@ -1122,16 +1129,13 @@ const IslemTable: React.FC<IslemTableProps> = ({
                         </span>
                       </Tooltip>
                       <Tooltip title="Düzenle">
-                        <span>
-                          <IconButton 
-                            size="small" 
-                            onClick={() => onEdit(islem)}
-                            disabled={!isAdminMode && (islem.is_durumu === 'tamamlandi' || islem.is_durumu === 'iptal')}
-                            sx={{ bgcolor: 'primary.light' }}
-                          >
-                            <Edit sx={{ fontSize: '1rem' }} />
-                          </IconButton>
-                        </span>
+                        <IconButton 
+                          size="small" 
+                          onClick={() => onEdit(islem)}
+                          sx={{ bgcolor: 'primary.light' }}
+                        >
+                          <Edit sx={{ fontSize: '1rem' }} />
+                        </IconButton>
                       </Tooltip>
                     </>
                   )}
