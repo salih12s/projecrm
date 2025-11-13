@@ -25,13 +25,26 @@ Modern ve kapsamlı bir CRM (Customer Relationship Management) sistemi. Servis t
 
 ### 📊 İşlem Takip Sistemi
 - **Gelişmiş Filtreleme**: Tüm alanlarda gerçek zamanlı arama
+- **Sütun Yönetimi**: Sürükle-bırak ile kolon sıralaması, dinamik genişlik ayarlama
 - **Durum Takibi**: Açık, Parça Bekliyor, Tamamlandı, İptal
 - **Müşteri Geçmişi**: Telefon numarasıyla geçmiş kayıt sorgulama
-- **Duplicate Kontrol**: Tamamlanmamış kayıt uyarısı
-- **Beklemeye Alma**: Birden fazla kayıt bekletme, yanyana kart görünümü
-- **Yazdırma**: Marka bazlı özelleştirilmiş servis fişi (A4/A5)
+- **Akıllı Duplicate Kontrol**: 
+  - Tamamlanmamış kayıt uyarısı
+  - "BİLGİLERİ GETİR" butonuyla mevcut kayıt kullanımı
+  - Çift tıklama ile kayıt klonlama (sadece müşteri bilgileri)
+  - Klonlamada duplicate kontrolü otomatik atlanır
+- **Beklemeye Alma**: 
+  - Birden fazla kayıt bekletme
+  - Sol alt köşede yanyana kart görünümü
+  - İptal edilince otomatik kart temizleme
+- **Yazdırma**: 
+  - Marka bazlı özelleştirilmiş servis fişi (A4/A5)
+  - Courier New font ile yazıcı çıktıları
+  - Segoe UI font ile ekran görünümü
 - **Excel Export**: Filtrelenmiş verileri Excel'e aktarma
 - **Yazıcı Durumu**: Her kayıt için yazdırıldı işaretleme
+- **Not Numarası**: Atölye takip entegrasyonu için note_no alanı
+- **Yedek Telefon**: Müşteriler için ikinci telefon numarası desteği
 
 ### 🔧 Atölye Takip Modülü
 - **Durum Yönetimi**: Beklemede, Sipariş Verildi, Yapıldı, Fabrika Gitti, Ödeme Bekliyor, Teslim Edildi
@@ -48,11 +61,12 @@ Modern ve kapsamlı bir CRM (Customer Relationship Management) sistemi. Servis t
 
 ### ⚡ Performans Özellikleri
 - **API Compression**: gzip ile %81 network azaltma
-- **Database Indexing**: 7 stratejik index ile hızlı sorgular
+- **Database Indexing**: 8 stratejik index ile hızlı sorgular (note_no eklendi)
 - **Connection Pooling**: Max 20 eşzamanlı bağlantı
 - **Cache Headers**: 5 dakika cache ile tekrarlayan istekleri azaltma
 - **React Optimizations**: useTransition, debounce, memoization
 - **Lazy Loading**: Gerektiğinde veri yükleme
+- **Column Virtualization**: Sürükle-bırak ve resize için optimize edilmiş render
 
 ### 📱 Responsive Tasarım
 - **Mobil Uyumlu**: Kart görünümü mobil cihazlar için
@@ -371,13 +385,26 @@ npm run build
 3. Sistem otomatik olarak:
    - Tamamlanmamış kayıt kontrolü yapar
    - Geçmiş kayıtları gösterir
-4. Müşteri bilgilerini doldurun:
+   - Duplicate uyarısı verir (aynı telefon + ürün + marka)
+4. **Duplicate Uyarısı Durumunda**:
+   - "BİLGİLERİ GETİR": Sadece müşteri bilgilerini doldurur (adres, telefon)
+   - "YENİ KAYIT OLUŞTUR": Yeni bir kayıt oluşturur (duplicate kontrolü atlanır)
+5. Müşteri bilgilerini doldurun:
    - Ad Soyad
    - Adres (İlçe, Mahalle, Cadde, Sokak, vb.)
    - Ürün ve Marka
    - Şikayet
-5. (Opsiyonel) Montaj ve Aksesuar seçin
-6. "Kaydet" butonuna tıklayın
+   - Yedek Telefon (opsiyonel)
+6. (Opsiyonel) Montaj ve Aksesuar seçin
+7. "Kaydet" butonuna tıklayın
+
+**Kayıt Klonlama:**
+1. Tabloda bir kaydın "Ad Soyad" alanına **çift tıklayın**
+2. Dialog açılır ve sadece **müşteri bilgileri** dolu gelir:
+   - Ad Soyad, Adres, Telefon, Ürün, Marka, Şikayet
+   - Teknisyen, Yapılan İşlem, Tutar, Montaj, Aksesuar **boş** gelir
+3. Buton "YENİ KAYIT OLUŞTUR" olarak görünür
+4. Duplicate kontrolü otomatik atlanır
 
 **İşlem Düzenleme:**
 1. İşlem satırındaki "Düzenle" (kalem) ikonuna tıklayın
@@ -385,12 +412,19 @@ npm run build
 3. Teknisyen ataması yapın
 4. Yapılan işlem ve tutar girin
 5. Kaydet
+6. **Not**: Normal kullanıcılar da tüm kayıtları düzenleyebilir
 
 **Beklemeye Alma:**
 1. Form doldururken "Beklemeye Al" butonuna tıklayın
 2. Birden fazla form bekletebilirsiniz
 3. Bekletilen formlar sol alt köşede kart olarak görünür
 4. Karta tıklayarak formu geri getirin
+5. **İptal**: İptal butonuna basarsanız kart da otomatik silinir
+
+**Sütun Yönetimi:**
+- Sütun başlıklarını **sürükle-bırak** ile yeniden sıralayın
+- Sütun kenarlarından **genişlik ayarı** yapın
+- Ayarlar localStorage'da saklanır
 
 **Filtreleme:**
 - Her sütun başlığının altında filtre kutuları var
@@ -429,7 +463,10 @@ npm run build
 1. İşlem satırındaki "Yazdır" (printer) ikonuna tıklayın
 2. PDF önizleme açılır
 3. Marka bazlı özel şablon yüklenir
-4. "İndir" veya "Yazdır" seçeneklerini kullanın
+4. **Font Seçimi**:
+   - Ekranda: Segoe UI (modern görünüm)
+   - Yazıcı çıktısı: Courier New (net baskı)
+5. "İndir" veya "Yazdır" seçeneklerini kullanın
 
 **Özel Şablon Ekleme:**
 1. `frontend/public/templates/` klasörüne PDF şablonu ekleyin
@@ -440,6 +477,7 @@ npm run build
 - Yazdırma işlemi sonrası otomatik işaretlenir
 - Printer ikonu yeşil olur
 - "Yazdırıldı" durumu saklanır
+- Filtre ile yazdırılmamış kayıtları görebilirsiniz
 
 ### 6️⃣ Bayi Paneli
 
@@ -784,7 +822,7 @@ CREATE TABLE islemler (
   -- Müşteri Bilgileri
   ad_soyad VARCHAR(255) NOT NULL,
   cep_tel VARCHAR(20) NOT NULL,
-  yedek_tel VARCHAR(20),
+  yedek_tel VARCHAR(20),          -- 🆕 Yedek telefon numarası
   sabit_tel VARCHAR(20),
   
   -- Adres Bilgileri
@@ -816,6 +854,7 @@ CREATE TABLE islemler (
   
   -- Metadata
   yazdirildi BOOLEAN DEFAULT FALSE,
+  note_no VARCHAR(100),            -- 🆕 Atölye takip not numarası
   created_by VARCHAR(255),
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -828,6 +867,7 @@ CREATE INDEX idx_islemler_teknisyen ON islemler(teknisyen_ismi);
 CREATE INDEX idx_islemler_tarih ON islemler(full_tarih DESC);
 CREATE INDEX idx_islemler_kayit_tarihi ON islemler(kayit_tarihi DESC);
 CREATE INDEX idx_islemler_ad_soyad ON islemler(ad_soyad);
+CREATE INDEX idx_islemler_note_no ON islemler(note_no);  -- 🆕 Not numarası index
 ```
 
 ### atolye
@@ -1296,8 +1336,44 @@ Bu proje özel bir projedir. Tüm hakları saklıdır.
 
 Bu projeyi kullandığınız için teşekkür ederiz! Sorunlarınız için GitHub Issues kullanabilirsiniz.
 
+## 🆕 Son Güncellemeler (v1.1.0)
+
+### Kullanıcı Deneyimi İyileştirmeleri
+- ✅ **Cursor Sorunu Düzeltildi**: Yapılan İşlem ve Şikayet alanlarında yazarken cursor artık kaybolmuyor
+- ✅ **Kayıt Klonlama**: Ad Soyad'a çift tıklayarak hızlı kayıt oluşturma
+  - Sadece müşteri bilgileri kopyalanır
+  - Teknisyen, tutar, montaj, aksesuar boş gelir
+  - Duplicate kontrolü otomatik atlanır
+- ✅ **Normal Kullanıcı Yetkileri**: Düzenleme butonu tüm kullanıcılar için aktif
+- ✅ **Bekleme Yönetimi**: İptal edilince sol alttaki kart da otomatik siliniyor
+
+### Veri Yönetimi
+- ✅ **Not Numarası Alanı**: Atölye takip entegrasyonu için note_no kolonu eklendi
+- ✅ **Yedek Telefon**: Müşteriler için ikinci telefon numarası desteği
+- ✅ **Nullable Constraint**: tel_no, bayi_adi, musteri_ad_soyad nullable yapıldı
+
+### Duplicate Kontrol İyileştirmeleri
+- ✅ **Akıllı Duplicate Kontrolü**: 
+  - "BİLGİLERİ GETİR": Sadece müşteri bilgilerini getir
+  - "YENİ KAYIT OLUŞTUR": Tamamlama bilgileri dahil etme
+  - Klonlamada duplicate kontrolü atlanıyor
+- ✅ **Timezone Fix**: yapilma_tarihi için timezone sorunu çözüldü
+
+### UI/UX Geliştirmeleri
+- ✅ **Sütun Yönetimi**: 
+  - Drag & Drop ile kolon sıralaması
+  - Dinamik genişlik ayarlama
+  - Resize sırasında drag devre dışı
+- ✅ **Font Optimizasyonu**:
+  - Segoe UI: Ekran görünümü
+  - Courier New: Yazıcı çıktıları
+- ✅ **Text Overflow**: Uzun metinler için tooltip desteği
+
+### Performans
+- ✅ **8. Index Eklendi**: note_no için performans indexi
+
 ---
 
-**Son Güncelleme**: Kasım 2025  
-**Versiyon**: 1.0.0  
+**Son Güncelleme**: 14 Kasım 2025  
+**Versiyon**: 1.1.0  
 **Durum**: Production Ready ✅

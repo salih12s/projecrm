@@ -458,6 +458,17 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
       const response = await islemService.getAll();
       const cleanedPhone = cleanPhoneNumber(phoneNumber);
       
+      // Response'un array olduğunu kontrol et
+      if (!response || !Array.isArray(response)) {
+        console.error('API response is not an array:', response);
+        showSnackbar('Veri yüklenirken hata oluştu! Lütfen tekrar deneyin.', 'error');
+        // Yeni kayıt olarak devam et
+        setFormData({ ...formData, cep_tel: phoneNumber });
+        setShowPhoneQuery(false);
+        setShowForm(true);
+        return;
+      }
+      
       // 1. Tamamlanmamış kayıt kontrolü (açık veya parça bekliyor)
       const incompleteRecord = response.find((item: Islem) => 
         cleanPhoneNumber(item.cep_tel) === cleanedPhone &&
@@ -745,20 +756,28 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
     if (!islem && !usedExistingData && !isCloneMode) { // Sadece yeni kayıt eklerken, mevcut kayıt kullanılmadıysa ve clone mode değilse kontrol et
       try {
         const allRecords = await islemService.getAll();
-        const cleanedPhone = cleanPhoneNumber(formData.cep_tel);
         
-        const foundDuplicate = allRecords.find((record: Islem) => 
-          cleanPhoneNumber(record.cep_tel) === cleanedPhone &&
-          record.urun === formData.urun &&
-          record.marka === formData.marka &&
-          (record.is_durumu === 'acik' || record.is_durumu === 'parca_bekliyor')
-        );
-        
-        if (foundDuplicate) {
-          // Tamamlanmamış aynı kayıt var - modal göster
-          setDuplicateRecord(foundDuplicate);
-          setShowDuplicateDialog(true);
-          return; // Kaydetme, kullanıcı onay verirse devam edecek
+        // Response'un array olduğunu kontrol et
+        if (!allRecords || !Array.isArray(allRecords)) {
+          console.error('API response is not an array:', allRecords);
+          // Hata durumunda duplicate kontrolü atlayıp kayda devam et
+          console.warn('Duplicate kontrolü atlanıyor, kayıt devam ediyor...');
+        } else {
+          const cleanedPhone = cleanPhoneNumber(formData.cep_tel);
+          
+          const foundDuplicate = allRecords.find((record: Islem) => 
+            cleanPhoneNumber(record.cep_tel) === cleanedPhone &&
+            record.urun === formData.urun &&
+            record.marka === formData.marka &&
+            (record.is_durumu === 'acik' || record.is_durumu === 'parca_bekliyor')
+          );
+          
+          if (foundDuplicate) {
+            // Tamamlanmamış aynı kayıt var - modal göster
+            setDuplicateRecord(foundDuplicate);
+            setShowDuplicateDialog(true);
+            return; // Kaydetme, kullanıcı onay verirse devam edecek
+          }
         }
       } catch (error) {
         console.error('Duplicate kontrolü hatası:', error);
@@ -849,7 +868,7 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
         if (ilce) {
           setSelectedIlceId(ilce.ilce_id);
           // Mahalle listesini API'den yükle
-          api.get(`/locations/mahalleler/${ilce.ilce_id}`)
+          api.get(`/ilceler/${ilce.ilce_id}/mahalleler`)
             .then(response => setMahalleler(response.data))
             .catch(err => console.error('Mahalle yükleme hatası:', err));
         }

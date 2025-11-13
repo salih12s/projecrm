@@ -91,6 +91,7 @@ app.use('/api/montajlar', montajlarRoutes);
 app.use('/api/aksesuarlar', aksesuarlarRoutes);
 app.use('/api/urunler', urunlerRoutes);
 app.use('/api/ilceler', locationsRoutes);
+app.use('/api/locations/ilceler', locationsRoutes);
 app.use('/api/printer-settings', printerSettingsRoutes);
 
 // Serve static files from frontend build (production only)
