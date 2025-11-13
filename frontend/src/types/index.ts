@@ -157,6 +157,7 @@ export interface Atolye {
   sikayet: string;
   ozel_not?: string;
   yapilan_islem?: string;
+  note_no?: string;
   ucret?: number;
   yapilma_tarihi?: string;
   kayit_tarihi?: string;
@@ -173,6 +174,7 @@ export interface AtolyeCreateDto {
   seri_no?: string;
   sikayet: string;
   ozel_not?: string;
+  note_no?: string;
   kayit_tarihi?: string;
 }
 
@@ -187,6 +189,7 @@ export interface AtolyeUpdateDto {
   sikayet?: string;
   ozel_not?: string;
   yapilan_islem?: string;
+  note_no?: string;
   ucret?: number;
   yapilma_tarihi?: string;
   kayit_tarihi?: string;

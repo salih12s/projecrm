@@ -83,6 +83,7 @@ const createTables = async (): Promise<void> => {
         sikayet TEXT NOT NULL,
         ozel_not TEXT,
         yapilan_islem TEXT,
+        note_no VARCHAR(100),
         ucret DECIMAL(10, 2),
         yapilma_tarihi TIMESTAMP,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

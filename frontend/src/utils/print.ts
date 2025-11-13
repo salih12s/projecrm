@@ -28,8 +28,8 @@ async function printWithPdfTemplate(islem: Islem, templateUrl: string) {
     const pages = pdfDoc.getPages();
     const firstPage = pages[0];
 
-    // Calibri font yükle
-    const fontUrl = '/fonts/Calibri-Regular.ttf';
+    // Courier New font yükle (nokta vuruşlu yazıcılar için)
+    const fontUrl = '/fonts/CourierNew-Regular.ttf';
 
     const fontBytes = await fetch(fontUrl).then(res => res.arrayBuffer());
     const font = await pdfDoc.embedFont(fontBytes);

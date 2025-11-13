@@ -50,6 +50,7 @@ const AtolyeDialog: React.FC<AtolyeDialogProps> = ({ open, onClose, atolyeId }) 
     sikayet: '',
     ozel_not: '',
     yapilan_islem: '',
+    note_no: '',
     ucret: undefined,
     yapilma_tarihi: undefined,
     teslim_durumu: 'beklemede',
@@ -107,10 +108,32 @@ const AtolyeDialog: React.FC<AtolyeDialogProps> = ({ open, onClose, atolyeId }) 
       
       console.log('=== FRONTEND fetchAtolyeData ===');
       console.log('Backend\'den gelen kayit_tarihi:', data.kayit_tarihi);
+      console.log('Backend\'den gelen yapilma_tarihi:', data.yapilma_tarihi);
       console.log('Typeof:', typeof data.kayit_tarihi);
       
       const processedDate = data.kayit_tarihi ? String(data.kayit_tarihi).substring(0, 10) : new Date().toISOString().substring(0, 10);
       console.log('Substring sonrası:', processedDate);
+      
+      // Yapılma tarihini timezone farkı olmadan işle
+      let processedYapilmaTarihi: string | undefined = undefined;
+      if (data.yapilma_tarihi) {
+        // UTC tarihini local timezone'a çevir
+        const yapilmaDate = new Date(data.yapilma_tarihi);
+        const year = yapilmaDate.getFullYear();
+        const month = String(yapilmaDate.getMonth() + 1).padStart(2, '0');
+        const day = String(yapilmaDate.getDate()).padStart(2, '0');
+        processedYapilmaTarihi = `${year}-${month}-${day}`;
+        console.log('Yapılma tarihi local:', processedYapilmaTarihi);
+      } else {
+        // Eğer yoksa bugünün tarihini kullan
+        const today = new Date();
+        const year = today.getFullYear();
+        const month = String(today.getMonth() + 1).padStart(2, '0');
+        const day = String(today.getDate()).padStart(2, '0');
+        processedYapilmaTarihi = `${year}-${month}-${day}`;
+        console.log('Bugünün tarihi:', processedYapilmaTarihi);
+      }
+      console.log('Final processedYapilmaTarihi:', processedYapilmaTarihi);
       console.log('================================');
       
       setFormData({
@@ -123,8 +146,9 @@ const AtolyeDialog: React.FC<AtolyeDialogProps> = ({ open, onClose, atolyeId }) 
         sikayet: data.sikayet,
         ozel_not: data.ozel_not || '',
         yapilan_islem: data.yapilan_islem || '',
+        note_no: data.note_no || '',
         ucret: data.ucret,
-        yapilma_tarihi: data.yapilma_tarihi ? String(data.yapilma_tarihi).substring(0, 10) : undefined,
+        yapilma_tarihi: processedYapilmaTarihi,
         kayit_tarihi: processedDate,
         teslim_durumu: data.teslim_durumu,
       });
@@ -144,6 +168,7 @@ const AtolyeDialog: React.FC<AtolyeDialogProps> = ({ open, onClose, atolyeId }) 
       sikayet: '',
       ozel_not: '',
       yapilan_islem: '',
+      note_no: '',
       ucret: undefined,
       yapilma_tarihi: undefined,
       teslim_durumu: 'beklemede',
@@ -308,7 +333,7 @@ const AtolyeDialog: React.FC<AtolyeDialogProps> = ({ open, onClose, atolyeId }) 
         )}
       </DialogTitle>
       <DialogContent>
-        <Grid container spacing={2} sx={{ mt: 1 }}>
+        <Grid container spacing={1.5} sx={{ mt: 0.5 }}>
           {/* Bayi Adı - Autocomplete */}
           <Grid item xs={12} md={6}>
             <Autocomplete
@@ -481,24 +506,25 @@ const AtolyeDialog: React.FC<AtolyeDialogProps> = ({ open, onClose, atolyeId }) 
               label="Şikayet"
               fullWidth
               multiline
-              rows={2}
+              rows={1}
               value={formData.sikayet}
               onChange={(e) => handleChange('sikayet', e.target.value)}
             />
           </Grid>
 
-          {/* Özel Not */}
-          <Grid item xs={12}>
-            <TextField
-              required
-              label="Özel Not"
-              fullWidth
-              multiline
-              rows={2}
-              value={formData.ozel_not}
-              onChange={(e) => handleChange('ozel_not', e.target.value)}
-            />
-          </Grid>
+          {/* Özel Not - Sadece yeni kayıtta */}
+          {!isEdit && (
+            <Grid item xs={12}>
+              <TextField
+                label="Özel Not"
+                fullWidth
+                multiline
+                rows={1}
+                value={formData.ozel_not}
+                onChange={(e) => handleChange('ozel_not', e.target.value)}
+              />
+            </Grid>
+          )}
 
           {/* Edit Mode Only Fields */}
           {isEdit && (
@@ -525,8 +551,20 @@ const AtolyeDialog: React.FC<AtolyeDialogProps> = ({ open, onClose, atolyeId }) 
                 <TextField
                   label="Yapılan İşlem"
                   fullWidth
+                  multiline
+                  rows={1}
                   value={formData.yapilan_islem}
                   onChange={(e) => handleChange('yapilan_islem', e.target.value)}
+                />
+              </Grid>
+
+              {/* Note No */}
+              <Grid item xs={12} md={6}>
+                <TextField
+                  label="Note No"
+                  fullWidth
+                  value={formData.note_no}
+                  onChange={(e) => handleChange('note_no', e.target.value)}
                 />
               </Grid>
 

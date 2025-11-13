@@ -61,8 +61,8 @@ router.post('/', auth, async (req: Request, res: Response) => {
 
     const result = await pool.query<Atolye>(
       `INSERT INTO atolye (
-        bayi_adi, musteri_ad_soyad, tel_no, marka, kod, seri_no, sikayet, ozel_not, kayit_tarihi, created_by
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) 
+        bayi_adi, musteri_ad_soyad, tel_no, marka, kod, seri_no, sikayet, ozel_not, note_no, kayit_tarihi, created_by
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) 
       RETURNING *`,
       [
         createDto.bayi_adi || null,
@@ -73,6 +73,7 @@ router.post('/', auth, async (req: Request, res: Response) => {
         createDto.seri_no || null,
         createDto.sikayet || null,
         createDto.ozel_not || null,
+        createDto.note_no || null,
         kayitTarihi,
         username || null
       ]
@@ -146,6 +147,10 @@ router.put('/:id', auth, async (req: Request, res: Response) => {
     if (updateDto.yapilan_islem !== undefined) {
       updates.push(`yapilan_islem = $${paramCounter++}`);
       values.push(updateDto.yapilan_islem);
+    }
+    if (updateDto.note_no !== undefined) {
+      updates.push(`note_no = $${paramCounter++}`);
+      values.push(updateDto.note_no);
     }
     if (updateDto.ucret !== undefined) {
       updates.push(`ucret = $${paramCounter++}`);

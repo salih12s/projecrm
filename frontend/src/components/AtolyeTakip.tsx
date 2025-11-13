@@ -59,6 +59,7 @@ const AtolyeTakip: React.FC = () => {
     sikayet: '',
     ozel_not: '',
     yapilan_islem: '',
+    note_no: '',
     ucret: '',
     yapilma_tarihi: '',
   });
@@ -238,6 +239,13 @@ const AtolyeTakip: React.FC = () => {
       );
     }
 
+    // Filter by note_no
+    if (filters.note_no) {
+      filtered = filtered.filter((item) =>
+        (item.note_no || '').toLowerCase().includes(filters.note_no.toLowerCase())
+      );
+    }
+
     // Filter by ucret
     if (filters.ucret) {
       filtered = filtered.filter((item) =>
@@ -375,7 +383,8 @@ const AtolyeTakip: React.FC = () => {
     }
   };
 
-  const formatPhoneNumber = (phone: string) => {
+  const formatPhoneNumber = (phone: string | null | undefined) => {
+    if (!phone) return '-';
     const cleaned = phone.replace(/\D/g, '');
     if (cleaned.length === 11) {
       return `${cleaned.slice(0, 4)} ${cleaned.slice(4, 7)} ${cleaned.slice(7, 9)} ${cleaned.slice(9)}`;
@@ -700,7 +709,12 @@ const AtolyeTakip: React.FC = () => {
         ) : (
           /* Masaüstü görünüm - Table layout */
           <TableContainer sx={{ maxHeight: 'calc(100vh - 250px)', overflow: 'auto' }}>
-            <Table size="small" stickyHeader>
+            <Table size="small" stickyHeader sx={{ 
+              '& .MuiTableCell-root': { 
+                borderRight: '1px solid rgba(0, 0, 0, 1)',
+                borderBottom: '1px solid rgba(0, 0, 0, 1)'
+              }
+            }}>
             <TableHead>
               {/* Filter Row */}
               <TableRow>
@@ -869,6 +883,19 @@ const AtolyeTakip: React.FC = () => {
                     }}
                   />
                 </TableCell>
+                <TableCell sx={{ width: '80px', padding: '3px', position: 'sticky', top: 0, backgroundColor: '#f5f5f5', zIndex: 10 }}>
+                  <TextField
+                    size="small"
+                    placeholder="Note..."
+                    value={filters.note_no}
+                    onChange={(e) => handleFilterChange('note_no', e.target.value)}
+                    sx={{ 
+                      width: '100%', 
+                      backgroundColor: 'white',
+                      '& .MuiInputBase-input': { padding: '3px 6px', fontSize: '0.75rem' }
+                    }}
+                  />
+                </TableCell>
                 <TableCell sx={{ width: '70px', padding: '3px', position: 'sticky', top: 0, backgroundColor: '#f5f5f5', zIndex: 10 }}>
                   <TextField
                     size="small"
@@ -911,6 +938,7 @@ const AtolyeTakip: React.FC = () => {
                 <TableCell sx={{ color: 'white', fontWeight: 'bold', padding: '6px', fontSize: '0.75rem', position: 'sticky', top: 30, backgroundColor: '#0D3282', zIndex: 9 }}>Şikayet</TableCell>
                 <TableCell sx={{ color: 'white', fontWeight: 'bold', padding: '6px', fontSize: '0.75rem', position: 'sticky', top: 30, backgroundColor: '#0D3282', zIndex: 9 }}>Özel Not</TableCell>
                 <TableCell sx={{ color: 'white', fontWeight: 'bold', padding: '6px', fontSize: '0.75rem', position: 'sticky', top: 30, backgroundColor: '#0D3282', zIndex: 9 }}>Yapılan İşlem</TableCell>
+                <TableCell sx={{ color: 'white', fontWeight: 'bold', padding: '6px', fontSize: '0.75rem', position: 'sticky', top: 30, backgroundColor: '#0D3282', zIndex: 9 }}>Note No</TableCell>
                 <TableCell sx={{ color: 'white', fontWeight: 'bold', padding: '6px', fontSize: '0.75rem', position: 'sticky', top: 30, backgroundColor: '#0D3282', zIndex: 9 }}>Ücret</TableCell>
                 <TableCell sx={{ color: 'white', fontWeight: 'bold', padding: '6px', fontSize: '0.75rem', position: 'sticky', top: 30, backgroundColor: '#0D3282', zIndex: 9 }}>Yapılma Tarihi</TableCell>
                 {!isBayi && <TableCell sx={{ color: 'white', fontWeight: 'bold', padding: '6px', fontSize: '0.75rem', position: 'sticky', top: 30, backgroundColor: '#0D3282', zIndex: 9 }}>İşlemler</TableCell>}
@@ -969,6 +997,11 @@ const AtolyeTakip: React.FC = () => {
                   <TableCell sx={{ padding: '3px', fontSize: '0.75rem', maxWidth: '120px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textTransform: 'uppercase' }}>
                     <Tooltip title={atolye.yapilan_islem || '-'} placement="top" arrow>
                       <span>{atolye.yapilan_islem || '-'}</span>
+                    </Tooltip>
+                  </TableCell>
+                  <TableCell sx={{ padding: '3px', fontSize: '0.75rem', maxWidth: '80px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textTransform: 'uppercase' }}>
+                    <Tooltip title={atolye.note_no || '-'} placement="top" arrow>
+                      <span>{atolye.note_no || '-'}</span>
                     </Tooltip>
                   </TableCell>
                   <TableCell sx={{ padding: '3px', fontSize: '0.75rem' }}>{atolye.ucret ? `${atolye.ucret} ₺` : '-'}</TableCell>

@@ -438,45 +438,156 @@ const IslemTable: React.FC<IslemTableProps> = ({
     return defaultOrder;
   });
 
+  // Sütun genişliklerini localStorage'dan yükle
+  const [columnWidths, setColumnWidths] = useState<Record<string, number>>(() => {
+    const saved = localStorage.getItem('islemTableColumnWidths');
+    const defaultWidths: Record<string, number> = {
+      sira: 35,
+      tarih: 90,
+      ad_soyad: 140,
+      ilce: 100,
+      mahalle: 120,
+      cadde: 120,
+      sokak: 100,
+      kapi_no: 60,
+      apartman_site: 120,
+      blok_no: 60,
+      daire_no: 60,
+      cep_tel: 110,
+      yedek_tel: 110,
+      urun: 120,
+      marka: 100,
+      sikayet: 180,
+      yapilan_islem: 180,
+      teknisyen: 100,
+      tutar: 80,
+      durum: 120,
+      islemler: 100,
+    };
+    
+    if (saved) {
+      return { ...defaultWidths, ...JSON.parse(saved) };
+    }
+    return defaultWidths;
+  });
+
+  // Resize state
+  const [resizing, setResizing] = useState<{ columnId: string; startX: number; startWidth: number } | null>(null);
+
+  // Resize handler
+  const handleResizeStart = (e: React.MouseEvent, columnId: string) => {
+    e.preventDefault();
+    e.stopPropagation(); // Drag event'ini engelle
+    const startX = e.clientX;
+    const startWidth = columnWidths[columnId] || 100;
+    setResizing({ columnId, startX, startWidth });
+  };
+
+  // Mouse move handler
+  React.useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (resizing) {
+        const diff = e.clientX - resizing.startX;
+        const newWidth = Math.max(40, resizing.startWidth + diff); // Min 40px
+        setColumnWidths(prev => ({
+          ...prev,
+          [resizing.columnId]: newWidth
+        }));
+      }
+    };
+
+    const handleMouseUp = () => {
+      if (resizing) {
+        // Save to localStorage
+        localStorage.setItem('islemTableColumnWidths', JSON.stringify(columnWidths));
+        setResizing(null);
+      }
+    };
+
+    if (resizing) {
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+      return () => {
+        document.removeEventListener('mousemove', handleMouseMove);
+        document.removeEventListener('mouseup', handleMouseUp);
+      };
+    }
+  }, [resizing, columnWidths]);
+
   // Sütun konfigürasyonu
   const columnConfigs: Record<string, ColumnConfig> = {
     tarih: {
       id: 'tarih',
       label: 'Tarih',
-      render: (islem) => (
-        <TableCell sx={{ fontWeight: 500, fontSize: '0.65rem', py: 0.1, px: 0.2 }}>
-          {islem.full_tarih ? new Date(islem.full_tarih).toLocaleDateString('tr-TR', {
-            year: 'numeric',
-            month: '2-digit',
-            day: '2-digit'
-          }) : '-'}
-        </TableCell>
-      ),
+      render: (islem) => {
+        const tarihStr = islem.full_tarih ? new Date(islem.full_tarih).toLocaleDateString('tr-TR', {
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit'
+        }) : '-';
+        return (
+          <TableCell sx={{ fontWeight: 500, fontSize: '0.65rem', py: 0.1, px: 0.2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            <Tooltip title={tarihStr} arrow>
+              <span>{tarihStr}</span>
+            </Tooltip>
+          </TableCell>
+        );
+      },
     },
     ad_soyad: {
       id: 'ad_soyad',
       label: 'Ad Soyad',
-      render: (islem) => <TableCell sx={{ fontWeight: 500, fontSize: '0.65rem', py: 0.1, px: 0.2, textTransform: 'uppercase' }}>{islem.ad_soyad || '-'}</TableCell>,
+      render: (islem) => (
+        <TableCell sx={{ fontWeight: 500, fontSize: '0.65rem', py: 0.1, px: 0.2, textTransform: 'uppercase', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          <Tooltip title={islem.ad_soyad || '-'} arrow>
+            <span>{islem.ad_soyad || '-'}</span>
+          </Tooltip>
+        </TableCell>
+      ),
     },
     ilce: {
       id: 'ilce',
       label: 'İlçe',
-      render: (islem) => <TableCell sx={{ fontSize: '0.65rem', py: 0.1, px: 0.2, textTransform: 'uppercase' }}>{islem.ilce || '-'}</TableCell>,
+      render: (islem) => (
+        <TableCell sx={{ fontSize: '0.65rem', py: 0.1, px: 0.2, textTransform: 'uppercase', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          <Tooltip title={islem.ilce || '-'} arrow>
+            <span>{islem.ilce || '-'}</span>
+          </Tooltip>
+        </TableCell>
+      ),
     },
     mahalle: {
       id: 'mahalle',
       label: 'Mahalle',
-      render: (islem) => <TableCell sx={{ fontSize: '0.65rem', py: 0.1, px: 0.2, textTransform: 'uppercase' }}>{islem.mahalle || '-'}</TableCell>,
+      render: (islem) => (
+        <TableCell sx={{ fontSize: '0.65rem', py: 0.1, px: 0.2, textTransform: 'uppercase', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          <Tooltip title={islem.mahalle || '-'} arrow>
+            <span>{islem.mahalle || '-'}</span>
+          </Tooltip>
+        </TableCell>
+      ),
     },
     cadde: {
       id: 'cadde',
       label: 'Cadde',
-      render: (islem) => <TableCell sx={{ fontSize: '0.65rem', py: 0.1, px: 0.2, textTransform: 'uppercase' }}>{islem.cadde || '-'}</TableCell>,
+      render: (islem) => (
+        <TableCell sx={{ fontSize: '0.65rem', py: 0.1, px: 0.2, textTransform: 'uppercase', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          <Tooltip title={islem.cadde || '-'} arrow>
+            <span>{islem.cadde || '-'}</span>
+          </Tooltip>
+        </TableCell>
+      ),
     },
     sokak: {
       id: 'sokak',
       label: 'Sokak',
-      render: (islem) => <TableCell sx={{ fontSize: '0.65rem', py: 0.1, px: 0.2, textTransform: 'uppercase' }}>{islem.sokak || '-'}</TableCell>,
+      render: (islem) => (
+        <TableCell sx={{ fontSize: '0.65rem', py: 0.1, px: 0.2, textTransform: 'uppercase', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          <Tooltip title={islem.sokak || '-'} arrow>
+            <span>{islem.sokak || '-'}</span>
+          </Tooltip>
+        </TableCell>
+      ),
     },
     apartman_site: {
       id: 'apartman_site',
@@ -503,22 +614,49 @@ const IslemTable: React.FC<IslemTableProps> = ({
     blok_no: {
       id: 'blok_no',
       label: 'Blok',
-      render: (islem) => <TableCell sx={{ fontSize: '0.65rem', py: 0.1, px: 0.2, textTransform: 'uppercase' }}>{islem.blok_no || '-'}</TableCell>,
+      render: (islem) => (
+        <TableCell sx={{ fontSize: '0.65rem', py: 0.1, px: 0.2, textTransform: 'uppercase', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          <Tooltip title={islem.blok_no || '-'} arrow>
+            <span>{islem.blok_no || '-'}</span>
+          </Tooltip>
+        </TableCell>
+      ),
     },
     daire_no: {
       id: 'daire_no',
       label: 'Daire',
-      render: (islem) => <TableCell sx={{ fontSize: '0.65rem', py: 0.1, px: 0.2, textTransform: 'uppercase' }}>{islem.daire_no || '-'}</TableCell>,
+      render: (islem) => (
+        <TableCell sx={{ fontSize: '0.65rem', py: 0.1, px: 0.2, textTransform: 'uppercase', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          <Tooltip title={islem.daire_no || '-'} arrow>
+            <span>{islem.daire_no || '-'}</span>
+          </Tooltip>
+        </TableCell>
+      ),
     },
     kapi_no: {
       id: 'kapi_no',
       label: 'Kapı',
-      render: (islem) => <TableCell sx={{ fontSize: '0.65rem', py: 0.1, px: 0.2, textTransform: 'uppercase' }}>{islem.kapi_no || '-'}</TableCell>,
+      render: (islem) => (
+        <TableCell sx={{ fontSize: '0.65rem', py: 0.1, px: 0.2, textTransform: 'uppercase', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          <Tooltip title={islem.kapi_no || '-'} arrow>
+            <span>{islem.kapi_no || '-'}</span>
+          </Tooltip>
+        </TableCell>
+      ),
     },
     cep_tel: {
       id: 'cep_tel',
       label: 'Cep Tel',
-      render: (islem) => <TableCell sx={{ fontSize: '0.65rem', py: 0.1, px: 0.2 }}>{islem.cep_tel ? formatPhoneNumber(islem.cep_tel) : '-'}</TableCell>,
+      render: (islem) => {
+        const formatted = islem.cep_tel ? formatPhoneNumber(islem.cep_tel) : '-';
+        return (
+          <TableCell sx={{ fontSize: '0.65rem', py: 0.1, px: 0.2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            <Tooltip title={formatted} arrow>
+              <span>{formatted}</span>
+            </Tooltip>
+          </TableCell>
+        );
+      },
     },
     yedek_tel: {
       id: 'yedek_tel',
@@ -547,12 +685,24 @@ const IslemTable: React.FC<IslemTableProps> = ({
     urun: {
       id: 'urun',
       label: 'Ürün',
-      render: (islem) => <TableCell sx={{ fontSize: '0.65rem', py: 0.1, px: 0.2, textTransform: 'uppercase' }}>{islem.urun || '-'}</TableCell>,
+      render: (islem) => (
+        <TableCell sx={{ fontSize: '0.65rem', py: 0.1, px: 0.2, textTransform: 'uppercase', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          <Tooltip title={islem.urun || '-'} arrow>
+            <span>{islem.urun || '-'}</span>
+          </Tooltip>
+        </TableCell>
+      ),
     },
     marka: {
       id: 'marka',
       label: 'Marka',
-      render: (islem) => <TableCell sx={{ fontWeight: 500, fontSize: '0.65rem', py: 0.1, px: 0.2, textTransform: 'uppercase' }}>{islem.marka || '-'}</TableCell>,
+      render: (islem) => (
+        <TableCell sx={{ fontWeight: 500, fontSize: '0.65rem', py: 0.1, px: 0.2, textTransform: 'uppercase', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          <Tooltip title={islem.marka || '-'} arrow>
+            <span>{islem.marka || '-'}</span>
+          </Tooltip>
+        </TableCell>
+      ),
     },
     sikayet: {
       id: 'sikayet',
@@ -579,16 +729,27 @@ const IslemTable: React.FC<IslemTableProps> = ({
     teknisyen: {
       id: 'teknisyen',
       label: 'Teknisyen',
-      render: (islem) => <TableCell sx={{ fontSize: '0.65rem', py: 0.1, px: 0.2, textTransform: 'uppercase' }}>{islem.teknisyen_ismi || '-'}</TableCell>,
+      render: (islem) => (
+        <TableCell sx={{ fontSize: '0.65rem', py: 0.1, px: 0.2, textTransform: 'uppercase', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          <Tooltip title={islem.teknisyen_ismi || '-'} arrow>
+            <span>{islem.teknisyen_ismi || '-'}</span>
+          </Tooltip>
+        </TableCell>
+      ),
     },
     tutar: {
       id: 'tutar',
       label: 'Tutar',
-      render: (islem) => (
-        <TableCell sx={{ fontWeight: 600, fontSize: '0.65rem', py: 0.1, px: 0.2 }}>
-          {islem.tutar ? `${Number(islem.tutar).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ₺` : '-'}
-        </TableCell>
-      ),
+      render: (islem) => {
+        const tutarStr = islem.tutar ? `${Number(islem.tutar).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ₺` : '-';
+        return (
+          <TableCell sx={{ fontWeight: 600, fontSize: '0.65rem', py: 0.1, px: 0.2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            <Tooltip title={tutarStr} arrow>
+              <span>{tutarStr}</span>
+            </Tooltip>
+          </TableCell>
+        );
+      },
     },
     durum: {
       id: 'durum',
@@ -1108,14 +1269,18 @@ const IslemTable: React.FC<IslemTableProps> = ({
     <>
     <TableContainer component={Paper} elevation={3} sx={{ maxWidth: '100vw', overflowX: 'auto' }}>
       <Table size="small" sx={{ 
+        fontFamily: '"Segoe UI", "Roboto", "Arial", sans-serif',
+        fontWeight: 500,
         '& .MuiTableCell-root': { 
           py: 0.2, 
           px: 0.3, 
           fontSize: '0.7rem',
           whiteSpace: 'nowrap',
           lineHeight: 1.2,
-          borderRight: '2px solid #e0e0e0',
+          borderRight: '1px solid #030303ff',
           borderBottom: '2px solid #000000ff',
+          fontFamily: '"Segoe UI", "Roboto", "Arial", sans-serif',
+          fontWeight: 500,
           '&:last-child': {
             borderRight: 'none'
           }
@@ -1131,13 +1296,44 @@ const IslemTable: React.FC<IslemTableProps> = ({
                   {...provided.droppableProps}
                 >
                   {/* Sıra No başlığı (draggable değil) */}
-                  <TableCell sx={{ color: 'white', fontWeight: 600, fontSize: '0.65rem', py: 0.1, px: 0.2, minWidth: '35px', maxWidth: '35px' }}>
+                  <TableCell sx={{ 
+                    color: 'white', 
+                    fontWeight: 600, 
+                    fontSize: '0.65rem', 
+                    py: 0.1, 
+                    px: 0.2, 
+                    width: columnWidths.sira,
+                    minWidth: columnWidths.sira,
+                    maxWidth: columnWidths.sira,
+                    position: 'relative',
+                  }}>
                     Sıra
+                    {/* Resize Handle */}
+                    <Box
+                      onMouseDown={(e) => handleResizeStart(e, 'sira')}
+                      sx={{
+                        position: 'absolute',
+                        right: 0,
+                        top: 0,
+                        bottom: 0,
+                        width: '4px',
+                        cursor: 'col-resize',
+                        userSelect: 'none',
+                        '&:hover': {
+                          backgroundColor: 'rgba(255,255,255,0.3)',
+                        },
+                      }}
+                    />
                   </TableCell>
                   {columnOrder.map((columnId, index) => {
                     const column = columnConfigs[columnId];
                     return (
-                      <Draggable key={columnId} draggableId={columnId} index={index}>
+                      <Draggable 
+                        key={columnId} 
+                        draggableId={columnId} 
+                        index={index}
+                        isDragDisabled={!!resizing}
+                      >
                         {(provided, snapshot) => (
                           <TableCell
                             ref={provided.innerRef}
@@ -1147,13 +1343,16 @@ const IslemTable: React.FC<IslemTableProps> = ({
                               color: 'white',
                               fontWeight: 600,
                               fontSize: '0.65rem',
-                              cursor: 'move',
+                              cursor: resizing ? 'col-resize' : (!snapshot.isDragging ? 'move' : 'grab'),
                               userSelect: 'none',
                               bgcolor: snapshot.isDragging ? 'primary.dark' : 'primary.main',
                               py: 0.1,
                               px: 0.2,
-                              minWidth: '60px',
-                              maxWidth: '120px',
+                              width: columnWidths[columnId],
+                              minWidth: columnWidths[columnId],
+                              maxWidth: columnWidths[columnId],
+                              position: 'relative',
+                              borderRight: '2px solid rgba(255, 255, 255, 0.3)',
                               '&:hover': {
                                 bgcolor: 'primary.dark',
                               },
@@ -1163,6 +1362,28 @@ const IslemTable: React.FC<IslemTableProps> = ({
                               <DragIndicator sx={{ fontSize: '0.7rem', opacity: 0.7 }} />
                               <span style={{ fontSize: '0.65rem' }}>{column.label}</span>
                             </Box>
+                            {/* Resize Handle */}
+                            <Box
+                              onMouseDown={(e) => {
+                                e.stopPropagation();
+                                handleResizeStart(e, columnId);
+                              }}
+                              sx={{
+                                position: 'absolute',
+                                right: 0,
+                                top: 0,
+                                bottom: 0,
+                                width: '8px',
+                                cursor: 'col-resize',
+                                userSelect: 'none',
+                                zIndex: 10,
+                                backgroundColor: 'transparent',
+                                transition: 'background-color 0.2s',
+                                '&:hover': {
+                                  backgroundColor: 'rgba(255,255,255,0.5)',
+                                },
+                              }}
+                            />
                           </TableCell>
                         )}
                       </Draggable>
@@ -1175,7 +1396,14 @@ const IslemTable: React.FC<IslemTableProps> = ({
           </DragDropContext>
           {/* Filter Row */}
           <TableRow sx={{ bgcolor: '#f5f5f5' }}>
-            <TableCell sx={{ py: 0.2, px: 0.2 }}>
+            <TableCell sx={{ 
+              py: 0.2, 
+              px: 0.2,
+              width: columnWidths.sira,
+              minWidth: columnWidths.sira,
+              maxWidth: columnWidths.sira,
+              borderRight: '1px solid rgba(224, 224, 224, 0.6)',
+            }}>
               <TextField
                 size="small"
                 placeholder="Sıra"
@@ -1183,12 +1411,19 @@ const IslemTable: React.FC<IslemTableProps> = ({
                 onChange={(e) => handleFilterChange('sira', e.target.value)}
                 sx={{
                   '& .MuiInputBase-input': { fontSize: '0.65rem', py: 0.2, px: 0.2 },
-                  width: '35px'
+                  width: '100%'
                 }}
               />
             </TableCell>
             {columnOrder.map((columnId) => (
-              <TableCell key={columnId} sx={{ py: 0.2, px: 0.2 }}>
+              <TableCell key={columnId} sx={{ 
+                py: 0.2, 
+                px: 0.2,
+                width: columnWidths[columnId],
+                minWidth: columnWidths[columnId],
+                maxWidth: columnWidths[columnId],
+                borderRight: '1px solid rgba(224, 224, 224, 0.6)',
+              }}>
                 {columnId !== 'islemler' ? (
                   <TextField
                     size="small"
@@ -1197,17 +1432,9 @@ const IslemTable: React.FC<IslemTableProps> = ({
                     onChange={(e) => handleFilterChange(columnId, e.target.value)}
                     sx={{
                       '& .MuiInputBase-input': { fontSize: '0.65rem', py: 0.2, px: 0.2 },
-                      minWidth: columnId === 'tarih' ? '75px' : 
-                               columnId === 'cep_tel' ? '85px' : 
-                               columnId === 'yedek_tel' ? '45px' : 
-                               columnId === 'tutar' ? '55px' :
-                               columnId === 'durum' ? '75px' : 
-                               columnId === 'apartman_site' ? '20px' :
-                               columnId === 'blok_no' ? '10px' :
-                               columnId === 'daire_no' ? '10px' :
-                               columnId === 'kapi_no' ? '10px' : '80px'
+                      width: '100%'
                     }}
-                  />
+                  /> 
                 ) : null}
               </TableCell>
             ))}
@@ -1228,15 +1455,38 @@ const IslemTable: React.FC<IslemTableProps> = ({
                 }
               }}
             >
-              <TableCell sx={{ fontWeight: 500, fontSize: '0.65rem', py: 0.1, px: 0.2, textAlign: 'center' }}>
+              <TableCell sx={{ 
+                fontWeight: 500, 
+                fontSize: '0.65rem', 
+                py: 0.1, 
+                px: 0.2, 
+                textAlign: 'center',
+                width: columnWidths.sira,
+                minWidth: columnWidths.sira,
+                maxWidth: columnWidths.sira,
+                borderRight: '1px solid rgba(224, 224, 224, 0.5)',
+              }}>
                 {siraNo}
               </TableCell>
               {columnOrder.map((columnId) => {
                 const column = columnConfigs[columnId];
-                return <React.Fragment key={columnId}>{column.render(islem)}</React.Fragment>;
+                const cell = column.render(islem);
+                const width = columnWidths[columnId];
+                
+                // Width'i cell'e ekle
+                return React.cloneElement(cell as React.ReactElement, {
+                  key: columnId,
+                  sx: {
+                    ...(cell as React.ReactElement).props.sx,
+                    width,
+                    minWidth: width,
+                    maxWidth: width,
+                    borderRight: '1px solid rgba(224, 224, 224, 0.5)',
+                  }
+                });
               })}
             </TableRow>
-            );
+          );
           })}
           {/* Daha fazla göster satırı */}
           {filteredIslemler.length > displayLimit && (

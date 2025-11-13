@@ -75,6 +75,7 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
   const [duplicateRecord, setDuplicateRecord] = useState<Islem | null>(null); // Duplicate kayıt için
   const [showDuplicateDialog, setShowDuplicateDialog] = useState(false); // Duplicate modal
   const [isOnHold, setIsOnHold] = useState(false); // Beklemeye alınma durumu
+  const [usedExistingData, setUsedExistingData] = useState(false); // BİLGİLERİ GETİR kullanıldı mı?
   const [formData, setFormData] = useState<IslemUpdateDto>({
     ad_soyad: '',
     ilce: '',
@@ -276,6 +277,7 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
   useEffect(() => {
     if (!open) {
       setIsOnHold(false);
+      setUsedExistingData(false); // Flag'i sıfırla
     }
   }, [open]);
 
@@ -435,49 +437,67 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
 
   const handleUseExistingData = async () => {
     if (existingRecord) {
-      // Önce ilçeyi bul ve set et (mahalleler yüklensin diye)
-      const ilce = ilceler.find(i => i.isim === existingRecord.ilce);
-      if (ilce) {
-        setSelectedIlceId(ilce.ilce_id);
-        // Mahalleleri yükle
-        try {
+      try {
+        // İlceler listesi yüklenmiş mi kontrol et
+        if (!ilceler || ilceler.length === 0) {
+          showSnackbar('Konum verileri yükleniyor, lütfen bekleyin...', 'info');
+          return;
+        }
+        
+        // Önce ilçeyi bul ve set et (mahalleler yüklensin diye)
+        const ilce = ilceler.find(i => i.isim === existingRecord.ilce);
+        if (ilce) {
+          setSelectedIlceId(ilce.ilce_id);
+          // Mahalleleri yükle ve tamamlanmasını bekle
           const response = await api.get<{ mahalle_id: number; isim: string }[]>(`/ilceler/${ilce.ilce_id}/mahalleler`);
           setMahalleler(response.data);
-        } catch (error) {
-          console.error('Mahalleler yüklenirken hata:', error);
         }
+        
+        // ✅ SADECE MÜŞTERİ BİLGİLERİNİ GETİR (tamamlama bilgileri BOŞ)
+        setFormData({
+          ad_soyad: existingRecord.ad_soyad || '',
+          ilce: existingRecord.ilce || '',
+          mahalle: existingRecord.mahalle || '',
+          cadde: existingRecord.cadde || '',
+          sokak: existingRecord.sokak || '',
+          kapi_no: existingRecord.kapi_no || '',
+          apartman_site: existingRecord.apartman_site || '',
+          blok_no: existingRecord.blok_no || '',
+          daire_no: existingRecord.daire_no || '',
+          sabit_tel: existingRecord.sabit_tel || '',
+          cep_tel: existingRecord.cep_tel || '',
+          yedek_tel: existingRecord.yedek_tel || '',
+          urun: existingRecord.urun || '',
+          marka: existingRecord.marka || '',
+          sikayet: existingRecord.sikayet || '',
+          // TAMAMLAMA BİLGİLERİ BOŞ
+          teknisyen_ismi: '',
+          yapilan_islem: '',
+          tutar: 0,
+          montaj: '',
+          aksesuar: '',
+          atolye: '',
+          is_durumu: 'acik',
+        });
+        
+        // Montaj ve aksesuar seçimlerini temizle
+        setSelectedMontajlar([]);
+        setSelectedAksesuarlar([]);
+        
+        showSnackbar('Önceki kayıt bilgileri getirildi. Değişiklik yapabilir veya olduğu gibi kaydedebilirsiniz.', 'info');
+        setUsedExistingData(true); // Mevcut kayıt kullanıldı, duplicate kontrolü yapma
+        setShowConfirmDialog(false);
+        setShowForm(true);
+      } catch (error) {
+        console.error('Bilgiler yüklenirken hata:', error);
+        showSnackbar('Bilgiler yüklenirken hata oluştu!', 'error');
       }
-      
-      // ✅ GÖREV 1: Teknisyen ismi, yapılan işlem, tutar getirme - sadece müşteri bilgileri
-      setFormData({
-        ad_soyad: existingRecord.ad_soyad || '',
-        ilce: existingRecord.ilce || '',
-        mahalle: existingRecord.mahalle || '',
-        cadde: existingRecord.cadde || '',
-        sokak: existingRecord.sokak || '',
-        kapi_no: existingRecord.kapi_no || '',
-        apartman_site: existingRecord.apartman_site || '',
-        blok_no: existingRecord.blok_no || '',
-        daire_no: existingRecord.daire_no || '',
-        sabit_tel: existingRecord.sabit_tel || '',
-        cep_tel: existingRecord.cep_tel || '',
-        yedek_tel: existingRecord.yedek_tel || '',
-        urun: existingRecord.urun || '',
-        marka: existingRecord.marka || '',
-        sikayet: existingRecord.sikayet || '',
-        teknisyen_ismi: '', // Getirme
-        yapilan_islem: '', // Getirme
-        tutar: 0, // Getirme
-        is_durumu: 'acik',
-      });
-      showSnackbar('Önceki kayıt bilgileri getirildi. Değişiklik yapabilir veya olduğu gibi kaydedebilirsiniz.', 'info');
     }
-    setShowConfirmDialog(false);
-    setShowForm(true);
   };
 
   const handleContinueWithNewData = () => {
     setFormData({ ...formData, cep_tel: phoneNumber });
+    setUsedExistingData(false); // Yeni kayıt açılıyor, duplicate kontrolü yapılacak
     setShowConfirmDialog(false);
     setShowForm(true);
     setExistingRecord(null);
@@ -663,7 +683,8 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
     
     // ✅ GÖREV 2: Yeni kayıt eklenirken duplicate kontrolü
     // Aynı telefon + ürün + marka + açık/parça bekliyor durumunda kayıt var mı kontrol et
-    if (!islem) { // Sadece yeni kayıt eklerken kontrol et
+    // "BİLGİLERİ GETİR" kullanıldıysa duplicate kontrolü yapma
+    if (!islem && !usedExistingData) { // Sadece yeni kayıt eklerken ve mevcut kayıt kullanılmadıysa kontrol et
       try {
         const allRecords = await islemService.getAll();
         const cleanedPhone = cleanPhoneNumber(formData.cep_tel);
@@ -691,26 +712,13 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
     await saveIslem();
   };
 
-  // Duplicate dialog'dan mevcut kaydı getir
+  // Duplicate dialog'dan mevcut kaydı getir - SADECE TAMAMLAMA BİLGİLERİ
   const handleLoadExistingRecord = () => {
     if (duplicateRecord) {
-      // Mevcut kaydın TÜM bilgilerini forma yükle
-      setFormData({
-        ad_soyad: duplicateRecord.ad_soyad || '',
-        cep_tel: duplicateRecord.cep_tel || '',
-        yedek_tel: duplicateRecord.yedek_tel || '',
-        sabit_tel: duplicateRecord.sabit_tel || '',
-        ilce: duplicateRecord.ilce || '',
-        mahalle: duplicateRecord.mahalle || '',
-        cadde: duplicateRecord.cadde || '',
-        sokak: duplicateRecord.sokak || '',
-        kapi_no: duplicateRecord.kapi_no || '',
-        apartman_site: duplicateRecord.apartman_site || '',
-        blok_no: duplicateRecord.blok_no || '',
-        daire_no: duplicateRecord.daire_no || '',
-        urun: duplicateRecord.urun || '',
-        marka: duplicateRecord.marka || '',
-        sikayet: duplicateRecord.sikayet || '',
+      // SADECE tamamlama bilgilerini getir, müşteri bilgileri mevcut kalacak
+      setFormData(prev => ({
+        ...prev, // Mevcut müşteri bilgilerini koru
+        // TAMAMLAMA bilgilerini duplicateRecord'dan al
         montaj: duplicateRecord.montaj || '',
         aksesuar: duplicateRecord.aksesuar || '',
         teknisyen_ismi: duplicateRecord.teknisyen_ismi || duplicateRecord.teknisyen || '',
@@ -718,7 +726,7 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
         is_durumu: duplicateRecord.is_durumu || 'acik',
         yapilan_islem: duplicateRecord.yapilan_islem || '',
         tutar: duplicateRecord.tutar || 0,
-      });
+      }));
       
       // Montaj ve aksesuar seçimlerini de yükle
       if (duplicateRecord.montaj) {
@@ -737,6 +745,46 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
         setSelectedAksesuarlar(aksesuarIds);
       }
       
+      setShowDuplicateDialog(false); // Modal'ı kapat
+      setUsedExistingData(true); // Mevcut kayıt bilgileri kullanıldı
+      setShowTamamlaConfirm(true); // Direkt tamamlama dialogunu aç
+    }
+  };
+
+  // Duplicate dialog'dan yeni kayıt oluştur - SADECE MÜŞTERİ BİLGİLERİ
+  const handleContinueWithDuplicate = async () => {
+    if (duplicateRecord) {
+      // SADECE müşteri bilgileri gelir, tamamlama bilgileri BOŞ
+      setFormData({
+        ad_soyad: duplicateRecord.ad_soyad || '',
+        cep_tel: duplicateRecord.cep_tel || '',
+        yedek_tel: duplicateRecord.yedek_tel || '',
+        sabit_tel: duplicateRecord.sabit_tel || '',
+        ilce: duplicateRecord.ilce || '',
+        mahalle: duplicateRecord.mahalle || '',
+        cadde: duplicateRecord.cadde || '',
+        sokak: duplicateRecord.sokak || '',
+        kapi_no: duplicateRecord.kapi_no || '',
+        apartman_site: duplicateRecord.apartman_site || '',
+        blok_no: duplicateRecord.blok_no || '',
+        daire_no: duplicateRecord.daire_no || '',
+        urun: duplicateRecord.urun || '',
+        marka: duplicateRecord.marka || '',
+        sikayet: duplicateRecord.sikayet || '',
+        // TAMAMLAMA bilgileri BOŞ
+        montaj: '',
+        aksesuar: '',
+        teknisyen_ismi: '',
+        atolye: '',
+        is_durumu: 'acik',
+        yapilan_islem: '',
+        tutar: 0,
+      });
+      
+      // Montaj ve aksesuar seçimlerini temizle
+      setSelectedMontajlar([]);
+      setSelectedAksesuarlar([]);
+      
       // İlçe seçiliyse mahalle listesini yükle
       if (duplicateRecord.ilce) {
         const ilce = ilceler.find(i => i.isim === duplicateRecord.ilce);
@@ -748,48 +796,9 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
             .catch(err => console.error('Mahalle yükleme hatası:', err));
         }
       }
-      
-      setShowForm(true);
     }
-    setShowDuplicateDialog(false);
-    setDuplicateRecord(null);
-  };
-
-  // Duplicate dialog'dan yeni kayıt oluştur - telefon numarasını koru
-  const handleContinueWithDuplicate = async () => {
-    // Sadece telefon numarasını koru, diğer her şeyi temizle
-    const phoneToKeep = formData.cep_tel || (duplicateRecord?.cep_tel || '');
     
-    setFormData({
-      ad_soyad: '',
-      ilce: '',
-      mahalle: '',
-      cadde: '',
-      sokak: '',
-      kapi_no: '',
-      apartman_site: '',
-      blok_no: '',
-      daire_no: '',
-      sabit_tel: '',
-      cep_tel: phoneToKeep, // Telefonu koru
-      yedek_tel: '',
-      urun: '',
-      marka: '',
-      sikayet: '',
-      montaj: '',
-      aksesuar: '',
-      atolye: '',
-      teknisyen_ismi: '',
-      yapilan_islem: '',
-      tutar: 0,
-      is_durumu: 'acik',
-    });
-    
-    setSelectedMontajlar([]);
-    setSelectedAksesuarlar([]);
-    setSelectedIlceId(null);
-    setMahalleler([]);
-    
+    setUsedExistingData(true); // Mevcut kayıt kullanıldı, duplicate kontrolü yapma
     setShowDuplicateDialog(false);
     setDuplicateRecord(null);
     setShowForm(true);
