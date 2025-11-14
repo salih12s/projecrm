@@ -1,16 +1,26 @@
 import pool from './db';
-import fs from 'fs';
-import path from 'path';
 
 async function addNoteNoToAtolyeTable() {
   const client = await pool.connect();
   try {
     console.log('🔧 Atölye tablosuna note_no kolonu ekleniyor...');
     
-    const sql = fs.readFileSync(
-      path.join(__dirname, 'migrations', 'add_note_no_to_atolye.sql'),
-      'utf-8'
-    );
+    // SQL direkt olarak kod içinde (build sorunu yaşanmaması için)
+    const sql = `
+      -- Atölye tablosuna note_no kolonu ekle
+      DO $$ 
+      BEGIN
+        IF NOT EXISTS (
+          SELECT 1 FROM information_schema.columns 
+          WHERE table_name = 'atolye' AND column_name = 'note_no'
+        ) THEN
+          ALTER TABLE atolye ADD COLUMN note_no VARCHAR(100);
+          RAISE NOTICE 'note_no kolonu eklendi';
+        ELSE
+          RAISE NOTICE 'note_no kolonu zaten mevcut';
+        END IF;
+      END $$;
+    `;
     
     await client.query(sql);
     console.log('✅ note_no kolonu başarıyla eklendi!');
