@@ -572,7 +572,12 @@ const AtolyeTakip: React.FC = () => {
               const siraNo = atolye.id;
 
               return (
-                <Card key={atolye.id} elevation={2}>
+                <Card 
+                  key={atolye.id} 
+                  elevation={2}
+                  onDoubleClick={() => !isBayi && handleEdit(atolye.id)}
+                  sx={{ cursor: !isBayi ? 'pointer' : 'default' }}
+                >
                   <CardContent sx={{ pb: 1 }}>
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
                       <Chip 
@@ -953,8 +958,10 @@ const AtolyeTakip: React.FC = () => {
                 <TableRow 
                   key={atolye.id} 
                   hover
+                  onDoubleClick={() => !isBayi && handleEdit(atolye.id)}
                   sx={{ 
                     backgroundColor: getRowBackgroundColor(atolye.teslim_durumu),
+                    cursor: !isBayi ? 'pointer' : 'default',
                     '&:hover': {
                       backgroundColor: getRowBackgroundColor(atolye.teslim_durumu),
                       filter: 'brightness(0.95)',

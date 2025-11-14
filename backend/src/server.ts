@@ -8,6 +8,7 @@ import path from 'path';
 
 import createTables from './createTables';
 import { initLocations } from './initLocations';
+import addNoteNoToAtolyeTable from './addNoteNoToAtolyeTable';
 import authRoutes from './routes/auth';
 import islemlerRoutes from './routes/islemler';
 import teknisyenlerRoutes from './routes/teknisyenler';
@@ -112,8 +113,9 @@ if (process.env.NODE_ENV === 'production') {
 
 const PORT = process.env.PORT || 5000;
 
-// Tabloları oluştur, location data'yı yükle ve sunucuyu başlat
+// Tabloları oluştur, migration'ları çalıştır, location data'yı yükle ve sunucuyu başlat
 createTables()
+  .then(() => addNoteNoToAtolyeTable())
   .then(() => initLocations())
   .then(() => {
     server.listen(PORT, () => {
