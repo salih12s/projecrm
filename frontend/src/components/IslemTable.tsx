@@ -680,20 +680,13 @@ const IslemTable: React.FC<IslemTableProps> = ({
       render: (islem) => {
         if (!islem.yedek_tel) return <TableCell sx={{ fontSize: '0.65rem', py: 0.1, px: 0.2 }}>-</TableCell>;
         const formatted = formatPhoneNumber(islem.yedek_tel);
-        const firstFour = formatted.slice(0, 4);
         return (
           <TableCell sx={{ 
             fontSize: '0.65rem', 
             py: 0.1, 
-            px: 0.2,
-            maxWidth: '45px',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            whiteSpace: 'nowrap'
+            px: 0.2
           }}>
-            <Tooltip title={formatted} arrow>
-              <span>{firstFour}</span>
-            </Tooltip>
+            {formatted}
           </TableCell>
         );
       },

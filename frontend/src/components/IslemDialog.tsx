@@ -1774,6 +1774,7 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
                 type="number"
                 value={formData.tutar}
                 onChange={handleChange('tutar')}
+                onFocus={(e) => e.target.select()}
                 InputProps={{
                   endAdornment: 'TL',
                 }}

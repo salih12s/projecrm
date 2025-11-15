@@ -436,8 +436,8 @@ const PrintEditor: React.FC<PrintEditorProps> = ({ open, onClose, islem }) => {
             }
             body { 
               font-family: 'Courier New', Courier, monospace;
-              font-size: 15px;
-              font-weight: 800;
+              font-size: 18px;
+              font-weight: 2000;
               color: #000;
               background: white;
               position: relative;
@@ -446,18 +446,18 @@ const PrintEditor: React.FC<PrintEditorProps> = ({ open, onClose, islem }) => {
             }
             .item {
               position: absolute;
-              font-weight: 800;
+              font-weight: 900;
               font-family: 'Courier New', Courier, monospace;
             }
             .item-small {
-              font-size: 12px;
+              font-size: 15px;
               max-width: 170mm;
               white-space: normal;
               word-wrap: break-word;
               line-height: 1.2;
             }
             .item-normal {
-              font-size: 14px;
+              font-size: 15px;
               white-space: nowrap;
             }
           </style>
