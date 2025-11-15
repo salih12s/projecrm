@@ -442,17 +442,17 @@ export const exportListToPDF = (islemler: Islem[]) => {
   const doc = new jsPDF('l', 'mm', 'a4'); // Landscape (yatay) A4
   
   // Türkçe karakter desteği için font ayarı
-  doc.setFont('helvetica');
+  doc.setFont('courier');
   
   // Başlık
   doc.setFontSize(16);
-  doc.setFont('helvetica', 'bold');
+  doc.setFont('courier', 'bold');
   const baslik = 'ISLEMLER LISTESI';
   doc.text(baslik, doc.internal.pageSize.getWidth() / 2, 15, { align: 'center' });
   
   // Tarih ve kayıt sayısı
   doc.setFontSize(10);
-  doc.setFont('helvetica', 'normal');
+  doc.setFont('courier', 'normal');
   const tarihStr = new Date().toLocaleDateString('tr-TR') + ' ' + new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
   doc.text('Tarih: ' + tarihStr, 14, 25);
   doc.text('Toplam Kayit: ' + islemler.length, 14, 30);

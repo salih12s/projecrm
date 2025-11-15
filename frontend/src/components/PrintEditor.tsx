@@ -435,9 +435,9 @@ const PrintEditor: React.FC<PrintEditorProps> = ({ open, onClose, islem }) => {
               box-sizing: border-box; 
             }
             body { 
-              font-family: 'Arial Black', 'Arial Bold', sans-serif;
+              font-family: 'Courier New', Courier, monospace;
               font-size: 15px;
-              font-weight: 900;
+              font-weight: 800;
               color: #000;
               background: white;
               position: relative;
@@ -446,8 +446,8 @@ const PrintEditor: React.FC<PrintEditorProps> = ({ open, onClose, islem }) => {
             }
             .item {
               position: absolute;
-              font-weight: 900;
-              font-family: 'Arial Black', 'Arial Bold', sans-serif;
+              font-weight: 800;
+              font-family: 'Courier New', Courier, monospace;
             }
             .item-small {
               font-size: 12px;
@@ -565,7 +565,7 @@ const PrintEditor: React.FC<PrintEditorProps> = ({ open, onClose, islem }) => {
                   border: selectedField === field.id ? '1px solid #1976d2' : '1px dashed transparent',
                   fontSize: ['yapilan_islem', 'sikayet'].includes(field.id) ? '12px' : '14px',
                   fontWeight: 900,
-                  fontFamily: 'Arial Black, Arial, sans-serif',
+                  fontFamily: 'Courier New, Courier, monospace',
                   whiteSpace: ['yapilan_islem', 'sikayet'].includes(field.id) ? 'normal' : 'nowrap',
                   wordWrap: ['yapilan_islem', 'sikayet'].includes(field.id) ? 'break-word' : 'normal',
                   maxWidth: ['yapilan_islem', 'sikayet'].includes(field.id) ? mmToPx(170) : 'none',
