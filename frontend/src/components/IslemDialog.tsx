@@ -471,7 +471,7 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
       
       // 1. Tamamlanmamış kayıt kontrolü (açık veya parça bekliyor)
       const incompleteRecord = response.find((item: Islem) => 
-        cleanPhoneNumber(item.cep_tel) === cleanedPhone &&
+        (cleanPhoneNumber(item.cep_tel) === cleanedPhone || cleanPhoneNumber(item.yedek_tel || '') === cleanedPhone) &&
         (item.is_durumu === 'acik' || item.is_durumu === 'parca_bekliyor')
       );
       
@@ -484,7 +484,10 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
       }
       
       // 2. Normal kayıt kontrolü (tamamlanmış kayıt)
-      const existing = response.find((item: Islem) => cleanPhoneNumber(item.cep_tel) === cleanedPhone);
+      const existing = response.find((item: Islem) => 
+        cleanPhoneNumber(item.cep_tel) === cleanedPhone || 
+        cleanPhoneNumber(item.yedek_tel || '') === cleanedPhone
+      );
       
       if (existing) {
         // Eski kayıt bulundu - uyarı göster

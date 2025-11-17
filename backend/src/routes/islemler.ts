@@ -92,9 +92,10 @@ router.get('/', authMiddleware, async (req: Request, res: Response): Promise<voi
     }
 
     if (cep_tel) {
-      query += ` AND cep_tel ILIKE $${paramIndex}`;
+      query += ` AND (cep_tel ILIKE $${paramIndex} OR yedek_tel ILIKE $${paramIndex + 1})`;
       params.push(`%${cep_tel}%`);
-      paramIndex++;
+      params.push(`%${cep_tel}%`);
+      paramIndex += 2;
     }
 
     if (urun) {

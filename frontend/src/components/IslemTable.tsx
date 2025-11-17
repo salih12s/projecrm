@@ -127,7 +127,6 @@ const IslemTable: React.FC<IslemTableProps> = ({
     blok_no: '',
     daire_no: '',
     cep_tel: '',
-    yedek_tel: '',
     urun: '',
     marka: '',
     sikayet: '',
@@ -211,17 +210,12 @@ const IslemTable: React.FC<IslemTableProps> = ({
       );
     }
 
-    // Filter by cep_tel
+    // Filter by cep_tel (hem cep telefonu hem de yedek telefon)
     if (filters.cep_tel) {
+      const cleanPhone = filters.cep_tel.replace(/\D/g, '');
       filtered = filtered.filter((item) =>
-        (item.cep_tel || '').includes(filters.cep_tel.replace(/\D/g, ''))
-      );
-    }
-
-    // Filter by yedek_tel
-    if (filters.yedek_tel) {
-      filtered = filtered.filter((item) =>
-        (item.yedek_tel || '').includes(filters.yedek_tel.replace(/\D/g, ''))
+        (item.cep_tel || '').includes(cleanPhone) || 
+        (item.yedek_tel || '').includes(cleanPhone)
       );
     }
 
@@ -1421,7 +1415,7 @@ const IslemTable: React.FC<IslemTableProps> = ({
                 maxWidth: columnWidths[columnId],
                 borderRight: '1px solid rgba(224, 224, 224, 0.6)',
               }}>
-                {columnId !== 'islemler' ? (
+                {columnId !== 'islemler' && columnId !== 'yedek_tel' ? (
                   <TextField
                     size="small"
                     placeholder={`${columnConfigs[columnId].label}...`}
