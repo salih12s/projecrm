@@ -186,7 +186,7 @@ const AtolyeTakip: React.FC = () => {
     // Filter by musteri_ad_soyad
     if (filters.musteri_ad_soyad) {
       filtered = filtered.filter((item) =>
-        item.musteri_ad_soyad?.toLowerCase().includes(filters.musteri_ad_soyad.toLowerCase())
+        item.musteri_ad_soyad?.toLocaleLowerCase('tr-TR').includes(filters.musteri_ad_soyad.toLocaleLowerCase('tr-TR'))
       );
     }
 

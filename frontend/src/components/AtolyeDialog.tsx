@@ -39,6 +39,8 @@ const AtolyeDialog: React.FC<AtolyeDialogProps> = ({ open, onClose, atolyeId }) 
 
   const [bayiler, setBayiler] = useState<Bayi[]>([]);
   const [markalar, setMarkalar] = useState<Marka[]>([]);
+  const [markaInputValue, setMarkaInputValue] = useState('');
+  const [bayiInputValue, setBayiInputValue] = useState('');
   const [nextSiraNo, setNextSiraNo] = useState<number | null>(null);
   const [formData, setFormData] = useState<AtolyeUpdateDto & AtolyeCreateDto>({
     bayi_adi: '',
@@ -339,21 +341,31 @@ const AtolyeDialog: React.FC<AtolyeDialogProps> = ({ open, onClose, atolyeId }) 
             <Autocomplete
               options={bayiler.map((b) => b.isim)}
               value={formData.bayi_adi || null}
+              inputValue={bayiInputValue}
               filterOptions={(options, state) => {
                 if (!state.inputValue) return options;
                 return options.filter(option =>
                   option.toLocaleLowerCase('tr-TR').includes(state.inputValue.toLocaleLowerCase('tr-TR'))
                 );
               }}
-              onChange={(_, newValue) => handleChange('bayi_adi', newValue || '')}
+              onChange={(_, newValue) => {
+                handleChange('bayi_adi', newValue || '');
+                setBayiInputValue(newValue || '');
+              }}
               onInputChange={(_, value, reason) => {
                 if (reason === 'input') {
                   const filtered = bayiler.filter(bayi => 
                     bayi.isim.toLocaleLowerCase('tr-TR').includes(value.toLocaleLowerCase('tr-TR'))
                   );
+                  
                   if (filtered.length === 1 && value.length > 0) {
                     handleChange('bayi_adi', filtered[0].isim);
+                    setBayiInputValue(filtered[0].isim);
+                  } else if (filtered.length > 1) {
+                    setBayiInputValue(value);
                   }
+                } else if (reason === 'reset') {
+                  setBayiInputValue(value);
                 }
               }}
               autoHighlight
@@ -377,6 +389,7 @@ const AtolyeDialog: React.FC<AtolyeDialogProps> = ({ open, onClose, atolyeId }) 
                           const text = highlighted.textContent;
                           if (text && bayiler.some(b => b.isim === text)) {
                             handleChange('bayi_adi', text);
+                            setBayiInputValue(text);
                           }
                         }
                       }
@@ -420,21 +433,34 @@ const AtolyeDialog: React.FC<AtolyeDialogProps> = ({ open, onClose, atolyeId }) 
             <Autocomplete
               options={markalar.map((m) => m.isim)}
               value={formData.marka || null}
+              inputValue={markaInputValue}
               filterOptions={(options, state) => {
                 if (!state.inputValue) return options;
                 return options.filter(option =>
                   option.toLocaleLowerCase('tr-TR').includes(state.inputValue.toLocaleLowerCase('tr-TR'))
                 );
               }}
-              onChange={(_, newValue) => handleChange('marka', newValue || '')}
+              onChange={(_, newValue) => {
+                handleChange('marka', newValue || '');
+                setMarkaInputValue(newValue || '');
+              }}
               onInputChange={(_, value, reason) => {
-                if (reason === 'input' && value.length > 2) {
+                if (reason === 'input') {
                   const filtered = markalar.filter(marka => 
                     marka.isim.toLocaleLowerCase('tr-TR').includes(value.toLocaleLowerCase('tr-TR'))
                   );
-                  if (filtered.length === 1) {
+                  
+                  // Eğer tek eşleşme varsa otomatik seç
+                  if (filtered.length === 1 && value.length > 0) {
                     handleChange('marka', filtered[0].isim);
+                    setMarkaInputValue(filtered[0].isim); // Input'u tamamlanmış haliyle set et
+                  } else if (filtered.length > 1) {
+                    // Birden fazla eşleşme varsa input'u kullanıcının yazdığı ile güncel tut
+                    setMarkaInputValue(value);
                   }
+                  // filtered.length === 0 durumunda hiçbir şey yapma
+                } else if (reason === 'reset') {
+                  setMarkaInputValue(value);
                 }
               }}
               autoHighlight
@@ -461,6 +487,7 @@ const AtolyeDialog: React.FC<AtolyeDialogProps> = ({ open, onClose, atolyeId }) 
                           const text = highlighted.textContent;
                           if (text && markalar.some(m => m.isim === text)) {
                             handleChange('marka', text);
+                            setMarkaInputValue(text);
                           }
                         }
                       }

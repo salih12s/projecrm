@@ -74,6 +74,9 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
   const [markaUyari, setMarkaUyari] = useState<string>(''); // Marka uyarı mesajı
   const [ilceInputValue, setIlceInputValue] = useState('');
   const [mahalleInputValue, setMahalleInputValue] = useState('');
+  const [urunInputValue, setUrunInputValue] = useState('');
+  const [markaInputValue, setMarkaInputValue] = useState('');
+  const [teknisyenInputValue, setTeknisyenInputValue] = useState('');
   const [duplicateRecord, setDuplicateRecord] = useState<Islem | null>(null); // Duplicate kayıt için
   const [showDuplicateDialog, setShowDuplicateDialog] = useState(false); // Duplicate modal
   const [isOnHold, setIsOnHold] = useState(false); // Beklemeye alınma durumu
@@ -227,6 +230,11 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
         is_durumu: (islem.is_durumu?.toLowerCase() as 'acik' | 'parca_bekliyor' | 'tamamlandi' | 'iptal') || 'acik',
       });
       
+      // InputValue'leri de başlat
+      setUrunInputValue(islem.urun);
+      setMarkaInputValue(islem.marka);
+      setTeknisyenInputValue(islem.teknisyen_ismi || '');
+      
       // Yapılan işlem alanından checkbox'ları otomatik işaretle
       parseYapilanIslem(islem.yapilan_islem || '');
     } else {
@@ -240,6 +248,9 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
       setMahalleler([]); // Mahalleleri temizle
       setIlceInputValue('');
       setMahalleInputValue('');
+      setUrunInputValue('');
+      setMarkaInputValue('');
+      setTeknisyenInputValue('');
       setFormData({
         ad_soyad: '',
         ilce: '',
@@ -1304,6 +1315,7 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
               size="small"
               options={urunler.map(u => u.isim)}
               value={formData.urun || null}
+              inputValue={urunInputValue}
               filterOptions={(options, state) => {
                 // Eğer input boşsa tüm seçenekleri göster
                 if (!state.inputValue) return options;
@@ -1316,6 +1328,7 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
               }}
               onChange={(_, newValue) => {
                 setFormData({ ...formData, urun: newValue || '' });
+                setUrunInputValue(newValue || '');
               }}
               onInputChange={(_, value, reason) => {
                 // Kullanıcı yazarken filtrelenen seçenekleri kontrol et
@@ -1323,10 +1336,19 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
                   const filtered = urunler.filter(urun => 
                     urun.isim.toLocaleLowerCase('tr-TR').includes(value.toLocaleLowerCase('tr-TR'))
                   );
-                  // Eğer tek bir seçenek kaldıysa otomatik seç (otomatik geçiş YAPMA)
+                  
+                  // Eğer eşleşme varsa ilk eşleşeni otomatik seç
                   if (filtered.length === 1 && value.length > 0) {
                     setFormData({ ...formData, urun: filtered[0].isim });
+                    setUrunInputValue(filtered[0].isim); // Input'u tamamlanmış haliyle set et
+                  } else if (filtered.length > 1) {
+                    // Birden fazla eşleşme varsa input'u kullanıcının yazdığı ile güncel tut
+                    setUrunInputValue(value);
+                  } else if (filtered.length === 0) {
+                    // Eşleşme yoksa input'u değiştirme, son geçerli değer kalsın
                   }
+                } else if (reason === 'reset') {
+                  setUrunInputValue(value);
                 }
               }}
               onClose={(_, reason) => {
@@ -1338,6 +1360,7 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
                       const text = highlighted.textContent;
                       if (text && urunler.some(u => u.isim === text)) {
                         setFormData({ ...formData, urun: text });
+                        setUrunInputValue(text);
                       }
                     }
                   }
@@ -1390,6 +1413,7 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
               size="small"
               options={markalar.map(m => m.isim)}
               value={formData.marka || null}
+              inputValue={markaInputValue}
               filterOptions={(options, state) => {
                 // Eğer input boşsa tüm seçenekleri göster
                 if (!state.inputValue) return options;
@@ -1402,19 +1426,29 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
               }}
               onChange={(_, newValue) => {
                 setFormData({ ...formData, marka: newValue || '' });
+                setMarkaInputValue(newValue || '');
                 setMarkaUyari(''); // Seçim yapıldığında uyarıyı temizle
               }}
               onInputChange={(_, value, reason) => {
                 // Kullanıcı yazarken filtrelenen seçenekleri kontrol et
-                if (reason === 'input' && value.length > 2) {
+                if (reason === 'input') {
                   const filtered = markalar.filter(marka => 
                     marka.isim.toLocaleLowerCase('tr-TR').includes(value.toLocaleLowerCase('tr-TR'))
                   );
-                  // Eğer tek bir seçenek kaldıysa otomatik seç
-                  if (filtered.length === 1) {
+                  
+                  // Eğer eşleşme varsa ilk eşleşeni otomatik seç
+                  if (filtered.length === 1 && value.length > 0) {
                     setFormData({ ...formData, marka: filtered[0].isim });
+                    setMarkaInputValue(filtered[0].isim); // Input'u tamamlanmış haliyle set et
                     setMarkaUyari('');
+                  } else if (filtered.length > 1) {
+                    // Birden fazla eşleşme varsa input'u kullanıcının yazdığı ile güncel tut
+                    setMarkaInputValue(value);
+                  } else if (filtered.length === 0) {
+                    // Eşleşme yoksa input'u değiştirme, son geçerli değer kalsın
                   }
+                } else if (reason === 'reset') {
+                  setMarkaInputValue(value);
                 }
               }}
               autoHighlight
@@ -1718,20 +1752,32 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
                 value={formData.teknisyen_ismi || ''}
                 onChange={(_, newValue) => {
                   setFormData({ ...formData, teknisyen_ismi: newValue || '' });
+                  setTeknisyenInputValue(newValue || '');
                 }}
-                inputValue={formData.teknisyen_ismi || ''}
+                inputValue={teknisyenInputValue}
                 onInputChange={(_, newInputValue, reason) => {
-                  setFormData({ ...formData, teknisyen_ismi: newInputValue || '' });
-                  
                   // Kullanıcı yazarken filtrelenen seçenekleri kontrol et
                   if (reason === 'input') {
                     const filtered = teknisyenler.filter(tek => 
-                      tek.isim.toLowerCase().includes(newInputValue.toLowerCase())
+                      tek.isim.toLocaleLowerCase('tr-TR').includes(newInputValue.toLocaleLowerCase('tr-TR'))
                     );
-                    // Eğer tek bir seçenek kaldıysa otomatik seç
+                    
+                    // Eğer tek eşleşme varsa otomatik seç ve inputValue'yu tamamla
                     if (filtered.length === 1 && newInputValue.length > 0) {
                       setFormData({ ...formData, teknisyen_ismi: filtered[0].isim });
+                      setTeknisyenInputValue(filtered[0].isim); // Input'u tamamlanmış haliyle set et
+                    } else if (filtered.length > 1) {
+                      // Birden fazla eşleşme varsa input'u kullanıcının yazdığı ile güncel tut
+                      setTeknisyenInputValue(newInputValue);
+                      setFormData({ ...formData, teknisyen_ismi: newInputValue });
                     }
+                    // filtered.length === 0 durumunda hiçbir şey yapma (freeSolo için yeni isim yazılabilir ama yazmayı durdur)
+                  } else if (reason === 'reset') {
+                    setTeknisyenInputValue(newInputValue);
+                    setFormData({ ...formData, teknisyen_ismi: newInputValue });
+                  } else {
+                    // Diğer durumlarda inputValue'yu güncelle
+                    setTeknisyenInputValue(newInputValue);
                   }
                 }}
                 autoHighlight
@@ -1755,6 +1801,7 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
                             const text = highlighted.textContent;
                             if (text) {
                               setFormData({ ...formData, teknisyen_ismi: text });
+                              setTeknisyenInputValue(text);
                               setTimeout(() => {
                                 (e.target as HTMLElement).blur();
                               }, 10);
