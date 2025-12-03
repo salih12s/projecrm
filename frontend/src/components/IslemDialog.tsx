@@ -18,7 +18,19 @@ import {
   MenuItem,
   useMediaQuery,
   useTheme,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Paper,
+  Chip,
+  CircularProgress,
+  IconButton,
+  Tooltip,
 } from '@mui/material';
+import { History } from '@mui/icons-material';
 import { Islem, IslemCreateDto, IslemUpdateDto, Teknisyen, Marka, Montaj, Aksesuar, Urun } from '../types';
 import { islemService } from '../services/api';
 import { api } from '../services/api';
@@ -81,6 +93,12 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
   const [showDuplicateDialog, setShowDuplicateDialog] = useState(false); // Duplicate modal
   const [isOnHold, setIsOnHold] = useState(false); // Beklemeye alınma durumu
   const [usedExistingData, setUsedExistingData] = useState(false); // BİLGİLERİ GETİR kullanıldı mı?
+  
+  // Müşteri Geçmişi Dialog state'leri
+  const [historyDialogOpen, setHistoryDialogOpen] = useState(false);
+  const [customerHistory, setCustomerHistory] = useState<Islem[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [selectedCustomerName, setSelectedCustomerName] = useState('');
   const [formData, setFormData] = useState<IslemUpdateDto>({
     ad_soyad: '',
     ilce: '',
@@ -578,6 +596,62 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
     }
   };
 
+  // Müşteri Geçmişi fonksiyonları
+  const handleOpenCustomerHistory = async (customerName: string) => {
+    if (!customerName || customerName.trim() === '') {
+      return;
+    }
+
+    setSelectedCustomerName(customerName);
+    setHistoryDialogOpen(true);
+    setHistoryLoading(true);
+
+    try {
+      const allIslemler = await islemService.getAll();
+      // Müşteri adına göre filtrele ve en yeni en üstte sırala (ID'ye göre azalan)
+      const customerIslemler = allIslemler
+        .filter((i: Islem) => i.ad_soyad && i.ad_soyad.toLowerCase().includes(customerName.toLowerCase()))
+        .sort((a: Islem, b: Islem) => b.id - a.id); // En yeni en üstte
+      
+      setCustomerHistory(customerIslemler);
+    } catch (error) {
+      console.error('Müşteri geçmişi yüklenirken hata:', error);
+      setCustomerHistory([]);
+    } finally {
+      setHistoryLoading(false);
+    }
+  };
+
+  const handleCloseHistoryDialog = () => {
+    setHistoryDialogOpen(false);
+    setCustomerHistory([]);
+    setSelectedCustomerName('');
+  };
+
+  // showConfirmDialog açıldığında müşteri geçmişini otomatik yükle
+  useEffect(() => {
+    if (showConfirmDialog && existingRecord?.ad_soyad) {
+      const loadHistory = async () => {
+        setHistoryLoading(true);
+        try {
+          const allIslemler = await islemService.getAll();
+          const customerIslemler = allIslemler
+            .filter((i: Islem) => i.ad_soyad && i.ad_soyad.toLowerCase().includes(existingRecord.ad_soyad!.toLowerCase()))
+            .sort((a: Islem, b: Islem) => b.id - a.id);
+          setCustomerHistory(customerIslemler);
+        } catch (error) {
+          console.error('Müşteri geçmişi yüklenirken hata:', error);
+          setCustomerHistory([]);
+        } finally {
+          setHistoryLoading(false);
+        }
+      };
+      loadHistory();
+    } else if (!showConfirmDialog) {
+      setCustomerHistory([]);
+    }
+  }, [showConfirmDialog, existingRecord]);
+
   const handleContinueWithNewData = () => {
     setFormData({ ...formData, cep_tel: phoneNumber });
     setUsedExistingData(false); // Yeni kayıt açılıyor, duplicate kontrolü yapılacak
@@ -723,6 +797,13 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
     // Cep Telefonu zorunlu
     if (!formData.cep_tel || formData.cep_tel.trim() === '') {
       showSnackbar('Cep Telefonu alanı zorunludur!', 'error');
+      return;
+    }
+    
+    // Yedek telefon girilmişse 11 hane olmalı
+    const yedekTelCleaned = cleanPhoneNumber(formData.yedek_tel || '');
+    if (yedekTelCleaned.length > 0 && yedekTelCleaned.length !== 11) {
+      showSnackbar('Yedek telefon numarası 11 haneli olmalıdır!', 'error');
       return;
     }
     
@@ -1021,26 +1102,194 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
 
         {/* Uyarı Mesajı (Eski kayıt bulunduğunda) */}
         {showConfirmDialog && existingRecord && (
-          <Alert 
-            severity="warning" 
-            sx={{ mb: 1.5, mt: 1, py: 0.5 }}
-            action={
-              <>
-                <Button color="inherit" size="small" onClick={handleUseExistingData}>
-                  Evet, Bilgileri Getir
-                </Button>
-                <Button color="inherit" size="small" onClick={handleContinueWithNewData}>
-                  Hayır, Devam Et
-                </Button>
-              </>
-            }
-          >
-            <AlertTitle sx={{ fontSize: '0.875rem', mb: 0.5 }}>Daha Önce Kayıt Bulundu!</AlertTitle>
-            <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
-              Bu telefon numarasıyla ({formatPhoneNumber(existingRecord.cep_tel)}) daha önce <strong>{existingRecord.ad_soyad}</strong> adına kayıt açılmış. 
-              Önceki müşteri bilgilerini getirmek ister misiniz?
-            </Typography>
-          </Alert>
+          <Box sx={{ mt: 1 }}>
+            <Alert 
+              severity="warning" 
+              sx={{ mb: 1.5, py: 0.5 }}
+              action={
+                <Box sx={{ display: 'flex', gap: 0.5 }}>
+                  <Button color="inherit" size="small" onClick={handleUseExistingData}>
+                    Bilgileri Getir
+                  </Button>
+                  <Button color="inherit" size="small" onClick={handleContinueWithNewData}>
+                    Yeni Kayıt
+                  </Button>
+                </Box>
+              }
+            >
+              <AlertTitle sx={{ fontSize: '0.875rem', mb: 0.5 }}>Daha Önce Kayıt Bulundu!</AlertTitle>
+              <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
+                Bu telefon numarasıyla ({formatPhoneNumber(existingRecord.cep_tel)}) daha önce <strong>{existingRecord.ad_soyad}</strong> adına kayıt açılmış.
+              </Typography>
+            </Alert>
+
+            {/* Müşteri Geçmişi Tablosu - Direkt Görünür */}
+            <Box sx={{ mb: 1.5 }}>
+              <Typography variant="subtitle2" sx={{ mb: 1, color: 'primary.main', fontWeight: 600 }}>
+                Müşteri Geçmişi ({customerHistory.length} kayıt)
+              </Typography>
+              {historyLoading ? (
+                <Box sx={{ display: 'flex', justifyContent: 'center', p: 2 }}>
+                  <CircularProgress size={24} />
+                </Box>
+              ) : customerHistory.length === 0 ? (
+                <Typography variant="body2" color="text.secondary" sx={{ py: 1 }}>
+                  Bu müşteri için kayıt bulunamadı.
+                </Typography>
+              ) : (
+                <TableContainer component={Paper} elevation={1} sx={{ maxHeight: 300, overflow: 'auto' }}>
+                  <Table size="small" stickyHeader sx={{ 
+                    '& .MuiTableCell-root': { 
+                      py: 0.3, 
+                      px: 0.5, 
+                      fontSize: '0.65rem',
+                      borderRight: '1px solid #e0e0e0',
+                      whiteSpace: 'nowrap',
+                      '&:last-child': { borderRight: 'none' }
+                    } 
+                  }}>
+                    <TableHead>
+                      <TableRow>
+                        <TableCell sx={{ bgcolor: 'primary.main', color: 'white', fontWeight: 600 }}>Sıra</TableCell>
+                        <TableCell sx={{ bgcolor: 'primary.main', color: 'white', fontWeight: 600 }}>Tarih</TableCell>
+                        <TableCell sx={{ bgcolor: 'primary.main', color: 'white', fontWeight: 600 }}>İlçe</TableCell>
+                        <TableCell sx={{ bgcolor: 'primary.main', color: 'white', fontWeight: 600 }}>Mahalle</TableCell>
+                        <TableCell sx={{ bgcolor: 'primary.main', color: 'white', fontWeight: 600 }}>Apt/Site</TableCell>
+                        <TableCell sx={{ bgcolor: 'primary.main', color: 'white', fontWeight: 600 }}>Blok</TableCell>
+                        <TableCell sx={{ bgcolor: 'primary.main', color: 'white', fontWeight: 600 }}>Daire</TableCell>
+                        <TableCell sx={{ bgcolor: 'primary.main', color: 'white', fontWeight: 600 }}>Cep Tel</TableCell>
+                        <TableCell sx={{ bgcolor: 'primary.main', color: 'white', fontWeight: 600 }}>Yedek Tel</TableCell>
+                        <TableCell sx={{ bgcolor: 'primary.main', color: 'white', fontWeight: 600 }}>Cadde</TableCell>
+                        <TableCell sx={{ bgcolor: 'primary.main', color: 'white', fontWeight: 600 }}>Sokak</TableCell>
+                        <TableCell sx={{ bgcolor: 'primary.main', color: 'white', fontWeight: 600 }}>Kapı</TableCell>
+                        <TableCell sx={{ bgcolor: 'primary.main', color: 'white', fontWeight: 600 }}>Ürün</TableCell>
+                        <TableCell sx={{ bgcolor: 'primary.main', color: 'white', fontWeight: 600 }}>Marka</TableCell>
+                        <TableCell sx={{ bgcolor: 'primary.main', color: 'white', fontWeight: 600 }}>Şikayet</TableCell>
+                        <TableCell sx={{ bgcolor: 'primary.main', color: 'white', fontWeight: 600 }}>Yapılan İşlem</TableCell>
+                        <TableCell sx={{ bgcolor: 'primary.main', color: 'white', fontWeight: 600 }}>Teknisyen</TableCell>
+                        <TableCell sx={{ bgcolor: 'primary.main', color: 'white', fontWeight: 600 }}>Tutar</TableCell>
+                        <TableCell sx={{ bgcolor: 'primary.main', color: 'white', fontWeight: 600 }}>Durum</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {customerHistory.map((record) => (
+                        <TableRow key={record.id} hover>
+                          <TableCell>
+                            <Tooltip title={`Kayıt No: ${record.id}`} arrow>
+                              <span>{record.id}</span>
+                            </Tooltip>
+                          </TableCell>
+                          <TableCell>
+                            <Tooltip title={record.full_tarih ? new Date(record.full_tarih).toLocaleDateString('tr-TR') : '-'} arrow>
+                              <span>{record.full_tarih ? new Date(record.full_tarih).toLocaleDateString('tr-TR') : '-'}</span>
+                            </Tooltip>
+                          </TableCell>
+                          <TableCell sx={{ maxWidth: 70, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            <Tooltip title={record.ilce || '-'} arrow>
+                              <span>{record.ilce || '-'}</span>
+                            </Tooltip>
+                          </TableCell>
+                          <TableCell sx={{ maxWidth: 80, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            <Tooltip title={record.mahalle || '-'} arrow>
+                              <span>{record.mahalle || '-'}</span>
+                            </Tooltip>
+                          </TableCell>
+                          <TableCell sx={{ maxWidth: 70, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            <Tooltip title={record.apartman_site || '-'} arrow>
+                              <span>{record.apartman_site || '-'}</span>
+                            </Tooltip>
+                          </TableCell>
+                          <TableCell>
+                            <Tooltip title={record.blok_no || '-'} arrow>
+                              <span>{record.blok_no || '-'}</span>
+                            </Tooltip>
+                          </TableCell>
+                          <TableCell>
+                            <Tooltip title={record.daire_no || '-'} arrow>
+                              <span>{record.daire_no || '-'}</span>
+                            </Tooltip>
+                          </TableCell>
+                          <TableCell>
+                            <Tooltip title={formatPhoneNumber(record.cep_tel)} arrow>
+                              <span>{formatPhoneNumber(record.cep_tel)}</span>
+                            </Tooltip>
+                          </TableCell>
+                          <TableCell>
+                            <Tooltip title={record.yedek_tel ? formatPhoneNumber(record.yedek_tel) : '-'} arrow>
+                              <span>{record.yedek_tel ? formatPhoneNumber(record.yedek_tel) : '-'}</span>
+                            </Tooltip>
+                          </TableCell>
+                          <TableCell sx={{ maxWidth: 70, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            <Tooltip title={record.cadde || '-'} arrow>
+                              <span>{record.cadde || '-'}</span>
+                            </Tooltip>
+                          </TableCell>
+                          <TableCell sx={{ maxWidth: 60, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            <Tooltip title={record.sokak || '-'} arrow>
+                              <span>{record.sokak || '-'}</span>
+                            </Tooltip>
+                          </TableCell>
+                          <TableCell>
+                            <Tooltip title={record.kapi_no || '-'} arrow>
+                              <span>{record.kapi_no || '-'}</span>
+                            </Tooltip>
+                          </TableCell>
+                          <TableCell sx={{ maxWidth: 70, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            <Tooltip title={record.urun || '-'} arrow>
+                              <span>{record.urun || '-'}</span>
+                            </Tooltip>
+                          </TableCell>
+                          <TableCell sx={{ maxWidth: 60, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            <Tooltip title={record.marka || '-'} arrow>
+                              <span>{record.marka || '-'}</span>
+                            </Tooltip>
+                          </TableCell>
+                          <TableCell sx={{ maxWidth: 90, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            <Tooltip title={record.sikayet || '-'} arrow>
+                              <span>{record.sikayet || '-'}</span>
+                            </Tooltip>
+                          </TableCell>
+                          <TableCell sx={{ maxWidth: 90, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            <Tooltip title={record.yapilan_islem || '-'} arrow>
+                              <span>{record.yapilan_islem || '-'}</span>
+                            </Tooltip>
+                          </TableCell>
+                          <TableCell sx={{ maxWidth: 60, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            <Tooltip title={record.teknisyen_ismi || '-'} arrow>
+                              <span>{record.teknisyen_ismi || '-'}</span>
+                            </Tooltip>
+                          </TableCell>
+                          <TableCell>
+                            <Tooltip title={record.tutar ? `${Number(record.tutar).toLocaleString('tr-TR')} ₺` : '-'} arrow>
+                              <span>{record.tutar ? `${Number(record.tutar).toLocaleString('tr-TR')} ₺` : '-'}</span>
+                            </Tooltip>
+                          </TableCell>
+                          <TableCell>
+                            <Chip 
+                              label={
+                                record.is_durumu === 'acik' ? 'Açık' : 
+                                record.is_durumu === 'parca_bekliyor' ? 'Parça Bek.' : 
+                                record.is_durumu === 'iptal' ? 'İptal' :
+                                'Tamamlandı'
+                              }
+                              color={
+                                record.is_durumu === 'acik' ? 'warning' : 
+                                record.is_durumu === 'parca_bekliyor' ? 'info' : 
+                                record.is_durumu === 'iptal' ? 'error' :
+                                'success'
+                              }
+                              size="small"
+                              sx={{ fontSize: '0.6rem', height: '18px' }}
+                            />
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              )}
+            </Box>
+          </Box>
         )}
 
         {/* Form Alanları (Form gösterildiyse) */}
@@ -1954,6 +2203,126 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
             size="small"
           >
             Yeni Kayıt Oluştur
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Müşteri Geçmişi Dialog */}
+      <Dialog 
+        open={historyDialogOpen} 
+        onClose={handleCloseHistoryDialog}
+        maxWidth="xl"
+        fullWidth
+      >
+        <DialogTitle>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Typography variant="h6">
+              Müşteri Geçmişi: {selectedCustomerName}
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              Toplam {customerHistory.length} kayıt
+            </Typography>
+          </Box>
+        </DialogTitle>
+        <DialogContent>
+          {historyLoading ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
+              <CircularProgress />
+            </Box>
+          ) : customerHistory.length === 0 ? (
+            <Typography variant="body1" color="text.secondary" sx={{ p: 2, textAlign: 'center' }}>
+              Bu müşteri için kayıt bulunamadı.
+            </Typography>
+          ) : (
+            <TableContainer component={Paper} elevation={0}>
+              <Table size="small" sx={{ 
+                '& .MuiTableCell-root': { 
+                  py: 0.5, 
+                  px: 1, 
+                  fontSize: '0.75rem',
+                  borderRight: '1px solid #e0e0e0',
+                  borderBottom: '1px solid #e0e0e0',
+                  '&:last-child': {
+                    borderRight: 'none'
+                  }
+                } 
+              }}>
+                <TableHead>
+                  <TableRow sx={{ bgcolor: 'primary.main' }}>
+                    <TableCell sx={{ color: 'white', fontWeight: 600, fontSize: '0.7rem' }}>Sıra</TableCell>
+                    <TableCell sx={{ color: 'white', fontWeight: 600, fontSize: '0.7rem' }}>Tarih</TableCell>
+                    <TableCell sx={{ color: 'white', fontWeight: 600, fontSize: '0.7rem' }}>İlçe</TableCell>
+                    <TableCell sx={{ color: 'white', fontWeight: 600, fontSize: '0.7rem' }}>Mahalle</TableCell>
+                    <TableCell sx={{ color: 'white', fontWeight: 600, fontSize: '0.7rem' }}>Cadde</TableCell>
+                    <TableCell sx={{ color: 'white', fontWeight: 600, fontSize: '0.7rem' }}>Sokak</TableCell>
+                    <TableCell sx={{ color: 'white', fontWeight: 600, fontSize: '0.7rem' }}>Kapı No</TableCell>
+                    <TableCell sx={{ color: 'white', fontWeight: 600, fontSize: '0.7rem' }}>Cep Tel</TableCell>
+                    <TableCell sx={{ color: 'white', fontWeight: 600, fontSize: '0.7rem' }}>Ürün</TableCell>
+                    <TableCell sx={{ color: 'white', fontWeight: 600, fontSize: '0.7rem' }}>Marka</TableCell>
+                    <TableCell sx={{ color: 'white', fontWeight: 600, fontSize: '0.7rem' }}>Şikayet</TableCell>
+                    <TableCell sx={{ color: 'white', fontWeight: 600, fontSize: '0.7rem' }}>Yapılan İşlem</TableCell>
+                    <TableCell sx={{ color: 'white', fontWeight: 600, fontSize: '0.7rem' }}>Teknisyen</TableCell>
+                    <TableCell sx={{ color: 'white', fontWeight: 600, fontSize: '0.7rem' }}>Tutar</TableCell>
+                    <TableCell sx={{ color: 'white', fontWeight: 600, fontSize: '0.7rem' }}>Durum</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {customerHistory.map((record) => (
+                    <TableRow key={record.id} hover>
+                      <TableCell>{record.id}</TableCell>
+                      <TableCell>
+                        {record.full_tarih ? new Date(record.full_tarih).toLocaleDateString('tr-TR') : '-'}
+                      </TableCell>
+                      <TableCell>{record.ilce || '-'}</TableCell>
+                      <TableCell>{record.mahalle || '-'}</TableCell>
+                      <TableCell>{record.cadde || '-'}</TableCell>
+                      <TableCell>{record.sokak || '-'}</TableCell>
+                      <TableCell>{record.kapi_no || '-'}</TableCell>
+                      <TableCell>{formatPhoneNumber(record.cep_tel)}</TableCell>
+                      <TableCell>{record.urun || '-'}</TableCell>
+                      <TableCell>{record.marka || '-'}</TableCell>
+                      <TableCell sx={{ maxWidth: 150, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        <Tooltip title={record.sikayet || '-'} placement="top">
+                          <span>{record.sikayet || '-'}</span>
+                        </Tooltip>
+                      </TableCell>
+                      <TableCell sx={{ maxWidth: 150, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        <Tooltip title={record.yapilan_islem || '-'} placement="top">
+                          <span>{record.yapilan_islem || '-'}</span>
+                        </Tooltip>
+                      </TableCell>
+                      <TableCell>{record.teknisyen_ismi || '-'}</TableCell>
+                      <TableCell>
+                        {record.tutar ? `${Number(record.tutar).toLocaleString('tr-TR')} ₺` : '-'}
+                      </TableCell>
+                      <TableCell>
+                        <Chip 
+                          label={
+                            record.is_durumu === 'acik' ? 'Açık' : 
+                            record.is_durumu === 'parca_bekliyor' ? 'Parça Bekliyor' : 
+                            record.is_durumu === 'iptal' ? 'İptal' :
+                            'Tamamlandı'
+                          }
+                          color={
+                            record.is_durumu === 'acik' ? 'warning' : 
+                            record.is_durumu === 'parca_bekliyor' ? 'info' : 
+                            record.is_durumu === 'iptal' ? 'error' :
+                            'success'
+                          }
+                          size="small"
+                          sx={{ fontSize: '0.65rem', height: '20px' }}
+                        />
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseHistoryDialog} variant="outlined">
+            Kapat
           </Button>
         </DialogActions>
       </Dialog>

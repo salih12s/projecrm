@@ -678,9 +678,14 @@ const IslemTable: React.FC<IslemTableProps> = ({
           <TableCell sx={{ 
             fontSize: '0.65rem', 
             py: 0.1, 
-            px: 0.2
+            px: 0.2,
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap'
           }}>
-            {formatted}
+            <Tooltip title={formatted} arrow>
+              <span>{formatted}</span>
+            </Tooltip>
           </TableCell>
         );
       },
