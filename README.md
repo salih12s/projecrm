@@ -234,55 +234,6 @@ npm install
 cd ..
 ```
 
-### 4️⃣ PostgreSQL Veritabanı Kurulumu
-
-```sql
--- PostgreSQL'e bağlanın
-psql -U postgres
-
--- Yeni database oluşturun (opsiyonel)
-CREATE DATABASE projecrm;
-
--- projecrm database'ine bağlanın
-\c projecrm
-
--- Tablolar otomatik oluşturulacaktır
-```
-
-### 5️⃣ Environment Variables
-
-Backend `.env` dosyası (zaten mevcut):
-```env
-# Server Configuration
-PORT=5000
-NODE_ENV=development
-
-# Database Configuration
-DB_HOST=localhost
-DB_PORT=5432
-DB_NAME=postgres
-DB_USER=postgres
-DB_PASSWORD=12345
-
-# JWT Configuration
-JWT_SECRET=your_jwt_secret_key_here_change_in_production
-
-# Admin Credentials
-ADMIN_USERNAME=admin
-ADMIN_PASSWORD=admin123
-
-# CORS
-ALLOWED_ORIGINS=http://localhost:5173,http://localhost:3000
-```
-
-**Production için `.env` güncelleme:**
-```env
-NODE_ENV=production
-DB_HOST=your_production_db_host
-DB_PASSWORD=strong_production_password
-JWT_SECRET=very_long_random_secret_key_min_32_chars
-ALLOWED_ORIGINS=https://yourdomain.com
-```
 
 ### 6️⃣ İlk Çalıştırma
 
