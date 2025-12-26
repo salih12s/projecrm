@@ -450,16 +450,21 @@ const AtolyeTakip: React.FC = () => {
     setPage(0);
   }, []);
 
-  // Refetch when page/rowsPerPage changes
+  // Refetch when page/rowsPerPage changes OR when filters change
   useEffect(() => {
-    if (!hasActiveFilters) {
+    fetchAtolyeList();
+  }, [page, rowsPerPage, fetchAtolyeList]);
+
+  // Refetch when debouncedFilters or activeStatusFilter changes (and reset to page 0)
+  useEffect(() => {
+    if (hasActiveFilters) {
+      setPage(0);
       fetchAtolyeList();
     }
-  }, [page, rowsPerPage, hasActiveFilters, fetchAtolyeList]);
+  }, [debouncedFilters, activeStatusFilter, hasActiveFilters, fetchAtolyeList]);
 
   const handleFilterChange = useCallback((field: string, value: string) => {
     setFilters((prev) => ({ ...prev, [field]: value }));
-    setPage(0); // Filtre değişince sayfa 0'a dön
   }, []);
 
   const handleAdd = useCallback(() => {
