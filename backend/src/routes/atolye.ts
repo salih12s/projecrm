@@ -5,16 +5,102 @@ import { Atolye, AtolyeCreateDto, AtolyeUpdateDto } from '../types';
 
 const router = express.Router();
 
-// GET all atolye records
-router.get('/', auth, async (_req: Request, res: Response) => {
+// === SIMPLE IN-MEMORY CACHE ===
+interface CacheEntry<T> {
+  data: T;
+  timestamp: number;
+}
+
+const cache: {
+  statusCounts?: CacheEntry<any>;
+  nextId?: CacheEntry<number>;
+} = {};
+
+const CACHE_TTL = 10000; // 10 saniye - daha agresif cache
+
+function isCacheValid<T>(entry: CacheEntry<T> | undefined): boolean {
+  if (!entry) return false;
+  return Date.now() - entry.timestamp < CACHE_TTL;
+}
+
+function invalidateCache() {
+  cache.statusCounts = undefined;
+  cache.nextId = undefined;
+}
+// === END CACHE ===
+
+// GET atolye records with pagination
+router.get('/', auth, async (req: Request, res: Response) => {
   try {
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 50;
+    const offset = (page - 1) * limit;
+    const noPagination = req.query.all === 'true';
+
+    if (noPagination) {
+      const result = await pool.query<Atolye>(
+        'SELECT * FROM atolye ORDER BY created_at DESC'
+      );
+      return res.json(result.rows);
+    }
+
+    const countResult = await pool.query('SELECT COUNT(*) FROM atolye');
+    const totalCount = parseInt(countResult.rows[0].count);
+    const totalPages = Math.ceil(totalCount / limit);
+
     const result = await pool.query<Atolye>(
-      'SELECT * FROM atolye ORDER BY created_at DESC'
+      'SELECT * FROM atolye ORDER BY id DESC LIMIT $1 OFFSET $2',
+      [limit, offset]
     );
-    return res.json(result.rows);
+
+    return res.json({
+      data: result.rows,
+      pagination: { page, limit, totalCount, totalPages, hasNext: page < totalPages, hasPrev: page > 1 }
+    });
   } catch (error) {
     console.error('Error fetching atolye records:', error);
     return res.status(500).json({ error: 'Atölye kayıtları getirilirken hata oluştu' });
+  }
+});
+
+// GET next available ID - CACHED
+router.get('/next-id', auth, async (_req: Request, res: Response) => {
+  try {
+    if (isCacheValid(cache.nextId)) {
+      return res.json({ nextId: cache.nextId!.data });
+    }
+    const result = await pool.query('SELECT COALESCE(MAX(id), 0) + 1 as next_id FROM atolye');
+    const nextId = result.rows[0].next_id;
+    cache.nextId = { data: nextId, timestamp: Date.now() };
+    return res.json({ nextId });
+  } catch (error) {
+    console.error('Error getting next ID:', error);
+    return res.status(500).json({ error: 'Sıra numarası alınamadı' });
+  }
+});
+
+// GET status counts - CACHED
+router.get('/status-counts', auth, async (_req: Request, res: Response) => {
+  try {
+    if (isCacheValid(cache.statusCounts)) {
+      return res.json(cache.statusCounts!.data);
+    }
+    const result = await pool.query(`
+      SELECT 
+        COUNT(*) as total,
+        COUNT(*) FILTER (WHERE teslim_durumu = 'beklemede') as beklemede,
+        COUNT(*) FILTER (WHERE teslim_durumu = 'teslim_edildi') as teslim_edildi,
+        COUNT(*) FILTER (WHERE teslim_durumu = 'siparis_verildi') as siparis_verildi,
+        COUNT(*) FILTER (WHERE teslim_durumu = 'yapildi') as yapildi,
+        COUNT(*) FILTER (WHERE teslim_durumu = 'fabrika_gitti') as fabrika_gitti,
+        COUNT(*) FILTER (WHERE teslim_durumu = 'odeme_bekliyor') as odeme_bekliyor
+      FROM atolye
+    `);
+    cache.statusCounts = { data: result.rows[0], timestamp: Date.now() };
+    return res.json(result.rows[0]);
+  } catch (error) {
+    console.error('Error getting status counts:', error);
+    return res.status(500).json({ error: 'Durum sayıları alınamadı' });
   }
 });
 
@@ -30,11 +116,6 @@ router.get('/:id', auth, async (req: Request, res: Response) => {
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Kayıt bulunamadı' });
     }
-
-    console.log('=== BACKEND GET /:id ===');
-    console.log('Database\'den okunan kayit_tarihi:', result.rows[0].kayit_tarihi);
-    console.log('Typeof:', typeof result.rows[0].kayit_tarihi);
-    console.log('========================');
 
     return res.json(result.rows[0]);
   } catch (error) {
@@ -83,6 +164,9 @@ router.post('/', auth, async (req: Request, res: Response) => {
     console.log('===================');
 
     const newRecord = result.rows[0];
+
+    // Cache'i invalidate et
+    invalidateCache();
 
     // Socket.IO ile tüm bağlı kullanıcılara bildir
     const io = (req as any).app.get('io');
@@ -190,6 +274,9 @@ router.put('/:id', auth, async (req: Request, res: Response) => {
 
     const updatedRecord = result.rows[0];
 
+    // Cache'i invalidate et
+    invalidateCache();
+
     // Socket.IO ile tüm bağlı kullanıcılara bildir
     const io = (req as any).app.get('io');
     if (io) {
@@ -216,6 +303,9 @@ router.delete('/:id', auth, async (req: Request, res: Response) => {
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Kayıt bulunamadı' });
     }
+
+    // Cache'i invalidate et
+    invalidateCache();
 
     // Socket.IO ile tüm bağlı kullanıcılara bildir
     const io = (req as any).app.get('io');

@@ -22,6 +22,8 @@ import {
   Divider,
   useMediaQuery,
   useTheme,
+  TablePagination,
+  CircularProgress,
 } from '@mui/material';
 import { Edit, Delete, Add } from '@mui/icons-material';
 import { Atolye } from '../types';
@@ -31,15 +33,150 @@ import { useAuth } from '../context/AuthContext';
 import AtolyeDialog from './AtolyeDialog.tsx';
 import { io } from 'socket.io-client';
 
+// Debounce hook
+function useDebounce<T>(value: T, delay: number): T {
+  const [debouncedValue, setDebouncedValue] = useState<T>(value);
+  useEffect(() => {
+    const handler = setTimeout(() => setDebouncedValue(value), delay);
+    return () => clearTimeout(handler);
+  }, [value, delay]);
+  return debouncedValue;
+}
+
+// Static helper functions
+const getStatusColor = (status: string): "default" | "primary" | "secondary" | "error" | "info" | "success" | "warning" => {
+  switch (status) {
+    case 'teslim_edildi': return 'info';
+    case 'beklemede': return 'warning';
+    case 'siparis_verildi': return 'secondary';
+    case 'yapildi': return 'success';
+    case 'fabrika_gitti': return 'default';
+    case 'odeme_bekliyor': return 'error';
+    default: return 'default';
+  }
+};
+
+const getStatusLabel = (status: string): string => {
+  switch (status) {
+    case 'teslim_edildi': return 'Teslim Edildi';
+    case 'beklemede': return 'Beklemede';
+    case 'siparis_verildi': return 'Sipariş Verildi';
+    case 'yapildi': return 'Yapıldı';
+    case 'fabrika_gitti': return 'Fabrika Gitti';
+    case 'odeme_bekliyor': return 'Ödeme Bekliyor';
+    default: return status;
+  }
+};
+
+const getRowBackgroundColor = (status: string): string => {
+  switch (status) {
+    case 'teslim_edildi': return '#b3e5fc';
+    case 'beklemede': return '#ffe0b2';
+    case 'siparis_verildi': return '#e1bee7';
+    case 'yapildi': return '#dcedc8';
+    case 'fabrika_gitti': return '#e0e0e0';
+    case 'odeme_bekliyor': return '#ffcdd2';
+    default: return 'transparent';
+  }
+};
+
+const formatDate = (dateString: string | undefined | null): string => {
+  if (!dateString) return '';
+  try {
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return '';
+    return date.toLocaleDateString('tr-TR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  } catch { return ''; }
+};
+
+const formatPhoneNumber = (phone: string | null | undefined): string => {
+  if (!phone) return '-';
+  const cleaned = phone.replace(/\D/g, '');
+  if (cleaned.length === 11) {
+    return `${cleaned.slice(0, 4)} ${cleaned.slice(4, 7)} ${cleaned.slice(7, 9)} ${cleaned.slice(9)}`;
+  }
+  return phone;
+};
+
+// Memoized Table Row
+interface AtolyeRowProps {
+  atolye: Atolye;
+  isBayi: boolean;
+  isAdmin: boolean;
+  onEdit: (id: number) => void;
+  onDelete: (id: number) => void;
+}
+
+const AtolyeTableRow = memo(({ atolye, isBayi, isAdmin, onEdit, onDelete }: AtolyeRowProps) => (
+  <TableRow 
+    hover
+    onDoubleClick={() => !isBayi && onEdit(atolye.id)}
+    sx={{ 
+      backgroundColor: getRowBackgroundColor(atolye.teslim_durumu),
+      cursor: !isBayi ? 'pointer' : 'default',
+      '&:hover': { backgroundColor: getRowBackgroundColor(atolye.teslim_durumu), filter: 'brightness(0.95)' }
+    }}
+  >
+    <TableCell sx={{ padding: '3px', fontSize: '1rem', fontWeight: 'bold', textAlign: 'center' }}>{atolye.id}</TableCell>
+    <TableCell sx={{ padding: '3px' }}>
+      <Chip label={getStatusLabel(atolye.teslim_durumu)} color={getStatusColor(atolye.teslim_durumu)} size="small"
+        sx={{ fontSize: '0.65rem', height: '20px', ...(atolye.teslim_durumu === 'siparis_verildi' && { backgroundColor: '#9c27b0', color: 'white' }) }} />
+    </TableCell>
+    <TableCell sx={{ padding: '3px', fontSize: '0.75rem' }}>{formatDate(atolye.kayit_tarihi || atolye.created_at)}</TableCell>
+    <TableCell sx={{ padding: '3px', fontSize: '0.75rem', textTransform: 'uppercase' }}>{atolye.bayi_adi}</TableCell>
+    <TableCell sx={{ padding: '3px', fontSize: '0.75rem', textTransform: 'uppercase' }}>{atolye.musteri_ad_soyad}</TableCell>
+    <TableCell sx={{ padding: '3px', fontSize: '0.75rem' }}>{formatPhoneNumber(atolye.tel_no)}</TableCell>
+    <TableCell sx={{ padding: '3px', fontSize: '0.75rem', textTransform: 'uppercase' }}>{atolye.marka}</TableCell>
+    <TableCell sx={{ padding: '3px', fontSize: '0.75rem', textTransform: 'uppercase' }}>{atolye.kod || '-'}</TableCell>
+    <TableCell sx={{ padding: '3px', fontSize: '0.75rem', textTransform: 'uppercase' }}>{atolye.seri_no || '-'}</TableCell>
+    <TableCell sx={{ padding: '3px', fontSize: '0.75rem', maxWidth: '120px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textTransform: 'uppercase' }}>
+      <Tooltip title={atolye.sikayet || ''} placement="top" arrow enterDelay={500}><span>{atolye.sikayet}</span></Tooltip>
+    </TableCell>
+    <TableCell sx={{ padding: '3px', fontSize: '0.75rem', maxWidth: '100px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textTransform: 'uppercase' }}>
+      <Tooltip title={atolye.ozel_not || '-'} placement="top" arrow enterDelay={500}><span>{atolye.ozel_not || '-'}</span></Tooltip>
+    </TableCell>
+    <TableCell sx={{ padding: '3px', fontSize: '0.75rem', maxWidth: '120px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textTransform: 'uppercase' }}>
+      <Tooltip title={atolye.yapilan_islem || '-'} placement="top" arrow enterDelay={500}><span>{atolye.yapilan_islem || '-'}</span></Tooltip>
+    </TableCell>
+    <TableCell sx={{ padding: '3px', fontSize: '0.75rem', maxWidth: '80px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textTransform: 'uppercase' }}>
+      <Tooltip title={atolye.note_no || '-'} placement="top" arrow enterDelay={500}><span>{atolye.note_no || '-'}</span></Tooltip>
+    </TableCell>
+    <TableCell sx={{ padding: '3px', fontSize: '0.75rem' }}>{atolye.ucret ? `${atolye.ucret} ₺` : '-'}</TableCell>
+    <TableCell sx={{ padding: '3px', fontSize: '0.75rem' }}>{atolye.yapilma_tarihi ? formatDate(atolye.yapilma_tarihi) : '-'}</TableCell>
+    {!isBayi && (
+      <TableCell sx={{ padding: '3px' }}>
+        <IconButton size="small" onClick={() => onEdit(atolye.id)} sx={{ mr: 0.5, padding: '3px' }}><Edit fontSize="small" sx={{ fontSize: '1rem' }} /></IconButton>
+        {isAdmin && <IconButton size="small" onClick={() => onDelete(atolye.id)} color="error" sx={{ padding: '3px' }}><Delete fontSize="small" sx={{ fontSize: '1rem' }} /></IconButton>}
+      </TableCell>
+    )}
+  </TableRow>
+));
+AtolyeTableRow.displayName = 'AtolyeTableRow';
+
+// Status counts type
+interface StatusCounts {
+  total: number; beklemede: number; teslim_edildi: number; siparis_verildi: number; yapildi: number; fabrika_gitti: number; odeme_bekliyor: number;
+}
+
 const AtolyeTakip: React.FC = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
-  const [atolyeList, setAtolyeList] = useState<Atolye[]>([]); // Görüntülenen liste (bayi için filtrelenmiş)
+  const [atolyeList, setAtolyeList] = useState<Atolye[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedAtolyeId, setSelectedAtolyeId] = useState<number | null>(null);
-  const [activeStatusFilter, setActiveStatusFilter] = useState<string>(''); // Yeni state
+  const [activeStatusFilter, setActiveStatusFilter] = useState<string>('');
+  const [loading, setLoading] = useState(false);
   const { showSnackbar } = useSnackbar();
   const { user } = useAuth();
+  
+  // Pagination
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(50);
+  const [totalCount, setTotalCount] = useState(0);
+  
+  // Status counts
+  // @ts-ignore - Will be used for status badges later
+  const [statusCounts, setStatusCounts] = useState<StatusCounts>({ total: 0, beklemede: 0, teslim_edildi: 0, siparis_verildi: 0, yapildi: 0, fabrika_gitti: 0, odeme_bekliyor: 0 });
   
   const isBayi = user?.role === 'bayi';
   const isAdmin = user?.role === 'admin';
@@ -47,25 +184,28 @@ const AtolyeTakip: React.FC = () => {
 
   // Filter states
   const [filters, setFilters] = useState({
-    sira: '',
-    teslim_durumu: '',
-    tarih: '',
-    bayi_adi: '',
-    musteri_ad_soyad: '',
-    tel_no: '',
-    marka: '',
-    kod: '',
-    seri_no: '',
-    sikayet: '',
-    ozel_not: '',
-    yapilan_islem: '',
-    note_no: '',
-    ucret: '',
-    yapilma_tarihi: '',
+    sira: '', teslim_durumu: '', tarih: '', bayi_adi: '', musteri_ad_soyad: '', tel_no: '',
+    marka: '', kod: '', seri_no: '', sikayet: '', ozel_not: '', yapilan_islem: '', note_no: '', ucret: '', yapilma_tarihi: '',
   });
+
+  const debouncedFilters = useDebounce(filters, 300);
+  const hasActiveFilters = useMemo(() => Object.values(filters).some(v => v !== '') || activeStatusFilter !== '', [filters, activeStatusFilter]);
+
+  const fetchStatusCounts = useCallback(async () => {
+    try {
+      const response = await api.get('/atolye/status-counts');
+      setStatusCounts({
+        total: parseInt(response.data.total) || 0, beklemede: parseInt(response.data.beklemede) || 0,
+        teslim_edildi: parseInt(response.data.teslim_edildi) || 0, siparis_verildi: parseInt(response.data.siparis_verildi) || 0,
+        yapildi: parseInt(response.data.yapildi) || 0, fabrika_gitti: parseInt(response.data.fabrika_gitti) || 0,
+        odeme_bekliyor: parseInt(response.data.odeme_bekliyor) || 0
+      });
+    } catch (error) { console.error('Status counts alınamadı:', error); }
+  }, []);
 
   useEffect(() => {
     fetchAtolyeList();
+    fetchStatusCounts();
 
     // Socket.IO bağlantısı - Gerçek zamanlı güncellemeler için
     const SOCKET_URL = import.meta.env.MODE === 'production' 
@@ -130,26 +270,50 @@ const AtolyeTakip: React.FC = () => {
   }, [isBayi, bayiIsim]);
 
   const fetchAtolyeList = useCallback(async () => {
+    setLoading(true);
     try {
-      const response = await api.get('/atolye');
-      const allData = response.data;
-      
-      // En yeni kayıtlar en üstte, en eski kayıtlar en altta (id'ye göre büyükten küçüğe)
-      const sortedAllData = allData.sort((a: Atolye, b: Atolye) => b.id - a.id);
-      
-      // Bayi ise sadece kendi kayıtlarını göster
-      if (isBayi) {
-        const bayiData = sortedAllData.filter((item: Atolye) => item.bayi_adi === bayiIsim);
-        setAtolyeList(bayiData);
+      // Filtre aktifse tüm veriyi çek (client-side filtreleme için)
+      // Filtre yoksa pagination ile çek
+      if (hasActiveFilters) {
+        const response = await api.get('/atolye?all=true');
+        const allData = response.data;
+        const sortedAllData = allData.sort((a: Atolye, b: Atolye) => b.id - a.id);
+        if (isBayi) {
+          setAtolyeList(sortedAllData.filter((item: Atolye) => item.bayi_adi === bayiIsim));
+        } else {
+          setAtolyeList(sortedAllData);
+        }
+        setTotalCount(allData.length);
       } else {
-        setAtolyeList(sortedAllData);
+        const response = await api.get(`/atolye?page=${page + 1}&limit=${rowsPerPage}`);
+        if (response.data.pagination) {
+          const { data, pagination } = response.data;
+          if (isBayi) {
+            setAtolyeList(data.filter((item: Atolye) => item.bayi_adi === bayiIsim));
+          } else {
+            setAtolyeList(data);
+          }
+          setTotalCount(pagination.totalCount);
+        } else {
+          // Eski format için fallback
+          const allData = response.data;
+          const sortedAllData = allData.sort((a: Atolye, b: Atolye) => b.id - a.id);
+          if (isBayi) {
+            setAtolyeList(sortedAllData.filter((item: Atolye) => item.bayi_adi === bayiIsim));
+          } else {
+            setAtolyeList(sortedAllData);
+          }
+          setTotalCount(allData.length);
+        }
       }
     } catch (error) {
       showSnackbar('Atölye kayıtları yüklenirken hata oluştu', 'error');
+    } finally {
+      setLoading(false);
     }
-  }, [isBayi, bayiIsim, showSnackbar]);
+  }, [isBayi, bayiIsim, showSnackbar, hasActiveFilters, page, rowsPerPage]);
 
-  // useMemo ile filtrelemeyi optimize et - sadece atolyeList, filters veya activeStatusFilter değişince hesapla
+  // useMemo ile filtrelemeyi optimize et - debounced filters kullan
   const filteredList = useMemo(() => {
     let filtered = [...atolyeList];
 
@@ -159,17 +323,17 @@ const AtolyeTakip: React.FC = () => {
     }
 
     // Filter by teslim_durumu (select dropdown - exact match)
-    if (filters.teslim_durumu) {
-      filtered = filtered.filter((item) => item.teslim_durumu === filters.teslim_durumu);
+    if (debouncedFilters.teslim_durumu) {
+      filtered = filtered.filter((item) => item.teslim_durumu === debouncedFilters.teslim_durumu);
     }
 
     // Filter by tarih (kayit_tarihi or created_at) - Ana sayfa mantığıyla
-    if (filters.tarih) {
+    if (debouncedFilters.tarih) {
       filtered = filtered.filter((item) => {
         const dateValue = item.kayit_tarihi || item.created_at;
         if (!dateValue) return false;
         try {
-          return new Date(dateValue).toLocaleDateString('tr-TR').includes(filters.tarih);
+          return new Date(dateValue).toLocaleDateString('tr-TR').includes(debouncedFilters.tarih);
         } catch (error) {
           return false;
         }
@@ -177,88 +341,88 @@ const AtolyeTakip: React.FC = () => {
     }
 
     // Filter by bayi_adi
-    if (filters.bayi_adi) {
+    if (debouncedFilters.bayi_adi) {
       filtered = filtered.filter((item) =>
-        item.bayi_adi?.toLowerCase().includes(filters.bayi_adi.toLowerCase())
+        item.bayi_adi?.toLowerCase().includes(debouncedFilters.bayi_adi.toLowerCase())
       );
     }
 
     // Filter by musteri_ad_soyad
-    if (filters.musteri_ad_soyad) {
+    if (debouncedFilters.musteri_ad_soyad) {
       filtered = filtered.filter((item) =>
-        item.musteri_ad_soyad?.toLocaleLowerCase('tr-TR').includes(filters.musteri_ad_soyad.toLocaleLowerCase('tr-TR'))
+        item.musteri_ad_soyad?.toLocaleLowerCase('tr-TR').includes(debouncedFilters.musteri_ad_soyad.toLocaleLowerCase('tr-TR'))
       );
     }
 
     // Filter by tel_no
-    if (filters.tel_no) {
+    if (debouncedFilters.tel_no) {
       filtered = filtered.filter((item) =>
-        item.tel_no?.includes(filters.tel_no.replace(/\D/g, ''))
+        item.tel_no?.includes(debouncedFilters.tel_no.replace(/\D/g, ''))
       );
     }
 
     // Filter by marka
-    if (filters.marka) {
+    if (debouncedFilters.marka) {
       filtered = filtered.filter((item) =>
-        item.marka?.toLowerCase().includes(filters.marka.toLowerCase())
+        item.marka?.toLowerCase().includes(debouncedFilters.marka.toLowerCase())
       );
     }
 
     // Filter by kod
-    if (filters.kod) {
+    if (debouncedFilters.kod) {
       filtered = filtered.filter((item) =>
-        (item.kod || '').toLowerCase().includes(filters.kod.toLowerCase())
+        (item.kod || '').toLowerCase().includes(debouncedFilters.kod.toLowerCase())
       );
     }
 
     // Filter by seri_no
-    if (filters.seri_no) {
+    if (debouncedFilters.seri_no) {
       filtered = filtered.filter((item) =>
-        (item.seri_no || '').toLowerCase().includes(filters.seri_no.toLowerCase())
+        (item.seri_no || '').toLowerCase().includes(debouncedFilters.seri_no.toLowerCase())
       );
     }
 
     // Filter by sikayet
-    if (filters.sikayet) {
+    if (debouncedFilters.sikayet) {
       filtered = filtered.filter((item) =>
-        item.sikayet?.toLowerCase().includes(filters.sikayet.toLowerCase())
+        item.sikayet?.toLowerCase().includes(debouncedFilters.sikayet.toLowerCase())
       );
     }
 
     // Filter by ozel_not
-    if (filters.ozel_not) {
+    if (debouncedFilters.ozel_not) {
       filtered = filtered.filter((item) =>
-        (item.ozel_not || '').toLowerCase().includes(filters.ozel_not.toLowerCase())
+        (item.ozel_not || '').toLowerCase().includes(debouncedFilters.ozel_not.toLowerCase())
       );
     }
 
     // Filter by yapilan_islem
-    if (filters.yapilan_islem) {
+    if (debouncedFilters.yapilan_islem) {
       filtered = filtered.filter((item) =>
-        (item.yapilan_islem || '').toLowerCase().includes(filters.yapilan_islem.toLowerCase())
+        (item.yapilan_islem || '').toLowerCase().includes(debouncedFilters.yapilan_islem.toLowerCase())
       );
     }
 
     // Filter by note_no
-    if (filters.note_no) {
+    if (debouncedFilters.note_no) {
       filtered = filtered.filter((item) =>
-        (item.note_no || '').toLowerCase().includes(filters.note_no.toLowerCase())
+        (item.note_no || '').toLowerCase().includes(debouncedFilters.note_no.toLowerCase())
       );
     }
 
     // Filter by ucret
-    if (filters.ucret) {
+    if (debouncedFilters.ucret) {
       filtered = filtered.filter((item) =>
-        (item.ucret?.toString() || '').includes(filters.ucret)
+        (item.ucret?.toString() || '').includes(debouncedFilters.ucret)
       );
     }
 
     // Filter by yapilma_tarihi - Ana sayfa mantığıyla
-    if (filters.yapilma_tarihi) {
+    if (debouncedFilters.yapilma_tarihi) {
       filtered = filtered.filter((item) => {
         if (!item.yapilma_tarihi) return false;
         try {
-          return new Date(item.yapilma_tarihi).toLocaleDateString('tr-TR').includes(filters.yapilma_tarihi);
+          return new Date(item.yapilma_tarihi).toLocaleDateString('tr-TR').includes(debouncedFilters.yapilma_tarihi);
         } catch (error) {
           return false;
         }
@@ -266,18 +430,36 @@ const AtolyeTakip: React.FC = () => {
     }
 
     // Filter by sira (ID bazlı - kalıcı sıra numarası)
-    if (filters.sira) {
+    if (debouncedFilters.sira) {
       filtered = filtered.filter((item) => {
         // Sıra numarası olarak ID kullanılıyor
-        return item.id.toString().includes(filters.sira);
+        return item.id.toString().includes(debouncedFilters.sira);
       });
     }
 
     return filtered;
-  }, [atolyeList, filters, activeStatusFilter]);
+  }, [atolyeList, debouncedFilters, activeStatusFilter]);
+
+  // Pagination handlers
+  const handleChangePage = useCallback((_event: unknown, newPage: number) => {
+    setPage(newPage);
+  }, []);
+
+  const handleChangeRowsPerPage = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    setRowsPerPage(parseInt(event.target.value, 10));
+    setPage(0);
+  }, []);
+
+  // Refetch when page/rowsPerPage changes
+  useEffect(() => {
+    if (!hasActiveFilters) {
+      fetchAtolyeList();
+    }
+  }, [page, rowsPerPage, hasActiveFilters, fetchAtolyeList]);
 
   const handleFilterChange = useCallback((field: string, value: string) => {
     setFilters((prev) => ({ ...prev, [field]: value }));
+    setPage(0); // Filtre değişince sayfa 0'a dön
   }, []);
 
   const handleAdd = useCallback(() => {
@@ -713,6 +895,7 @@ const AtolyeTakip: React.FC = () => {
           </Box>
         ) : (
           /* Masaüstü görünüm - Table layout */
+          <>
           <TableContainer sx={{ maxHeight: 'calc(100vh - 250px)', overflow: 'auto' }}>
             <Table size="small" stickyHeader sx={{ 
               '& .MuiTableCell-root': { 
@@ -1031,13 +1214,26 @@ const AtolyeTakip: React.FC = () => {
               {filteredList.length === 0 && (
                 <TableRow>
                   <TableCell colSpan={isBayi ? 14 : 15} align="center" sx={{ py: 3 }}>
-                    {atolyeList.length === 0 ? 'Henüz kayıt bulunmamaktadır' : 'Filtreye uygun kayıt bulunamadı'}
+                    {loading ? <CircularProgress size={24} /> : (atolyeList.length === 0 ? 'Henüz kayıt bulunmamaktadır' : 'Filtreye uygun kayıt bulunamadı')}
                   </TableCell>
                 </TableRow>
               )}
             </TableBody>
           </Table>
         </TableContainer>
+        <TablePagination
+          component="div"
+          count={hasActiveFilters ? filteredList.length : totalCount}
+          page={page}
+          onPageChange={handleChangePage}
+          rowsPerPage={rowsPerPage}
+          onRowsPerPageChange={handleChangeRowsPerPage}
+          rowsPerPageOptions={[25, 50, 100, 200]}
+          labelRowsPerPage="Sayfa başına:"
+          labelDisplayedRows={({ from, to, count }) => `${from}-${to} / ${count}`}
+          sx={{ borderTop: '1px solid #e0e0e0' }}
+        />
+        </>
         )}
       </Paper>
 

@@ -27,10 +27,8 @@ import {
   Paper,
   Chip,
   CircularProgress,
-  IconButton,
   Tooltip,
 } from '@mui/material';
-import { History } from '@mui/icons-material';
 import { Islem, IslemCreateDto, IslemUpdateDto, Teknisyen, Marka, Montaj, Aksesuar, Urun } from '../types';
 import { islemService } from '../services/api';
 import { api } from '../services/api';
@@ -597,31 +595,6 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
   };
 
   // Müşteri Geçmişi fonksiyonları
-  const handleOpenCustomerHistory = async (customerName: string) => {
-    if (!customerName || customerName.trim() === '') {
-      return;
-    }
-
-    setSelectedCustomerName(customerName);
-    setHistoryDialogOpen(true);
-    setHistoryLoading(true);
-
-    try {
-      const allIslemler = await islemService.getAll();
-      // Müşteri adına göre filtrele ve en yeni en üstte sırala (ID'ye göre azalan)
-      const customerIslemler = allIslemler
-        .filter((i: Islem) => i.ad_soyad && i.ad_soyad.toLowerCase().includes(customerName.toLowerCase()))
-        .sort((a: Islem, b: Islem) => b.id - a.id); // En yeni en üstte
-      
-      setCustomerHistory(customerIslemler);
-    } catch (error) {
-      console.error('Müşteri geçmişi yüklenirken hata:', error);
-      setCustomerHistory([]);
-    } finally {
-      setHistoryLoading(false);
-    }
-  };
-
   const handleCloseHistoryDialog = () => {
     setHistoryDialogOpen(false);
     setCustomerHistory([]);
