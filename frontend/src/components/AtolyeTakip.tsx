@@ -171,7 +171,7 @@ const AtolyeTakip: React.FC = () => {
   
   // Pagination
   const [page, setPage] = useState(0);
-  const [rowsPerPage, setRowsPerPage] = useState(50);
+  const [rowsPerPage, setRowsPerPage] = useState(10000);
   const [totalCount, setTotalCount] = useState(0);
   
   // Status counts
