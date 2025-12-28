@@ -171,7 +171,7 @@ const AtolyeTakip: React.FC = () => {
   
   // Pagination
   const [page, setPage] = useState(0);
-  const [rowsPerPage, setRowsPerPage] = useState(10000);
+  const [rowsPerPage, setRowsPerPage] = useState(50);
   const [totalCount, setTotalCount] = useState(0);
   
   // Status counts
@@ -188,7 +188,7 @@ const AtolyeTakip: React.FC = () => {
     marka: '', kod: '', seri_no: '', sikayet: '', ozel_not: '', yapilan_islem: '', note_no: '', ucret: '', yapilma_tarihi: '',
   });
 
-  const debouncedFilters = useDebounce(filters, 300);
+  const debouncedFilters = useDebounce(filters, 700);
   const hasActiveFilters = useMemo(() => Object.values(filters).some(v => v !== '') || activeStatusFilter !== '', [filters, activeStatusFilter]);
 
   const fetchStatusCounts = useCallback(async () => {
@@ -272,46 +272,24 @@ const AtolyeTakip: React.FC = () => {
   const fetchAtolyeList = useCallback(async () => {
     setLoading(true);
     try {
-      // Filtre aktifse tüm veriyi çek (client-side filtreleme için)
-      // Filtre yoksa pagination ile çek
-      if (hasActiveFilters) {
-        const response = await api.get('/atolye?all=true');
-        const allData = response.data;
-        const sortedAllData = allData.sort((a: Atolye, b: Atolye) => b.id - a.id);
-        if (isBayi) {
-          setAtolyeList(sortedAllData.filter((item: Atolye) => item.bayi_adi === bayiIsim));
-        } else {
-          setAtolyeList(sortedAllData);
-        }
-        setTotalCount(allData.length);
+      // HER ZAMAN tüm veriyi çek - filtreler client-side uygulanacak
+      const response = await api.get('/atolye?all=true');
+      const allData = response.data;
+      const sortedAllData = allData.sort((a: Atolye, b: Atolye) => b.id - a.id);
+      if (isBayi) {
+        const bayiData = sortedAllData.filter((item: Atolye) => item.bayi_adi === bayiIsim);
+        setAtolyeList(bayiData);
+        setTotalCount(bayiData.length);
       } else {
-        const response = await api.get(`/atolye?page=${page + 1}&limit=${rowsPerPage}`);
-        if (response.data.pagination) {
-          const { data, pagination } = response.data;
-          if (isBayi) {
-            setAtolyeList(data.filter((item: Atolye) => item.bayi_adi === bayiIsim));
-          } else {
-            setAtolyeList(data);
-          }
-          setTotalCount(pagination.totalCount);
-        } else {
-          // Eski format için fallback
-          const allData = response.data;
-          const sortedAllData = allData.sort((a: Atolye, b: Atolye) => b.id - a.id);
-          if (isBayi) {
-            setAtolyeList(sortedAllData.filter((item: Atolye) => item.bayi_adi === bayiIsim));
-          } else {
-            setAtolyeList(sortedAllData);
-          }
-          setTotalCount(allData.length);
-        }
+        setAtolyeList(sortedAllData);
+        setTotalCount(sortedAllData.length);
       }
     } catch (error) {
       showSnackbar('Atölye kayıtları yüklenirken hata oluştu', 'error');
     } finally {
       setLoading(false);
     }
-  }, [isBayi, bayiIsim, showSnackbar, hasActiveFilters, page, rowsPerPage]);
+  }, [isBayi, bayiIsim, showSnackbar]);
 
   // useMemo ile filtrelemeyi optimize et - debounced filters kullan
   const filteredList = useMemo(() => {
@@ -440,6 +418,13 @@ const AtolyeTakip: React.FC = () => {
     return filtered;
   }, [atolyeList, debouncedFilters, activeStatusFilter]);
 
+  // Pagination için slice edilmiş liste
+  const displayedList = useMemo(() => {
+    const startIndex = page * rowsPerPage;
+    const endIndex = startIndex + rowsPerPage;
+    return filteredList.slice(startIndex, endIndex);
+  }, [filteredList, page, rowsPerPage]);
+
   // Pagination handlers
   const handleChangePage = useCallback((_event: unknown, newPage: number) => {
     setPage(newPage);
@@ -450,18 +435,18 @@ const AtolyeTakip: React.FC = () => {
     setPage(0);
   }, []);
 
-  // Refetch when page/rowsPerPage changes OR when filters change
+  // Sadece ilk yüklemede veriyi çek
   useEffect(() => {
     fetchAtolyeList();
-  }, [page, rowsPerPage, fetchAtolyeList]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-  // Refetch when debouncedFilters or activeStatusFilter changes (and reset to page 0)
+  // Filtre değiştiğinde sayfayı 0'a sıfırla
   useEffect(() => {
     if (hasActiveFilters) {
       setPage(0);
-      fetchAtolyeList();
     }
-  }, [debouncedFilters, activeStatusFilter, hasActiveFilters, fetchAtolyeList]);
+  }, [debouncedFilters, activeStatusFilter, hasActiveFilters]);
 
   const handleFilterChange = useCallback((field: string, value: string) => {
     setFilters((prev) => ({ ...prev, [field]: value }));
@@ -1138,7 +1123,7 @@ const AtolyeTakip: React.FC = () => {
               </TableRow>
             </TableHead>
             <TableBody>
-              {filteredList.map((atolye) => {
+              {displayedList.map((atolye) => {
                 // Kalıcı sıra numarası olarak ID kullan - silme işlemlerinde kayma olmaz
                 const siraNo = atolye.id;
                 
@@ -1216,7 +1201,7 @@ const AtolyeTakip: React.FC = () => {
                 </TableRow>
                 );
               })}
-              {filteredList.length === 0 && (
+              {displayedList.length === 0 && (
                 <TableRow>
                   <TableCell colSpan={isBayi ? 14 : 15} align="center" sx={{ py: 3 }}>
                     {loading ? <CircularProgress size={24} /> : (atolyeList.length === 0 ? 'Henüz kayıt bulunmamaktadır' : 'Filtreye uygun kayıt bulunamadı')}
@@ -1228,7 +1213,7 @@ const AtolyeTakip: React.FC = () => {
         </TableContainer>
         <TablePagination
           component="div"
-          count={hasActiveFilters ? filteredList.length : totalCount}
+          count={filteredList.length}
           page={page}
           onPageChange={handleChangePage}
           rowsPerPage={rowsPerPage}

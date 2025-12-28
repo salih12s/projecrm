@@ -33,7 +33,7 @@ function invalidateCache() {
 router.get('/', auth, async (req: Request, res: Response) => {
   try {
     const page = parseInt(req.query.page as string) || 1;
-    const limit = parseInt(req.query.limit as string) || 10000;
+    const limit = parseInt(req.query.limit as string) || 50;
     const offset = (page - 1) * limit;
     const noPagination = req.query.all === 'true';
 
