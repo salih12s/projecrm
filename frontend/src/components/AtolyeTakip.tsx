@@ -172,7 +172,6 @@ const AtolyeTakip: React.FC = () => {
   // Pagination
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(50);
-  const [totalCount, setTotalCount] = useState(0);
   
   // Status counts
   // @ts-ignore - Will be used for status badges later
@@ -279,10 +278,8 @@ const AtolyeTakip: React.FC = () => {
       if (isBayi) {
         const bayiData = sortedAllData.filter((item: Atolye) => item.bayi_adi === bayiIsim);
         setAtolyeList(bayiData);
-        setTotalCount(bayiData.length);
       } else {
         setAtolyeList(sortedAllData);
-        setTotalCount(sortedAllData.length);
       }
     } catch (error) {
       showSnackbar('Atölye kayıtları yüklenirken hata oluştu', 'error');
