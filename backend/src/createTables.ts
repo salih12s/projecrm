@@ -1,7 +1,7 @@
 import pool from './db';
 
 // Retry mekanizmalı sorgu
-async function queryWithRetry(sql: string, retries = 5, delay = 3000) {
+async function queryWithRetry(sql: string, retries = 5, delay = 3000): Promise<any> {
   for (let i = 0; i < retries; i++) {
     try {
       return await pool.query(sql);
@@ -16,6 +16,7 @@ async function queryWithRetry(sql: string, retries = 5, delay = 3000) {
       }
     }
   }
+  throw new Error('Veritabanı bağlantısı kurulamadı');
 }
 
 const createTables = async (): Promise<void> => {
