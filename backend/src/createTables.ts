@@ -1,9 +1,27 @@
 import pool from './db';
 
+// Retry mekanizmalı sorgu
+async function queryWithRetry(sql: string, retries = 5, delay = 3000) {
+  for (let i = 0; i < retries; i++) {
+    try {
+      return await pool.query(sql);
+    } catch (err: any) {
+      // Timeout veya bağlantı hatası ise retry yap
+      if (err.code === 'ETIMEDOUT' || err.message?.includes('timeout') || err.message?.includes('terminated')) {
+        console.log(`⏳ Veritabanı bağlantısı bekleniyor... (${i + 1}/${retries})`);
+        if (i === retries - 1) throw err;
+        await new Promise(resolve => setTimeout(resolve, delay));
+      } else {
+        throw err; // Diğer hatalar için retry yapma
+      }
+    }
+  }
+}
+
 const createTables = async (): Promise<void> => {
   try {
     // Kullanıcılar tablosu
-    await pool.query(`
+    await queryWithRetry(`
       CREATE TABLE IF NOT EXISTS users (
         id SERIAL PRIMARY KEY,
         username VARCHAR(50) UNIQUE NOT NULL,

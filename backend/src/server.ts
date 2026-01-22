@@ -113,18 +113,46 @@ if (process.env.NODE_ENV === 'production') {
 
 const PORT = process.env.PORT || 5000;
 
+// Retry helper fonksiyonu
+async function withRetry<T>(
+  fn: () => Promise<T>,
+  name: string,
+  retries = 5,
+  delay = 3000
+): Promise<T> {
+  for (let i = 0; i < retries; i++) {
+    try {
+      return await fn();
+    } catch (err) {
+      console.log(`⏳ ${name} bekleniyor... (${i + 1}/${retries})`);
+      if (i === retries - 1) throw err;
+      await new Promise(resolve => setTimeout(resolve, delay));
+    }
+  }
+  throw new Error(`${name} başarısız oldu`);
+}
+
 // Tabloları oluştur, migration'ları çalıştır, location data'yı yükle ve sunucuyu başlat
-createTables()
-  .then(() => addNoteNoToAtolyeTable())
-  .then(() => initLocations())
-  .then(() => {
+async function startServer() {
+  try {
+    console.log('🚀 Sunucu başlatılıyor...');
+    
+    await withRetry(() => createTables(), 'Tablo oluşturma');
+    await withRetry(() => addNoteNoToAtolyeTable(), 'Migration');
+    await withRetry(() => initLocations(), 'Location data');
+    
     server.listen(PORT, () => {
-      console.log(`Server ${PORT} portunda çalışıyor`);
+      console.log(`✅ Server ${PORT} portunda çalışıyor`);
     });
-  })
-  .catch((error) => {
-    console.error('Başlatma hatası:', error);
-    process.exit(1);
-  });
+  } catch (error) {
+    console.error('❌ Başlatma hatası:', error);
+    // Sunucuyu başlat, veritabanı sonra bağlanabilir
+    server.listen(PORT, () => {
+      console.log(`⚠️ Server ${PORT} portunda çalışıyor (veritabanı bağlantısı beklemede)`);
+    });
+  }
+}
+
+startServer();
 
 export { app, io };

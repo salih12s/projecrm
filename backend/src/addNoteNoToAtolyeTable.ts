@@ -1,7 +1,22 @@
 import pool from './db';
 
+// Retry mekanizmalı bağlantı
+async function connectWithRetry(retries = 5, delay = 3000) {
+  for (let i = 0; i < retries; i++) {
+    try {
+      const client = await pool.connect();
+      return client;
+    } catch (err) {
+      console.log(`⏳ Veritabanı bağlantısı bekleniyor... (${i + 1}/${retries})`);
+      if (i === retries - 1) throw err;
+      await new Promise(resolve => setTimeout(resolve, delay));
+    }
+  }
+  throw new Error('Veritabanına bağlanılamadı');
+}
+
 async function addNoteNoToAtolyeTable() {
-  const client = await pool.connect();
+  const client = await connectWithRetry();
   try {
     console.log('🔧 Atölye tablosuna note_no kolonu ekleniyor...');
     

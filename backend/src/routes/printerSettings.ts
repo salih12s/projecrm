@@ -68,7 +68,7 @@ router.get('/:marka', authMiddleware, async (req: Request, res: Response): Promi
     );
 
     if (result.rows.length > 0) {
-      console.log('✅ Bulundu:', result.rows[0].config);
+      console.log('✅ Bulundu: Yazıcı ayarları yüklendi (' + (Array.isArray(result.rows[0].config) ? result.rows[0].config.length + ' alan' : 'config mevcut') + ')');
       res.json(result.rows[0].config);
     } else {
       console.log('⚠️ Bulunamadı');
@@ -87,7 +87,7 @@ router.post('/:marka', authMiddleware, async (req: Request, res: Response): Prom
     const masterBrand = getMasterBrand(marka);
     const config = req.body;
 
-    console.log('📝 Yazıcı ayarları kaydediliyor:', { marka, masterBrand, config });
+    console.log('📝 Yazıcı ayarları kaydediliyor:', marka, '→ Master:', masterBrand);
 
     const result = await pool.query(
       `INSERT INTO printer_settings (marka, config, updated_at)
@@ -98,7 +98,7 @@ router.post('/:marka', authMiddleware, async (req: Request, res: Response): Prom
       [masterBrand, JSON.stringify(config)]
     );
 
-    console.log('✅ Kaydedildi (master brand):', result.rows[0]);
+    console.log('✅ Kaydedildi (master brand):', masterBrand);
     res.json(result.rows[0]);
   } catch (error) {
     console.error('❌ Yazıcı ayarları kaydetme hatası:', error);
