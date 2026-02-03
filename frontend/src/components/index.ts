@@ -11,3 +11,5 @@ export { default as AtolyeTakip } from './AtolyeTakip.tsx';
 export { default as AtolyeDialog } from './AtolyeDialog.tsx';
 export { default as Settings } from './Settings';
 export { default as PrintEditor } from './PrintEditor';
+export { default as SahaPanel } from './SahaPanel';
+export { default as SahaKayitlari } from './SahaKayitlari';

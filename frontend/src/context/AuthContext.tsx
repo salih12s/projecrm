@@ -1,12 +1,13 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { User } from '../types';
-import { authService } from '../services/api';
+import { authService, sahaService } from '../services/api';
 
 interface AuthContextType {
   user: User | null;
   login: (username: string, password: string) => Promise<void>;
   bayiLogin: (username: string, password: string) => Promise<void>;
   adminLogin: (username: string, password: string) => Promise<void>;
+  sahaLogin: (username: string, password: string) => Promise<void>;
   register: (username: string, password: string) => Promise<void>;
   logout: () => void;
   isAuthenticated: boolean;
@@ -42,6 +43,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setUser(data.user);
   };
 
+  const sahaLogin = async (username: string, password: string) => {
+    const data = await sahaService.login(username, password);
+    setUser(data.user);
+  };
+
   const register = async (username: string, password: string) => {
     await authService.register(username, password);
   };
@@ -58,6 +64,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         login,
         bayiLogin,
         adminLogin,
+        sahaLogin,
         register,
         logout,
         isAuthenticated: !!user,

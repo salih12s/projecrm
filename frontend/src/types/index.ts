@@ -1,8 +1,9 @@
 export interface User {
   id: number;
   username: string;
-  role?: 'admin' | 'user' | 'bayi';
+  role?: 'admin' | 'user' | 'bayi' | 'saha';
   bayiIsim?: string;
+  ad_soyad?: string;
 }
 
 export interface Islem {
@@ -193,5 +194,44 @@ export interface AtolyeUpdateDto {
   ucret?: number;
   yapilma_tarihi?: string;
   kayit_tarihi?: string;
+}
+
+// Saha Elemanı
+export interface SahaElemani {
+  id: number;
+  username: string;
+  ad_soyad?: string;
+  is_active: boolean;
+  created_at: string;
+  total_records?: number;
+}
+
+// Saha Kayıt (Kart)
+export interface SahaKayit {
+  id: number;
+  saha_elemani_id: number;
+  saha_elemani_username: string;
+  saha_elemani_ad_soyad?: string;
+  isim: string;
+  soyisim: string;
+  foto_url?: string;
+  foto_data?: string;
+  notlar?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SahaKayitCreateDto {
+  isim: string;
+  soyisim: string;
+  foto_data?: string;
+  notlar?: string;
+}
+
+export interface SahaKayitUpdateDto {
+  isim: string;
+  soyisim: string;
+  foto_data?: string;
+  notlar?: string;
 }
 

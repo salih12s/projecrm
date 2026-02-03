@@ -6,15 +6,20 @@ dotenv.config();
 // Railway DATABASE_URL veya ayrı ayrı env variables kullan
 const isProduction = process.env.NODE_ENV === 'production';
 
-// Pool konfigürasyonu
+// Pool konfigürasyonu - Railway için optimize edilmiş
 const poolConfig: PoolConfig = process.env.DATABASE_URL
   ? {
       // Railway/Production: DATABASE_URL kullan
       connectionString: process.env.DATABASE_URL,
       ssl: isProduction ? { rejectUnauthorized: false } : false,
-      max: 10, // Railway için daha az bağlantı
-      idleTimeoutMillis: 30000,
-      connectionTimeoutMillis: 30000, // 30 saniye timeout (Railway cold start için)
+      max: 5, // Railway için az bağlantı (proxy limitleri)
+      min: 1, // Minimum 1 bağlantı her zaman hazır
+      idleTimeoutMillis: 10000, // 10 saniye idle sonra bağlantıyı kapat (Railway proxy timeout'undan önce)
+      connectionTimeoutMillis: 30000, // 30 saniye bağlantı timeout
+      allowExitOnIdle: false, // Pool idle olsa bile process'i kapatma
+      // Keepalive ayarları - bağlantının kopmasını önler
+      keepAlive: true,
+      keepAliveInitialDelayMillis: 10000, // 10 saniyede bir keepalive gönder
     }
   : {
       // Local development: ayrı env variables
@@ -30,9 +35,20 @@ const poolConfig: PoolConfig = process.env.DATABASE_URL
 
 const pool = new Pool(poolConfig);
 
-// Bağlantı hatası event handler
+// Bağlantı hatası event handler - pool'u resetleme
 pool.on('error', (err) => {
-  console.error('Beklenmeyen veritabanı hatası:', err);
+  console.error('⚠️ Veritabanı pool hatası (bağlantı yeniden kurulacak):', err.message);
+  // Pool otomatik olarak yeni bağlantı açacak, crash olmayacak
+});
+
+// Bağlantı açıldığında log
+pool.on('connect', () => {
+  console.log('🔗 Yeni veritabanı bağlantısı açıldı');
+});
+
+// Bağlantı kapandığında log
+pool.on('remove', () => {
+  console.log('🔌 Veritabanı bağlantısı kapatıldı');
 });
 
 // Retry mekanizmalı bağlantı testi

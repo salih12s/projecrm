@@ -21,6 +21,7 @@ import aksesuarlarRoutes from './routes/aksesuarlar';
 import urunlerRoutes from './routes/urunler';
 import locationsRoutes from './routes/locations';
 import printerSettingsRoutes from './routes/printerSettings';
+import sahaRoutes from './routes/saha';
 
 dotenv.config();
 
@@ -66,7 +67,10 @@ app.use(cors({
   },
   credentials: true
 }));
-app.use(express.json());
+
+// JSON body limit - fotoğraf yüklemeleri için 50MB
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
 // Socket.IO bağlantısı
 io.on('connection', (socket) => {
@@ -94,6 +98,7 @@ app.use('/api/urunler', urunlerRoutes);
 app.use('/api/ilceler', locationsRoutes);
 app.use('/api/locations/ilceler', locationsRoutes);
 app.use('/api/printer-settings', printerSettingsRoutes);
+app.use('/api/saha', sahaRoutes);
 
 // Serve static files from frontend build (production only)
 if (process.env.NODE_ENV === 'production') {

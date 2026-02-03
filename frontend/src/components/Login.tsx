@@ -12,21 +12,21 @@ import {
   Grid,
   Alert,
 } from '@mui/material';
-import { AdminPanelSettings, Store, Person } from '@mui/icons-material';
+import { AdminPanelSettings, Store, Person, Engineering } from '@mui/icons-material';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { useSnackbar } from '../context/SnackbarContext';
 
 const Login: React.FC = () => {
-  const [loginType, setLoginType] = useState<'select' | 'admin' | 'bayi' | 'user'>('select');
+  const [loginType, setLoginType] = useState<'select' | 'admin' | 'bayi' | 'user' | 'saha'>('select');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
-  const { login, bayiLogin, adminLogin } = useAuth();
+  const { login, bayiLogin, adminLogin, sahaLogin } = useAuth();
   const navigate = useNavigate();
   const { showSnackbar } = useSnackbar();
 
-  const handleLoginTypeSelect = (type: 'admin' | 'bayi' | 'user') => {
+  const handleLoginTypeSelect = (type: 'admin' | 'bayi' | 'user' | 'saha') => {
     setLoginType(type);
     setError('');
     setUsername('');
@@ -58,6 +58,10 @@ const Login: React.FC = () => {
         await bayiLogin(username, password);
         showSnackbar('Bayi girişi başarılı!', 'success');
         navigate('/');
+      } else if (loginType === 'saha') {
+        await sahaLogin(username, password);
+        showSnackbar('Saha girişi başarılı!', 'success');
+        navigate('/');
       } else if (loginType === 'user') {
         await login(username, password);
         showSnackbar('Giriş başarılı!', 'success');
@@ -86,47 +90,62 @@ const Login: React.FC = () => {
           </Typography>
 
           {loginType === 'select' && (
-            <Grid container spacing={3}>
-              <Grid item xs={12} sm={4}>
-                <Card>
-                  <CardActionArea onClick={() => handleLoginTypeSelect('user')}>
-                    <CardContent sx={{ textAlign: 'center', py: 4 }}>
-                      <Person sx={{ fontSize: 80, color: '#0D3282', mb: 2 }} />
-                      <Typography variant="h5" component="div">
+            <Grid container spacing={2} justifyContent="center">
+              <Grid item xs={6} sm={6} md={3}>
+                <Card sx={{ height: '100%' }}>
+                  <CardActionArea onClick={() => handleLoginTypeSelect('user')} sx={{ height: '100%' }}>
+                    <CardContent sx={{ textAlign: 'center', py: { xs: 2, sm: 3 }, px: 1 }}>
+                      <Person sx={{ fontSize: { xs: 50, sm: 70 }, color: '#0D3282', mb: 1 }} />
+                      <Typography variant="h6" component="div" sx={{ fontSize: { xs: '0.9rem', sm: '1.1rem' } }}>
                         Kullanıcı Girişi
                       </Typography>
-                      <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                      <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5, fontSize: { xs: '0.7rem', sm: '0.8rem' } }}>
                         Normal kullanıcı olarak giriş yap
                       </Typography>
                     </CardContent>
                   </CardActionArea>
                 </Card>
               </Grid>
-              <Grid item xs={12} sm={4}>
-                <Card>
-                  <CardActionArea onClick={() => handleLoginTypeSelect('admin')}>
-                    <CardContent sx={{ textAlign: 'center', py: 4 }}>
-                      <AdminPanelSettings sx={{ fontSize: 80, color: '#0D3282', mb: 2 }} />
-                      <Typography variant="h5" component="div">
+              <Grid item xs={6} sm={6} md={3}>
+                <Card sx={{ height: '100%' }}>
+                  <CardActionArea onClick={() => handleLoginTypeSelect('admin')} sx={{ height: '100%' }}>
+                    <CardContent sx={{ textAlign: 'center', py: { xs: 2, sm: 3 }, px: 1 }}>
+                      <AdminPanelSettings sx={{ fontSize: { xs: 50, sm: 70 }, color: '#0D3282', mb: 1 }} />
+                      <Typography variant="h6" component="div" sx={{ fontSize: { xs: '0.9rem', sm: '1.1rem' } }}>
                         Admin Girişi
                       </Typography>
-                      <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                      <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5, fontSize: { xs: '0.7rem', sm: '0.8rem' } }}>
                         Yönetici paneline giriş yap
                       </Typography>
                     </CardContent>
                   </CardActionArea>
                 </Card>
               </Grid>
-              <Grid item xs={12} sm={4}>
-                <Card>
-                  <CardActionArea onClick={() => handleLoginTypeSelect('bayi')}>
-                    <CardContent sx={{ textAlign: 'center', py: 4 }}>
-                      <Store sx={{ fontSize: 80, color: '#0D3282', mb: 2 }} />
-                      <Typography variant="h5" component="div">
+              <Grid item xs={6} sm={6} md={3}>
+                <Card sx={{ height: '100%' }}>
+                  <CardActionArea onClick={() => handleLoginTypeSelect('bayi')} sx={{ height: '100%' }}>
+                    <CardContent sx={{ textAlign: 'center', py: { xs: 2, sm: 3 }, px: 1 }}>
+                      <Store sx={{ fontSize: { xs: 50, sm: 70 }, color: '#0D3282', mb: 1 }} />
+                      <Typography variant="h6" component="div" sx={{ fontSize: { xs: '0.9rem', sm: '1.1rem' } }}>
                         Bayi Girişi
                       </Typography>
-                      <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                      <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5, fontSize: { xs: '0.7rem', sm: '0.8rem' } }}>
                         Bayi paneline giriş yap
+                      </Typography>
+                    </CardContent>
+                  </CardActionArea>
+                </Card>
+              </Grid>
+              <Grid item xs={6} sm={6} md={3}>
+                <Card sx={{ height: '100%' }}>
+                  <CardActionArea onClick={() => handleLoginTypeSelect('saha')} sx={{ height: '100%' }}>
+                    <CardContent sx={{ textAlign: 'center', py: { xs: 2, sm: 3 }, px: 1 }}>
+                      <Engineering sx={{ fontSize: { xs: 50, sm: 70 }, color: '#0D3282', mb: 1 }} />
+                      <Typography variant="h6" component="div" sx={{ fontSize: { xs: '0.9rem', sm: '1.1rem' } }}>
+                        Saha Girişi
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5, fontSize: { xs: '0.7rem', sm: '0.8rem' } }}>
+                        Saha elemanı olarak giriş yap
                       </Typography>
                     </CardContent>
                   </CardActionArea>
@@ -135,10 +154,10 @@ const Login: React.FC = () => {
             </Grid>
           )}
 
-          {(loginType === 'admin' || loginType === 'bayi' || loginType === 'user') && (
+          {(loginType === 'admin' || loginType === 'bayi' || loginType === 'user' || loginType === 'saha') && (
             <>
               <Typography variant="h6" align="center" sx={{ mb: 3 }}>
-                {loginType === 'admin' ? 'Admin Girişi' : loginType === 'bayi' ? 'Bayi Girişi' : 'Kullanıcı Girişi'}
+                {loginType === 'admin' ? 'Admin Girişi' : loginType === 'bayi' ? 'Bayi Girişi' : loginType === 'saha' ? 'Saha Girişi' : 'Kullanıcı Girişi'}
               </Typography>
 
               {error && (

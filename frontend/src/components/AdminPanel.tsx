@@ -20,6 +20,9 @@ import {
   Tooltip,
   Alert,
   Collapse,
+  Tabs,
+  Tab,
+  Divider,
 } from '@mui/material';
 import {
   PersonAdd,
@@ -28,9 +31,12 @@ import {
   Delete,
   ExpandMore,
   ExpandLess,
+  Engineering,
+  People,
 } from '@mui/icons-material';
-import { adminService } from '../services/api';
+import { adminService, sahaService } from '../services/api';
 import { useSnackbar } from '../context/SnackbarContext';
+import { SahaElemani, SahaKayit } from '../types';
 
 interface User {
   id: number;
@@ -84,9 +90,23 @@ const AdminPanel: React.FC = () => {
   const [userRecords, setUserRecords] = useState<{ [key: string]: UserRecord[] }>({});
   const [userAtolyeRecords, setUserAtolyeRecords] = useState<{ [key: string]: AtolyeRecord[] }>({});
   const { showSnackbar } = useSnackbar();
+  
+  // Tab state
+  const [activeTab, setActiveTab] = useState(0);
+  
+  // Saha elemanları state
+  const [sahaElemanlari, setSahaElemanlari] = useState<SahaElemani[]>([]);
+  const [sahaLoading, setSahaLoading] = useState(false);
+  const [openSahaDialog, setOpenSahaDialog] = useState(false);
+  const [newSahaUsername, setNewSahaUsername] = useState('');
+  const [newSahaPassword, setNewSahaPassword] = useState('');
+  const [newSahaAdSoyad, setNewSahaAdSoyad] = useState('');
+  const [expandedSahaUser, setExpandedSahaUser] = useState<string | null>(null);
+  const [sahaUserRecords, setSahaUserRecords] = useState<{ [key: string]: SahaKayit[] }>({});
 
   useEffect(() => {
     loadUsers();
+    loadSahaElemanlari();
   }, []);
 
   const loadUsers = async () => {
@@ -99,6 +119,18 @@ const AdminPanel: React.FC = () => {
       showSnackbar('Kullanıcılar yüklenirken hata oluştu!', 'error');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadSahaElemanlari = async () => {
+    try {
+      setSahaLoading(true);
+      const data = await sahaService.getSahaElemanlari();
+      setSahaElemanlari(data);
+    } catch (error: any) {
+      console.error('Saha elemanları yüklenirken hata:', error);
+    } finally {
+      setSahaLoading(false);
     }
   };
 
@@ -165,56 +197,132 @@ const AdminPanel: React.FC = () => {
     }
   };
 
+  // Saha Elemanı Fonksiyonları
+  const handleCreateSahaElemani = async () => {
+    if (!newSahaUsername || !newSahaPassword) {
+      showSnackbar('Kullanıcı adı ve şifre boş olamaz!', 'warning');
+      return;
+    }
+
+    try {
+      await sahaService.createSahaElemani(newSahaUsername, newSahaPassword, newSahaAdSoyad);
+      showSnackbar('Saha elemanı başarıyla oluşturuldu!', 'success');
+      setOpenSahaDialog(false);
+      setNewSahaUsername('');
+      setNewSahaPassword('');
+      setNewSahaAdSoyad('');
+      loadSahaElemanlari();
+    } catch (error: any) {
+      const errorMsg = error.response?.data?.message || 'Saha elemanı oluşturulurken hata oluştu!';
+      showSnackbar(errorMsg, 'error');
+    }
+  };
+
+  const handleToggleSahaStatus = async (id: number, currentStatus: boolean) => {
+    try {
+      await sahaService.toggleSahaElemaniStatus(id);
+      showSnackbar(
+        currentStatus ? 'Saha elemanı pasif edildi!' : 'Saha elemanı aktif edildi!',
+        'success'
+      );
+      loadSahaElemanlari();
+    } catch (error: any) {
+      showSnackbar('Durum değiştirilirken hata oluştu!', 'error');
+    }
+  };
+
+  const handleDeleteSahaElemani = async (id: number, username: string) => {
+    if (window.confirm(`${username} saha elemanını silmek istediğinizden emin misiniz?`)) {
+      try {
+        await sahaService.deleteSahaElemani(id);
+        showSnackbar('Saha elemanı silindi!', 'success');
+        loadSahaElemanlari();
+      } catch (error: any) {
+        showSnackbar('Saha elemanı silinirken hata oluştu!', 'error');
+      }
+    }
+  };
+
+  const handleViewSahaRecords = async (username: string) => {
+    if (expandedSahaUser === username) {
+      setExpandedSahaUser(null);
+      return;
+    }
+
+    try {
+      const records = await sahaService.getUserKayitlar(username);
+      setSahaUserRecords({ ...sahaUserRecords, [username]: records });
+      setExpandedSahaUser(username);
+    } catch (error: any) {
+      showSnackbar('Kayıtlar yüklenirken hata oluştu!', 'error');
+    }
+  };
+
   if (loading) {
     return <Typography>Yükleniyor...</Typography>;
   }
 
   return (
     <Box sx={{ p: { xs: 2, sm: 3 } }}>
-      <Box sx={{ 
-        display: 'flex', 
-        flexDirection: { xs: 'column', sm: 'row' },
-        justifyContent: 'space-between', 
-        alignItems: { xs: 'stretch', sm: 'center' }, 
-        mb: 3,
-        gap: 2
-      }}>
-        <Typography variant="h5" fontWeight={600} sx={{ fontSize: { xs: '1.25rem', sm: '1.5rem' } }}>
-          Kullanıcı Yönetimi
-        </Typography>
-        <Button
-          variant="contained"
-          startIcon={<PersonAdd />}
-          onClick={() => setOpenCreateDialog(true)}
-          fullWidth
-          sx={{ maxWidth: { sm: 200 } }}
+      {/* Tabs */}
+      <Paper sx={{ mb: 3 }}>
+        <Tabs 
+          value={activeTab} 
+          onChange={(_, newValue) => setActiveTab(newValue)}
+          sx={{ borderBottom: 1, borderColor: 'divider' }}
         >
-          Yeni Kullanıcı Ekle
-        </Button>
-      </Box>
+          <Tab icon={<People />} iconPosition="start" label="Kullanıcılar" />
+          <Tab icon={<Engineering />} iconPosition="start" label="Saha Elemanları" />
+        </Tabs>
+      </Paper>
 
-      <Alert severity="info" sx={{ mb: 3, fontSize: { xs: '0.875rem', sm: '1rem' } }}>
-        Sistemdeki tüm kullanıcıları görüntüleyebilir, aktif/pasif yapabilir ve kayıtlarını inceleyebilirsiniz.
-      </Alert>
+      {/* Kullanıcılar Tab */}
+      {activeTab === 0 && (
+        <>
+          <Box sx={{ 
+            display: 'flex', 
+            flexDirection: { xs: 'column', sm: 'row' },
+            justifyContent: 'space-between', 
+            alignItems: { xs: 'stretch', sm: 'center' }, 
+            mb: 3,
+            gap: 2
+          }}>
+            <Typography variant="h5" fontWeight={600} sx={{ fontSize: { xs: '1.25rem', sm: '1.5rem' } }}>
+              Kullanıcı Yönetimi
+            </Typography>
+            <Button
+              variant="contained"
+              startIcon={<PersonAdd />}
+              onClick={() => setOpenCreateDialog(true)}
+              fullWidth
+              sx={{ maxWidth: { sm: 200 } }}
+            >
+              Yeni Kullanıcı Ekle
+            </Button>
+          </Box>
 
-      <TableContainer component={Paper} sx={{ overflowX: 'auto' }}>
-        <Table sx={{ minWidth: 650 }}>
-          <TableHead>
-            <TableRow sx={{ bgcolor: '#0D3282' }}>
-              <TableCell sx={{ color: 'white', fontWeight: 600 }}>Kullanıcı Adı</TableCell>
-              <TableCell sx={{ color: 'white', fontWeight: 600 }}>Kayıt Tarihi</TableCell>
-              <TableCell sx={{ color: 'white', fontWeight: 600 }}>Toplam Kayıt</TableCell>
-              <TableCell sx={{ color: 'white', fontWeight: 600 }}>Durum</TableCell>
-              <TableCell sx={{ color: 'white', fontWeight: 600 }}>İşlemler</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {users.map((user) => (
-              <React.Fragment key={user.id}>
-                <TableRow hover>
-                  <TableCell>
-                    <Typography fontWeight={500}>{user.username}</Typography>
-                  </TableCell>
+          <Alert severity="info" sx={{ mb: 3, fontSize: { xs: '0.875rem', sm: '1rem' } }}>
+            Sistemdeki tüm kullanıcıları görüntüleyebilir, aktif/pasif yapabilir ve kayıtlarını inceleyebilirsiniz.
+          </Alert>
+
+          <TableContainer component={Paper} sx={{ overflowX: 'auto' }}>
+            <Table sx={{ minWidth: 650 }}>
+              <TableHead>
+                <TableRow sx={{ bgcolor: '#0D3282' }}>
+                  <TableCell sx={{ color: 'white', fontWeight: 600 }}>Kullanıcı Adı</TableCell>
+                  <TableCell sx={{ color: 'white', fontWeight: 600 }}>Kayıt Tarihi</TableCell>
+                  <TableCell sx={{ color: 'white', fontWeight: 600 }}>Toplam Kayıt</TableCell>
+                  <TableCell sx={{ color: 'white', fontWeight: 600 }}>Durum</TableCell>
+                  <TableCell sx={{ color: 'white', fontWeight: 600 }}>İşlemler</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {users.map((user) => (
+                  <React.Fragment key={user.id}>
+                    <TableRow hover>
+                      <TableCell>
+                        <Typography fontWeight={500}>{user.username}</Typography>
+                      </TableCell>
                   <TableCell>
                     {new Date(user.created_at).toLocaleString('tr-TR')}
                   </TableCell>
@@ -439,6 +547,190 @@ const AdminPanel: React.FC = () => {
           </TableBody>
         </Table>
       </TableContainer>
+        </>
+      )}
+
+      {/* Saha Elemanları Tab */}
+      {activeTab === 1 && (
+        <>
+          <Box sx={{ 
+            display: 'flex', 
+            flexDirection: { xs: 'column', sm: 'row' },
+            justifyContent: 'space-between', 
+            alignItems: { xs: 'stretch', sm: 'center' }, 
+            mb: 3,
+            gap: 2
+          }}>
+            <Typography variant="h5" fontWeight={600} sx={{ fontSize: { xs: '1.25rem', sm: '1.5rem' } }}>
+              Saha Elemanları Yönetimi
+            </Typography>
+            <Button
+              variant="contained"
+              startIcon={<Engineering />}
+              onClick={() => setOpenSahaDialog(true)}
+              fullWidth
+              sx={{ maxWidth: { sm: 220 }, bgcolor: '#0D3282', '&:hover': { bgcolor: '#082052' } }}
+            >
+              Yeni Saha Elemanı Ekle
+            </Button>
+          </Box>
+
+          <Alert severity="info" sx={{ mb: 3, fontSize: { xs: '0.875rem', sm: '1rem' } }}>
+            Saha elemanlarını yönetebilir, ekleyebilir, aktif/pasif yapabilir ve kayıtlarını görüntüleyebilirsiniz.
+          </Alert>
+
+          {sahaLoading ? (
+            <Typography>Yükleniyor...</Typography>
+          ) : sahaElemanlari.length === 0 ? (
+            <Alert severity="warning">Henüz saha elemanı bulunmuyor.</Alert>
+          ) : (
+            <TableContainer component={Paper} sx={{ overflowX: 'auto' }}>
+              <Table sx={{ minWidth: 650 }}>
+                <TableHead>
+                  <TableRow sx={{ bgcolor: '#1976d2' }}>
+                    <TableCell sx={{ color: 'white', fontWeight: 600 }}>Kullanıcı Adı</TableCell>
+                    <TableCell sx={{ color: 'white', fontWeight: 600 }}>Ad Soyad</TableCell>
+                    <TableCell sx={{ color: 'white', fontWeight: 600 }}>Kayıt Tarihi</TableCell>
+                    <TableCell sx={{ color: 'white', fontWeight: 600 }}>Toplam Kayıt</TableCell>
+                    <TableCell sx={{ color: 'white', fontWeight: 600 }}>Durum</TableCell>
+                    <TableCell sx={{ color: 'white', fontWeight: 600 }}>İşlemler</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {sahaElemanlari.map((se) => (
+                    <React.Fragment key={se.id}>
+                      <TableRow hover>
+                        <TableCell>
+                          <Typography fontWeight={500}>{se.username}</Typography>
+                        </TableCell>
+                        <TableCell>{se.ad_soyad || '-'}</TableCell>
+                        <TableCell>
+                          {new Date(se.created_at).toLocaleString('tr-TR')}
+                        </TableCell>
+                        <TableCell>
+                          <Chip label={se.total_records || 0} color="info" size="small" />
+                        </TableCell>
+                        <TableCell>
+                          <Chip
+                            label={se.is_active ? 'Aktif' : 'Pasif'}
+                            color={se.is_active ? 'success' : 'error'}
+                            size="small"
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <Box sx={{ display: 'flex', gap: 1 }}>
+                            <Tooltip title="Kayıtları Görüntüle">
+                              <IconButton
+                                size="small"
+                                onClick={() => handleViewSahaRecords(se.username)}
+                                color="info"
+                              >
+                                {expandedSahaUser === se.username ? <ExpandLess /> : <ExpandMore />}
+                              </IconButton>
+                            </Tooltip>
+                            <Tooltip title={se.is_active ? 'Pasif Yap' : 'Aktif Yap'}>
+                              <IconButton
+                                size="small"
+                                onClick={() => handleToggleSahaStatus(se.id, se.is_active)}
+                                color={se.is_active ? 'warning' : 'success'}
+                              >
+                                {se.is_active ? <Block /> : <CheckCircle />}
+                              </IconButton>
+                            </Tooltip>
+                            <Tooltip title="Sil">
+                              <IconButton
+                                size="small"
+                                onClick={() => handleDeleteSahaElemani(se.id, se.username)}
+                                color="error"
+                              >
+                                <Delete />
+                              </IconButton>
+                            </Tooltip>
+                          </Box>
+                        </TableCell>
+                      </TableRow>
+
+                      {/* Saha Elemanı Kayıtları */}
+                      <TableRow>
+                        <TableCell colSpan={6} sx={{ p: 0 }}>
+                          <Collapse in={expandedSahaUser === se.username} timeout="auto" unmountOnExit>
+                            <Box sx={{ bgcolor: '#e3f2fd', p: 2 }}>
+                              <Typography variant="h6" gutterBottom sx={{ color: '#1976d2', display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+                                <Engineering sx={{ fontSize: '1.3rem' }} />
+                                {se.ad_soyad || se.username} - Saha Kayıtları ({sahaUserRecords[se.username]?.length || 0} adet)
+                              </Typography>
+                              {sahaUserRecords[se.username] && sahaUserRecords[se.username].length > 0 ? (
+                                <TableContainer component={Paper} sx={{ maxHeight: 400, overflow: 'auto' }}>
+                                  <Table size="small" stickyHeader>
+                                    <TableHead>
+                                      <TableRow>
+                                        <TableCell sx={{ fontWeight: 600, bgcolor: '#1976d2', color: 'white' }}>Fotoğraf</TableCell>
+                                        <TableCell sx={{ fontWeight: 600, bgcolor: '#1976d2', color: 'white' }}>İsim</TableCell>
+                                        <TableCell sx={{ fontWeight: 600, bgcolor: '#1976d2', color: 'white' }}>Soyisim</TableCell>
+                                        <TableCell sx={{ fontWeight: 600, bgcolor: '#1976d2', color: 'white' }}>Notlar</TableCell>
+                                        <TableCell sx={{ fontWeight: 600, bgcolor: '#1976d2', color: 'white' }}>Tarih</TableCell>
+                                      </TableRow>
+                                    </TableHead>
+                                    <TableBody>
+                                      {sahaUserRecords[se.username].map((record) => (
+                                        <TableRow key={record.id} hover sx={{ '&:hover': { bgcolor: '#bbdefb' } }}>
+                                          <TableCell>
+                                            {record.foto_data ? (
+                                              <img 
+                                                src={record.foto_data} 
+                                                alt={`${record.isim} ${record.soyisim}`}
+                                                style={{ width: 50, height: 50, objectFit: 'cover', borderRadius: 4 }}
+                                              />
+                                            ) : (
+                                              <Box sx={{ 
+                                                width: 50, 
+                                                height: 50, 
+                                                bgcolor: '#f5f5f5', 
+                                                display: 'flex', 
+                                                alignItems: 'center', 
+                                                justifyContent: 'center',
+                                                borderRadius: 1,
+                                              }}>
+                                                <PersonAdd sx={{ color: '#ccc' }} />
+                                              </Box>
+                                            )}
+                                          </TableCell>
+                                          <TableCell sx={{ fontWeight: 500 }}>{record.isim}</TableCell>
+                                          <TableCell sx={{ fontWeight: 500 }}>{record.soyisim}</TableCell>
+                                          <TableCell sx={{ maxWidth: 200 }}>
+                                            <Typography variant="body2" noWrap title={record.notlar}>
+                                              {record.notlar || '-'}
+                                            </Typography>
+                                          </TableCell>
+                                          <TableCell sx={{ whiteSpace: 'nowrap', fontSize: '0.85rem' }}>
+                                            {new Date(record.created_at).toLocaleString('tr-TR', {
+                                              day: '2-digit',
+                                              month: '2-digit',
+                                              year: 'numeric',
+                                              hour: '2-digit',
+                                              minute: '2-digit'
+                                            })}
+                                          </TableCell>
+                                        </TableRow>
+                                      ))}
+                                    </TableBody>
+                                  </Table>
+                                </TableContainer>
+                              ) : (
+                                <Alert severity="info">Bu saha elemanının henüz kaydı yok.</Alert>
+                              )}
+                            </Box>
+                          </Collapse>
+                        </TableCell>
+                      </TableRow>
+                    </React.Fragment>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          )}
+        </>
+      )}
 
       {/* Kullanıcı Oluşturma Dialog */}
       <Dialog open={openCreateDialog} onClose={() => setOpenCreateDialog(false)} maxWidth="sm" fullWidth>
@@ -466,6 +758,46 @@ const AdminPanel: React.FC = () => {
         <DialogActions>
           <Button onClick={() => setOpenCreateDialog(false)}>İptal</Button>
           <Button onClick={handleCreateUser} variant="contained">
+            Oluştur
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Saha Elemanı Oluşturma Dialog */}
+      <Dialog open={openSahaDialog} onClose={() => setOpenSahaDialog(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>Yeni Saha Elemanı Oluştur</DialogTitle>
+        <DialogContent>
+          <TextField
+            autoFocus
+            margin="dense"
+            label="Kullanıcı Adı"
+            type="text"
+            fullWidth
+            value={newSahaUsername}
+            onChange={(e) => setNewSahaUsername(e.target.value)}
+            sx={{ mb: 2 }}
+          />
+          <TextField
+            margin="dense"
+            label="Ad Soyad (Opsiyonel)"
+            type="text"
+            fullWidth
+            value={newSahaAdSoyad}
+            onChange={(e) => setNewSahaAdSoyad(e.target.value)}
+            sx={{ mb: 2 }}
+          />
+          <TextField
+            margin="dense"
+            label="Şifre"
+            type="password"
+            fullWidth
+            value={newSahaPassword}
+            onChange={(e) => setNewSahaPassword(e.target.value)}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setOpenSahaDialog(false)}>İptal</Button>
+          <Button onClick={handleCreateSahaElemani} variant="contained" sx={{ bgcolor: '#0D3282' }}>
             Oluştur
           </Button>
         </DialogActions>

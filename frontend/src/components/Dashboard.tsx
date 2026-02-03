@@ -38,6 +38,7 @@ import {
   Menu as MenuIcon,
   AdminPanelSettings,
   Close as CloseIcon,
+  Engineering,
 } from '@mui/icons-material';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
@@ -53,6 +54,8 @@ const Settings = lazy(() => import('./Settings'));
 const MusteriGecmisi = lazy(() => import('./MusteriGecmisi.tsx'));
 const AtolyeTakip = lazy(() => import('./AtolyeTakip.tsx'));
 const AdminPanel = lazy(() => import('./AdminPanel.tsx'));
+const SahaPanel = lazy(() => import('./SahaPanel.tsx'));
+const SahaKayitlari = lazy(() => import('./SahaKayitlari.tsx'));
 import { exportToExcel } from '../utils/excel.ts';
 import Loading from './Loading';
 import ErrorMessage from './ErrorMessage';
@@ -91,6 +94,7 @@ const Dashboard: React.FC = () => {
   // Güvenli rol kontrolü - eğer user yoksa veya role tanımlı değilse en kısıtlı mod
   const isBayi = user?.role === 'bayi';
   const isAdmin = user?.role === 'admin';
+  const isSaha = user?.role === 'saha';
 
   useEffect(() => {
     // Socket.IO bağlantısı - Backend Railway'de, frontend Hostinger'da
@@ -380,7 +384,8 @@ const Dashboard: React.FC = () => {
     { label: 'Atölye Takip', icon: <Build />, index: 2 },
     ...(isAdmin ? [
       { label: 'Tanımlamalar', icon: <SettingsIcon />, index: 3 },
-      { label: 'Yönetim', icon: <AdminPanelSettings />, index: 4 }
+      { label: 'Yönetim', icon: <AdminPanelSettings />, index: 4 },
+      { label: 'Saha', icon: <Engineering />, index: 5 }
     ] : [])
   ];
 
@@ -410,10 +415,10 @@ const Dashboard: React.FC = () => {
 
   return (
     <Box sx={{ flexGrow: 1 }}>
-      <AppBar position="static" sx={{ bgcolor: '#2C3E82' }}>
+      <AppBar position="static" sx={{ bgcolor: isSaha ? '#1976d2' : '#2C3E82' }}>
         <Toolbar sx={{ minHeight: '48px !important', px: 2 }}>
-          {/* Mobilde hamburger menu (sadece admin için) */}
-          {isMobile && !isBayi && (
+          {/* Mobilde hamburger menu (sadece admin için, saha ve bayi hariç) */}
+          {isMobile && !isBayi && !isSaha && (
             <IconButton
               color="inherit"
               edge="start"
@@ -423,13 +428,24 @@ const Dashboard: React.FC = () => {
               <MenuIcon />
             </IconButton>
           )}
-          <Build sx={{ mr: 1, fontSize: '1.5rem' }} />
-          <Typography variant="h6" component="div" sx={{ fontWeight: 600, fontSize: { xs: '0.95rem', sm: '1.1rem' } }}>
-            Teknik Servis - Ana Sayfa
-          </Typography>
+          {isSaha ? (
+            <>
+              <Engineering sx={{ mr: 1, fontSize: '1.5rem' }} />
+              <Typography variant="h6" component="div" sx={{ fontWeight: 600, fontSize: { xs: '0.95rem', sm: '1.1rem' } }}>
+                Saha Paneli
+              </Typography>
+            </>
+          ) : (
+            <>
+              <Build sx={{ mr: 1, fontSize: '1.5rem' }} />
+              <Typography variant="h6" component="div" sx={{ fontWeight: 600, fontSize: { xs: '0.95rem', sm: '1.1rem' } }}>
+                Teknik Servis - Ana Sayfa
+              </Typography>
+            </>
+          )}
           
           {/* Toplam Tutar - Header'da büyük ve belirgin */}
-          {isAdmin && !isBayi && (
+          {isAdmin && !isBayi && !isSaha && (
             <Typography 
               variant="h6" 
               sx={{ 
@@ -482,8 +498,8 @@ const Dashboard: React.FC = () => {
         </Toolbar>
       </AppBar>
 
-      {/* Mobile Drawer - Sadece Admin için */}
-      {!isBayi && (
+      {/* Mobile Drawer - Sadece Admin için (Bayi ve Saha hariç) */}
+      {!isBayi && !isSaha && (
         <Drawer
           anchor="left"
           open={mobileDrawerOpen}
@@ -517,8 +533,8 @@ const Dashboard: React.FC = () => {
         </Drawer>
       )}
 
-      {/* Navigation Tabs - Masaüstünde göster, mobilde gizle */}
-      <Box sx={{ bgcolor: 'background.paper', borderBottom: 1, borderColor: 'divider', display: { xs: 'none', sm: 'block' } }}>
+      {/* Navigation Tabs - Masaüstünde göster, mobilde gizle, Saha için gizle */}
+      <Box sx={{ bgcolor: 'background.paper', borderBottom: 1, borderColor: 'divider', display: { xs: 'none', sm: isSaha ? 'none' : 'block' } }}>
         {isBayi ? (
           <Tabs 
             value={0}
@@ -534,6 +550,7 @@ const Dashboard: React.FC = () => {
             }}
           >
             <Tab 
+              value={0}
               icon={<Build sx={{ fontSize: '1.1rem' }} />} 
               iconPosition="start" 
               label="Atölye Takip" 
@@ -588,13 +605,35 @@ const Dashboard: React.FC = () => {
                 label="Yönetim" 
               />
             )}
+            {isAdmin && (
+              <Tab 
+                value={5}
+                icon={<Engineering sx={{ fontSize: '1.1rem' }} />} 
+                iconPosition="start" 
+                label="Saha" 
+              />
+            )}
+            {/* Normal kullanıcı (user) için Saha tab'ı */}
+            {!isAdmin && !isBayi && !isSaha && (
+              <Tab 
+                value={5}
+                icon={<Engineering sx={{ fontSize: '1.1rem' }} />} 
+                iconPosition="start" 
+                label="Saha" 
+              />
+            )}
           </Tabs>
         )}
       </Box>
 
       <Container maxWidth="xl" sx={{ mt: { xs: 2, sm: 4 }, mb: { xs: 2, sm: 4 }, px: { xs: 1, sm: 2 } }}>
-        {isBayi ? (
-          // Bayi sadece Atölye Takip görür (activeTab her zaman 0)
+        {isSaha ? (
+          // Saha elemanı sadece SahaPanel görür
+          <Suspense fallback={<Loading message="Yükleniyor..." />}>
+            <SahaPanel />
+          </Suspense>
+        ) : isBayi ? (
+          // Bayi sadece Atölye Takip görür
           <AtolyeTakip />
         ) : (
           <>
@@ -865,6 +904,11 @@ const Dashboard: React.FC = () => {
           // Kullanıcı Yönetimi (Sadece Admin) - Lazy loaded
           <Suspense fallback={<Loading />}>
             <AdminPanel />
+          </Suspense>
+        ) : activeTab === 5 ? (
+          // Saha Kayıtları (Admin ve Normal Kullanıcı) - Lazy loaded
+          <Suspense fallback={<Loading />}>
+            <SahaKayitlari />
           </Suspense>
         ) : (
           // Fallback

@@ -1,5 +1,5 @@
 import axios, { InternalAxiosRequestConfig } from 'axios';
-import { Islem, IslemCreateDto, IslemUpdateDto, FilterParams } from '../types';
+import { Islem, IslemCreateDto, IslemUpdateDto, FilterParams, SahaKayit, SahaKayitCreateDto, SahaKayitUpdateDto, SahaElemani } from '../types';
 
 // Environment variable'dan API URL'i al
 // Development: http://localhost:5000/api
@@ -151,6 +151,85 @@ export const adminService = {
 
   getAllRecords: async (): Promise<Islem[]> => {
     const response = await api.get('/admin/all-records');
+    return response.data;
+  },
+};
+
+// Saha servisleri
+export const sahaService = {
+  // Saha elemanı girişi
+  login: async (username: string, password: string) => {
+    const response = await api.post('/saha/login', { username, password });
+    if (response.data.token) {
+      localStorage.setItem('token', response.data.token);
+      localStorage.setItem('user', JSON.stringify(response.data.user));
+    }
+    return response.data;
+  },
+
+  // Yeni saha elemanı oluştur (admin)
+  createSahaElemani: async (username: string, password: string, ad_soyad?: string) => {
+    const response = await api.post('/saha/create', { username, password, ad_soyad });
+    return response.data;
+  },
+
+  // Tüm saha elemanlarını listele (admin)
+  getSahaElemanlari: async (): Promise<SahaElemani[]> => {
+    const response = await api.get('/saha/users');
+    return response.data;
+  },
+
+  // Saha elemanı aktif/pasif yap (admin)
+  toggleSahaElemaniStatus: async (id: number) => {
+    const response = await api.patch(`/saha/users/${id}/toggle`);
+    return response.data;
+  },
+
+  // Saha elemanı sil (admin)
+  deleteSahaElemani: async (id: number) => {
+    const response = await api.delete(`/saha/users/${id}`);
+    return response.data;
+  },
+
+  // Yeni kayıt ekle (saha elemanı)
+  createKayit: async (data: SahaKayitCreateDto): Promise<SahaKayit> => {
+    const response = await api.post('/saha/kayit', data);
+    return response.data.kayit;
+  },
+
+  // Kendi kayıtlarını getir (saha elemanı)
+  getKayitlar: async (params?: { search?: string; startDate?: string; endDate?: string }): Promise<SahaKayit[]> => {
+    const response = await api.get('/saha/kayitlar', { params });
+    return response.data;
+  },
+
+  // Tek kayıt getir
+  getKayit: async (id: number): Promise<SahaKayit> => {
+    const response = await api.get(`/saha/kayit/${id}`);
+    return response.data;
+  },
+
+  // Kayıt güncelle
+  updateKayit: async (id: number, data: SahaKayitUpdateDto): Promise<SahaKayit> => {
+    const response = await api.put(`/saha/kayit/${id}`, data);
+    return response.data.kayit;
+  },
+
+  // Kayıt sil
+  deleteKayit: async (id: number) => {
+    const response = await api.delete(`/saha/kayit/${id}`);
+    return response.data;
+  },
+
+  // Tüm saha kayıtlarını getir (admin)
+  getAllKayitlar: async (params?: { search?: string; startDate?: string; endDate?: string; sahaElemaniId?: number }): Promise<SahaKayit[]> => {
+    const response = await api.get('/saha/all-kayitlar', { params });
+    return response.data;
+  },
+
+  // Saha elemanının kayıtlarını getir (admin)
+  getUserKayitlar: async (username: string): Promise<SahaKayit[]> => {
+    const response = await api.get(`/saha/user-kayitlar/${username}`);
     return response.data;
   },
 };
