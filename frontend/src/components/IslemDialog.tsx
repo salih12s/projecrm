@@ -625,14 +625,6 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
     }
   }, [showConfirmDialog, existingRecord]);
 
-  const handleContinueWithNewData = () => {
-    setFormData({ ...formData, cep_tel: phoneNumber });
-    setUsedExistingData(false); // Yeni kayıt açılıyor, duplicate kontrolü yapılacak
-    setShowConfirmDialog(false);
-    setShowForm(true);
-    setExistingRecord(null);
-  };
-
   // Montaj checkbox değişikliği
   const handleMontajChange = (montajId: number) => {
     const newSelected = selectedMontajlar.includes(montajId)
