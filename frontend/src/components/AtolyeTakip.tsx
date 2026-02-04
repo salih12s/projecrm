@@ -318,7 +318,7 @@ const AtolyeTakip: React.FC = () => {
     // Filter by bayi_adi
     if (debouncedFilters.bayi_adi) {
       filtered = filtered.filter((item) =>
-        item.bayi_adi?.toLowerCase().includes(debouncedFilters.bayi_adi.toLowerCase())
+        item.bayi_adi?.toLocaleLowerCase('tr-TR').includes(debouncedFilters.bayi_adi.toLocaleLowerCase('tr-TR'))
       );
     }
 
@@ -339,49 +339,49 @@ const AtolyeTakip: React.FC = () => {
     // Filter by marka
     if (debouncedFilters.marka) {
       filtered = filtered.filter((item) =>
-        item.marka?.toLowerCase().includes(debouncedFilters.marka.toLowerCase())
+        item.marka?.toLocaleLowerCase('tr-TR').includes(debouncedFilters.marka.toLocaleLowerCase('tr-TR'))
       );
     }
 
     // Filter by kod
     if (debouncedFilters.kod) {
       filtered = filtered.filter((item) =>
-        (item.kod || '').toLowerCase().includes(debouncedFilters.kod.toLowerCase())
+        (item.kod || '').toLocaleLowerCase('tr-TR').includes(debouncedFilters.kod.toLocaleLowerCase('tr-TR'))
       );
     }
 
     // Filter by seri_no
     if (debouncedFilters.seri_no) {
       filtered = filtered.filter((item) =>
-        (item.seri_no || '').toLowerCase().includes(debouncedFilters.seri_no.toLowerCase())
+        (item.seri_no || '').toLocaleLowerCase('tr-TR').includes(debouncedFilters.seri_no.toLocaleLowerCase('tr-TR'))
       );
     }
 
     // Filter by sikayet
     if (debouncedFilters.sikayet) {
       filtered = filtered.filter((item) =>
-        item.sikayet?.toLowerCase().includes(debouncedFilters.sikayet.toLowerCase())
+        item.sikayet?.toLocaleLowerCase('tr-TR').includes(debouncedFilters.sikayet.toLocaleLowerCase('tr-TR'))
       );
     }
 
     // Filter by ozel_not
     if (debouncedFilters.ozel_not) {
       filtered = filtered.filter((item) =>
-        (item.ozel_not || '').toLowerCase().includes(debouncedFilters.ozel_not.toLowerCase())
+        (item.ozel_not || '').toLocaleLowerCase('tr-TR').includes(debouncedFilters.ozel_not.toLocaleLowerCase('tr-TR'))
       );
     }
 
     // Filter by yapilan_islem
     if (debouncedFilters.yapilan_islem) {
       filtered = filtered.filter((item) =>
-        (item.yapilan_islem || '').toLowerCase().includes(debouncedFilters.yapilan_islem.toLowerCase())
+        (item.yapilan_islem || '').toLocaleLowerCase('tr-TR').includes(debouncedFilters.yapilan_islem.toLocaleLowerCase('tr-TR'))
       );
     }
 
     // Filter by note_no
     if (debouncedFilters.note_no) {
       filtered = filtered.filter((item) =>
-        (item.note_no || '').toLowerCase().includes(debouncedFilters.note_no.toLowerCase())
+        (item.note_no || '').toLocaleLowerCase('tr-TR').includes(debouncedFilters.note_no.toLocaleLowerCase('tr-TR'))
       );
     }
 

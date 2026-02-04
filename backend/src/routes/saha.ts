@@ -201,9 +201,15 @@ router.get('/kayitlar', authenticateToken, async (req: Request, res: Response): 
     const params: any[] = [user.id];
     let paramIndex = 2;
 
-    // Arama filtresi
+    // Arama filtresi - isim, soyisim, telefon, adres alanlarında ara (case-insensitive)
     if (search) {
-      query += ` AND (LOWER(isim) LIKE LOWER($${paramIndex}) OR LOWER(soyisim) LIKE LOWER($${paramIndex}))`;
+      query += ` AND (
+        isim ILIKE $${paramIndex} OR 
+        soyisim ILIKE $${paramIndex} OR 
+        telefon ILIKE $${paramIndex} OR 
+        adres ILIKE $${paramIndex} OR
+        CONCAT(isim, ' ', soyisim) ILIKE $${paramIndex}
+      )`;
       params.push(`%${search}%`);
       paramIndex++;
     }
@@ -324,9 +330,15 @@ router.get('/all-kayitlar', authenticateToken, async (req: Request, res: Respons
       paramIndex++;
     }
 
-    // Arama filtresi
+    // Arama filtresi - isim, soyisim, telefon, adres alanlarında ara (case-insensitive)
     if (search) {
-      query += ` AND (LOWER(sk.isim) LIKE LOWER($${paramIndex}) OR LOWER(sk.soyisim) LIKE LOWER($${paramIndex}))`;
+      query += ` AND (
+        sk.isim ILIKE $${paramIndex} OR 
+        sk.soyisim ILIKE $${paramIndex} OR 
+        sk.telefon ILIKE $${paramIndex} OR 
+        sk.adres ILIKE $${paramIndex} OR
+        CONCAT(sk.isim, ' ', sk.soyisim) ILIKE $${paramIndex}
+      )`;
       params.push(`%${search}%`);
       paramIndex++;
     }

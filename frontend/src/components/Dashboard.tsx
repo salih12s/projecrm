@@ -415,7 +415,7 @@ const Dashboard: React.FC = () => {
 
   return (
     <Box sx={{ flexGrow: 1 }}>
-      <AppBar position="static" sx={{ bgcolor: isSaha ? '#1976d2' : '#2C3E82' }}>
+      <AppBar position="static" sx={{ bgcolor: '#2C3E82' }}>
         <Toolbar sx={{ minHeight: '48px !important', px: 2 }}>
           {/* Mobilde hamburger menu (sadece admin için, saha ve bayi hariç) */}
           {isMobile && !isBayi && !isSaha && (

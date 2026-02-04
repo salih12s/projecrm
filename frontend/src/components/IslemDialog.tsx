@@ -959,9 +959,23 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
 
   const saveIslem = async () => {
     try {
+      // Telefon numaralarını temizle (sadece rakamlar, max 20 karakter)
+      const cleanedSabitTel = cleanPhoneNumber(formData.sabit_tel || '').slice(0, 20);
+      const cleanedCepTel = cleanPhoneNumber(formData.cep_tel || '').slice(0, 20);
+      const cleanedYedekTel = cleanPhoneNumber(formData.yedek_tel || '').slice(0, 20);
+      
       if (islem) {
-        // Güncelleme
-        await islemService.update(islem.id, formData);
+        // Güncelleme - telefon numaralarını temizle
+        const updateData = {
+          ...formData,
+          sabit_tel: cleanedSabitTel,
+          cep_tel: cleanedCepTel,
+          yedek_tel: cleanedYedekTel,
+          kapi_no: (formData.kapi_no || '').slice(0, 20),
+          blok_no: (formData.blok_no || '').slice(0, 20),
+          daire_no: (formData.daire_no || '').slice(0, 20),
+        };
+        await islemService.update(islem.id, updateData);
         showSnackbar('İşlem başarıyla güncellendi!', 'success');
       } else {
         // Yeni ekleme - tüm doldurulmuş alanları gönder
@@ -971,13 +985,13 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
           mahalle: formData.mahalle,
           cadde: formData.cadde,
           sokak: formData.sokak,
-          kapi_no: formData.kapi_no,
+          kapi_no: (formData.kapi_no || '').slice(0, 20),
           apartman_site: formData.apartman_site,
-          blok_no: formData.blok_no,
-          daire_no: formData.daire_no,
-          sabit_tel: formData.sabit_tel,
-          cep_tel: formData.cep_tel,
-          yedek_tel: formData.yedek_tel,
+          blok_no: (formData.blok_no || '').slice(0, 20),
+          daire_no: (formData.daire_no || '').slice(0, 20),
+          sabit_tel: cleanedSabitTel,
+          cep_tel: cleanedCepTel,
+          yedek_tel: cleanedYedekTel,
           urun: formData.urun,
           marka: formData.marka,
           sikayet: formData.sikayet,
@@ -1082,10 +1096,7 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
               action={
                 <Box sx={{ display: 'flex', gap: 0.5 }}>
                   <Button color="inherit" size="small" onClick={handleUseExistingData}>
-                    Bilgileri Getir
-                  </Button>
-                  <Button color="inherit" size="small" onClick={handleContinueWithNewData}>
-                    Yeni Kayıt
+                    Bilgileri Getir ve Yeni Kayıt Aç
                   </Button>
                 </Box>
               }

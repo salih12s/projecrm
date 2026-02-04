@@ -60,6 +60,7 @@ const SahaPanel: React.FC = () => {
   const [formSubmitting, setFormSubmitting] = useState(false);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
   const { showSnackbar } = useSnackbar();
   const { user } = useAuth();
 
@@ -131,43 +132,108 @@ const SahaPanel: React.FC = () => {
   // Fotoğrafı daha iyi sıkıştır (daha küçük boyut ve kalite)
   const compressImage = (file: File, maxWidth: number = 600, quality: number = 0.4): Promise<string> => {
     return new Promise((resolve, reject) => {
+      // Önce dosyayı base64 olarak oku (fallback için)
+      const fallbackReader = new FileReader();
+      let fallbackBase64 = '';
+      
+      fallbackReader.onload = (fallbackEvent) => {
+        fallbackBase64 = fallbackEvent.target?.result as string;
+      };
+      fallbackReader.readAsDataURL(file);
+      
+      // Asıl sıkıştırma işlemi
       const reader = new FileReader();
       reader.onload = (e) => {
         const img = new Image();
-        img.onload = () => {
-          const canvas = document.createElement('canvas');
-          let width = img.width;
-          let height = img.height;
-          
-          // Oranı koru ve maxWidth'e göre küçült
-          if (width > maxWidth) {
-            height = (height * maxWidth) / width;
-            width = maxWidth;
-          }
-          
-          // Yükseklik de sınırla
-          const maxHeight = 800;
-          if (height > maxHeight) {
-            width = (width * maxHeight) / height;
-            height = maxHeight;
-          }
-          
-          canvas.width = width;
-          canvas.height = height;
-          
-          const ctx = canvas.getContext('2d');
-          if (ctx) {
-            ctx.drawImage(img, 0, 0, width, height);
-            const compressedData = canvas.toDataURL('image/jpeg', quality);
-            resolve(compressedData);
+        
+        // Timeout ile sıkıştırma - 10 saniye içinde tamamlanmazsa fallback kullan
+        const timeout = setTimeout(() => {
+          console.warn('Sıkıştırma zaman aşımı, orijinal kullanılıyor');
+          if (fallbackBase64) {
+            resolve(fallbackBase64);
           } else {
-            reject(new Error('Canvas context not available'));
+            reject(new Error('Sıkıştırma zaman aşımı'));
+          }
+        }, 10000);
+        
+        img.onload = () => {
+          clearTimeout(timeout);
+          try {
+            const canvas = document.createElement('canvas');
+            let width = img.width;
+            let height = img.height;
+            
+            // Oranı koru ve maxWidth'e göre küçült
+            if (width > maxWidth) {
+              height = (height * maxWidth) / width;
+              width = maxWidth;
+            }
+            
+            // Yükseklik de sınırla
+            const maxHeight = 800;
+            if (height > maxHeight) {
+              width = (width * maxHeight) / height;
+              height = maxHeight;
+            }
+            
+            canvas.width = Math.floor(width);
+            canvas.height = Math.floor(height);
+            
+            const ctx = canvas.getContext('2d');
+            if (ctx) {
+              ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+              try {
+                const compressedData = canvas.toDataURL('image/jpeg', quality);
+                resolve(compressedData);
+              } catch (canvasError) {
+                console.warn('Canvas toDataURL hatası, orijinal kullanılıyor:', canvasError);
+                if (fallbackBase64) {
+                  resolve(fallbackBase64);
+                } else {
+                  reject(canvasError);
+                }
+              }
+            } else {
+              console.warn('Canvas context yok, orijinal kullanılıyor');
+              if (fallbackBase64) {
+                resolve(fallbackBase64);
+              } else {
+                reject(new Error('Canvas context not available'));
+              }
+            }
+          } catch (error) {
+            console.warn('Sıkıştırma hatası, orijinal kullanılıyor:', error);
+            if (fallbackBase64) {
+              resolve(fallbackBase64);
+            } else {
+              reject(error);
+            }
           }
         };
-        img.onerror = reject;
+        
+        img.onerror = (error) => {
+          clearTimeout(timeout);
+          console.warn('Resim yüklenemedi, orijinal kullanılıyor:', error);
+          // Resim yüklenemezse fallback kullan
+          if (fallbackBase64) {
+            resolve(fallbackBase64);
+          } else {
+            reject(error);
+          }
+        };
+        
         img.src = e.target?.result as string;
       };
-      reader.onerror = reject;
+      
+      reader.onerror = (error) => {
+        console.warn('Dosya okunamadı, fallback deneniyor:', error);
+        if (fallbackBase64) {
+          resolve(fallbackBase64);
+        } else {
+          reject(error);
+        }
+      };
+      
       reader.readAsDataURL(file);
     });
   };
@@ -200,19 +266,34 @@ const SahaPanel: React.FC = () => {
         newPhotos.push(compressedData);
       } catch (error) {
         console.error('Fotoğraf sıkıştırma hatası:', error);
-        // Sıkıştırma başarısız olursa bu fotoğrafı atla
-        showSnackbar(`${file.name} sıkıştırılamadı!`, 'warning');
+        // Sıkıştırma başarısız olursa, orijinal dosyayı base64 olarak dene
+        try {
+          const reader = new FileReader();
+          const base64 = await new Promise<string>((resolve, reject) => {
+            reader.onload = () => resolve(reader.result as string);
+            reader.onerror = reject;
+            reader.readAsDataURL(file);
+          });
+          newPhotos.push(base64);
+          console.log('Fallback: Orijinal fotoğraf kullanıldı');
+        } catch (fallbackError) {
+          console.error('Fallback da başarısız:', fallbackError);
+          showSnackbar(`${file.name} yüklenemedi!`, 'warning');
+        }
       }
     }
 
     if (newPhotos.length > 0) {
       setFormFotolar(prev => [...prev, ...newPhotos]);
-      showSnackbar(`${newPhotos.length} fotoğraf yüklendi ve sıkıştırıldı!`, 'success');
+      showSnackbar(`${newPhotos.length} fotoğraf yüklendi!`, 'success');
     }
     
-    // Input'u temizle (aynı dosyaları tekrar seçebilmek için)
+    // Input'ları temizle (aynı dosyaları tekrar seçebilmek için)
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
+    }
+    if (cameraInputRef.current) {
+      cameraInputRef.current.value = '';
     }
   };
 
@@ -280,7 +361,7 @@ const SahaPanel: React.FC = () => {
         gap: 2
       }}>
         <Box>
-          <Typography variant="h5" fontWeight={600} sx={{ fontSize: { xs: '1.25rem', sm: '1.5rem' } }}>
+          <Typography variant="h5" fontWeight={600} sx={{ fontSize: { xs: '1.25rem', sm: '1.5rem' }, color: '#2C3E82' }}>
             Saha Kayıtları
           </Typography>
           <Typography variant="body2" color="text.secondary">
@@ -293,8 +374,16 @@ const SahaPanel: React.FC = () => {
             startIcon={<FilterList />}
             onClick={() => setShowFilters(!showFilters)}
             size="small"
+            sx={{
+              borderColor: '#0D3282',
+              color: '#0D3282',
+              '&:hover': {
+                borderColor: '#082052',
+                bgcolor: 'rgba(13, 50, 130, 0.04)',
+              }
+            }}
           >
-            Filtrele
+            FİLTRELE
           </Button>
           <Button
             variant="contained"
@@ -302,7 +391,7 @@ const SahaPanel: React.FC = () => {
             onClick={() => handleOpenDialog()}
             sx={{ bgcolor: '#0D3282', '&:hover': { bgcolor: '#082052' } }}
           >
-            Yeni Kayıt
+            YENİ KAYIT
           </Button>
         </Box>
       </Box>
@@ -356,17 +445,25 @@ const SahaPanel: React.FC = () => {
                   variant="contained"
                   onClick={handleSearch}
                   size="small"
-                  sx={{ bgcolor: '#0D3282' }}
+                  sx={{ bgcolor: '#0D3282', '&:hover': { bgcolor: '#082052' } }}
                 >
-                  Ara
+                  ARA
                 </Button>
                 <Button
                   variant="outlined"
                   onClick={handleClearFilters}
                   size="small"
                   startIcon={<Refresh />}
+                  sx={{
+                    borderColor: '#0D3282',
+                    color: '#0D3282',
+                    '&:hover': {
+                      borderColor: '#082052',
+                      bgcolor: 'rgba(13, 50, 130, 0.04)',
+                    }
+                  }}
                 >
-                  Temizle
+                  TEMİZLE
                 </Button>
               </Box>
             </Grid>
@@ -568,10 +665,22 @@ const SahaPanel: React.FC = () => {
                 <>
                   <PhotoCamera sx={{ fontSize: 48, color: '#ccc', mb: 1 }} />
                   <Typography variant="body2" color="text.secondary" gutterBottom>
-                    Fotoğraf yüklemek için tıklayın (maks. 5 adet)
+                    Fotoğraf yüklemek için aşağıdaki butonları kullanın (maks. 5 adet)
                   </Typography>
                 </>
               )}
+              
+              {/* Kamera input - capture="environment" ile arka kamerayı aç */}
+              <input
+                type="file"
+                accept="image/*"
+                capture="environment"
+                ref={cameraInputRef}
+                onChange={handleFileSelect}
+                style={{ display: 'none' }}
+              />
+              
+              {/* Galeri input - capture yok, galeriden seç */}
               <input
                 type="file"
                 accept="image/*"
@@ -580,15 +689,34 @@ const SahaPanel: React.FC = () => {
                 onChange={handleFileSelect}
                 style={{ display: 'none' }}
               />
+              
               {formFotolar.length < 5 && (
-                <Button
-                  variant="outlined"
-                  startIcon={<PhotoCamera />}
-                  onClick={() => fileInputRef.current?.click()}
-                  sx={{ mt: 1 }}
-                >
-                  {formFotolar.length > 0 ? 'Daha Fazla Fotoğraf Ekle' : 'Fotoğraf Seç'}
-                </Button>
+                <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', justifyContent: 'center', mt: 1 }}>
+                  {/* Kamera Aç Butonu - Öncelikli ve Büyük */}
+                  <Button
+                    variant="contained"
+                    color="primary"
+                    startIcon={<PhotoCamera />}
+                    onClick={() => cameraInputRef.current?.click()}
+                    sx={{ 
+                      minWidth: 150,
+                      py: 1.5,
+                      fontSize: '1rem',
+                      fontWeight: 600,
+                    }}
+                  >
+                    KAMERA AÇ
+                  </Button>
+                  
+                  {/* Galeriden Seç Butonu */}
+                  <Button
+                    variant="outlined"
+                    onClick={() => fileInputRef.current?.click()}
+                    sx={{ minWidth: 120 }}
+                  >
+                    Galeriden Seç
+                  </Button>
+                </Box>
               )}
             </Box>
 

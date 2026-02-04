@@ -128,9 +128,9 @@ const IslemFilters: React.FC<IslemFiltersProps> = ({
     // Montaj filtresi
     if (isAdmin && selectedMontajlar.length > 0) {
       result = result.filter((islem) => {
-        const yapilanIslem = (islem.yapilan_islem || '').toLowerCase();
+        const yapilanIslem = (islem.yapilan_islem || '').toLocaleLowerCase('tr-TR');
         return selectedMontajlar.some(montaj => 
-          yapilanIslem.includes(montaj.toLowerCase())
+          yapilanIslem.includes(montaj.toLocaleLowerCase('tr-TR'))
         );
       });
     }
@@ -138,9 +138,9 @@ const IslemFilters: React.FC<IslemFiltersProps> = ({
     // Aksesuar filtresi
     if (isAdmin && selectedAksesuarlar.length > 0) {
       result = result.filter((islem) => {
-        const yapilanIslem = (islem.yapilan_islem || '').toLowerCase();
+        const yapilanIslem = (islem.yapilan_islem || '').toLocaleLowerCase('tr-TR');
         return selectedAksesuarlar.some(aksesuar => 
-          yapilanIslem.includes(aksesuar.toLowerCase())
+          yapilanIslem.includes(aksesuar.toLocaleLowerCase('tr-TR'))
         );
       });
     }

@@ -163,6 +163,15 @@ router.post('/', authMiddleware, async (req: Request, res: Response): Promise<vo
       is_durumu
     }: IslemCreateDto = req.body;
 
+    // VARCHAR(20) alanları truncate et
+    const truncatedKapiNo = (kapi_no || '').slice(0, 20);
+    const truncatedBlokNo = (blok_no || '').slice(0, 20);
+    const truncatedDaireNo = (daire_no || '').slice(0, 20);
+    const truncatedSabitTel = (sabit_tel || '').replace(/\D/g, '').slice(0, 20);
+    const truncatedCepTel = (cep_tel || '').replace(/\D/g, '').slice(0, 20);
+    const truncatedYedekTel = (yedek_tel || '').replace(/\D/g, '').slice(0, 20);
+    const truncatedIsDurumu = (is_durumu || 'acik').slice(0, 20);
+
     const result = await pool.query(
       `INSERT INTO islemler (
         ad_soyad, ilce, mahalle, cadde, sokak, kapi_no,
@@ -171,9 +180,9 @@ router.post('/', authMiddleware, async (req: Request, res: Response): Promise<vo
       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)
       RETURNING *`,
       [
-        ad_soyad, ilce, mahalle, cadde, sokak, kapi_no,
-        apartman_site, blok_no, daire_no, sabit_tel, cep_tel, yedek_tel,
-        urun, marka, sikayet, teknisyen_ismi, yapilan_islem, tutar, is_durumu || 'acik', req.user?.username
+        ad_soyad, ilce, mahalle, cadde, sokak, truncatedKapiNo,
+        apartman_site, truncatedBlokNo, truncatedDaireNo, truncatedSabitTel, truncatedCepTel, truncatedYedekTel,
+        urun, marka, sikayet, teknisyen_ismi, yapilan_islem, tutar, truncatedIsDurumu, req.user?.username
       ]
     );
 
@@ -209,6 +218,15 @@ router.put('/:id', authMiddleware, async (req: Request, res: Response): Promise<
     const currentData = existing.rows[0];
     const updatedData = { ...currentData, ...updates };
 
+    // VARCHAR(20) alanları truncate et
+    const truncatedKapiNo = (updatedData.kapi_no || '').slice(0, 20);
+    const truncatedBlokNo = (updatedData.blok_no || '').slice(0, 20);
+    const truncatedDaireNo = (updatedData.daire_no || '').slice(0, 20);
+    const truncatedSabitTel = (updatedData.sabit_tel || '').replace(/\D/g, '').slice(0, 20);
+    const truncatedCepTel = (updatedData.cep_tel || '').replace(/\D/g, '').slice(0, 20);
+    const truncatedYedekTel = (updatedData.yedek_tel || '').replace(/\D/g, '').slice(0, 20);
+    const truncatedIsDurumu = (updatedData.is_durumu || 'acik').slice(0, 20);
+
     const result = await pool.query(
       `UPDATE islemler SET
         teknisyen_ismi = $1,
@@ -237,10 +255,10 @@ router.put('/:id', authMiddleware, async (req: Request, res: Response): Promise<
       [
         updatedData.teknisyen_ismi, updatedData.yapilan_islem, updatedData.tutar, 
         updatedData.ad_soyad, updatedData.ilce, updatedData.mahalle,
-        updatedData.cadde, updatedData.sokak, updatedData.kapi_no, 
-        updatedData.apartman_site, updatedData.blok_no, updatedData.daire_no,
-        updatedData.sabit_tel, updatedData.cep_tel, updatedData.yedek_tel, updatedData.urun, 
-        updatedData.marka, updatedData.sikayet, updatedData.is_durumu, 
+        updatedData.cadde, updatedData.sokak, truncatedKapiNo, 
+        updatedData.apartman_site, truncatedBlokNo, truncatedDaireNo,
+        truncatedSabitTel, truncatedCepTel, truncatedYedekTel, updatedData.urun, 
+        updatedData.marka, updatedData.sikayet, truncatedIsDurumu, 
         updatedData.yazdirildi, id
       ]
     );

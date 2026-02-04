@@ -38,6 +38,10 @@ import {
   ExpandMore,
   ExpandLess,
   Close,
+  ZoomIn,
+  ZoomOut,
+  Fullscreen,
+  FullscreenExit,
 } from '@mui/icons-material';
 import { useSnackbar } from '../context/SnackbarContext';
 import { sahaService } from '../services/api';
@@ -55,6 +59,13 @@ const SahaKayitlari: React.FC = () => {
   const [viewMode, setViewMode] = useState<'cards' | 'table'>('cards');
   const [selectedImages, setSelectedImages] = useState<string[]>([]);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [zoomLevel, setZoomLevel] = useState(1);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [transformOrigin, setTransformOrigin] = useState({ x: 50, y: 50 }); // yüzde olarak
+  const [isPanning, setIsPanning] = useState(false);
+  const [panPosition, setPanPosition] = useState({ x: 0, y: 0 });
+  const [startPan, setStartPan] = useState({ x: 0, y: 0 });
+  const imageContainerRef = React.useRef<HTMLDivElement>(null);
   
   const { showSnackbar } = useSnackbar();
 
@@ -126,7 +137,7 @@ const SahaKayitlari: React.FC = () => {
         mb: 3,
         gap: 2
       }}>
-        <Typography variant="h5" fontWeight={600} sx={{ fontSize: { xs: '1.25rem', sm: '1.5rem' } }}>
+        <Typography variant="h5" fontWeight={600} sx={{ fontSize: { xs: '1.25rem', sm: '1.5rem' }, color: '#2C3E82' }}>
           Saha Kayıtları Görüntüleme
         </Typography>
         <Box sx={{ display: 'flex', gap: 1 }}>
@@ -134,15 +145,33 @@ const SahaKayitlari: React.FC = () => {
             variant={viewMode === 'cards' ? 'contained' : 'outlined'}
             size="small"
             onClick={() => setViewMode('cards')}
+            sx={{
+              bgcolor: viewMode === 'cards' ? '#0D3282' : 'transparent',
+              borderColor: '#0D3282',
+              color: viewMode === 'cards' ? 'white' : '#0D3282',
+              '&:hover': {
+                bgcolor: viewMode === 'cards' ? '#082052' : 'rgba(13, 50, 130, 0.04)',
+                borderColor: '#082052',
+              }
+            }}
           >
-            Kartlar
+            KARTLAR
           </Button>
           <Button
             variant={viewMode === 'table' ? 'contained' : 'outlined'}
             size="small"
             onClick={() => setViewMode('table')}
+            sx={{
+              bgcolor: viewMode === 'table' ? '#0D3282' : 'transparent',
+              borderColor: '#0D3282',
+              color: viewMode === 'table' ? 'white' : '#0D3282',
+              '&:hover': {
+                bgcolor: viewMode === 'table' ? '#082052' : 'rgba(13, 50, 130, 0.04)',
+                borderColor: '#082052',
+              }
+            }}
           >
-            Tablo
+            TABLO
           </Button>
         </Box>
       </Box>
@@ -222,14 +251,22 @@ const SahaKayitlari: React.FC = () => {
                   onClick={handleSearch}
                   size="small"
                   fullWidth
-                  sx={{ bgcolor: '#0D3282' }}
+                  sx={{ bgcolor: '#0D3282', '&:hover': { bgcolor: '#082052' } }}
                 >
-                  Ara
+                  ARA
                 </Button>
                 <Button
                   variant="outlined"
                   onClick={handleClearFilters}
                   size="small"
+                  sx={{
+                    borderColor: '#0D3282',
+                    color: '#0D3282',
+                    '&:hover': {
+                      borderColor: '#082052',
+                      bgcolor: 'rgba(13, 50, 130, 0.04)',
+                    }
+                  }}
                 >
                   <Refresh />
                 </Button>
@@ -455,40 +492,146 @@ const SahaKayitlari: React.FC = () => {
         </TableContainer>
       )}
 
-      {/* Image Preview Dialog - Multiple Photos Support */}
+      {/* Image Preview Dialog - Multiple Photos Support with Zoom */}
       <Dialog 
         open={selectedImages.length > 0} 
-        onClose={() => setSelectedImages([])}
-        maxWidth="md"
+        onClose={() => { setSelectedImages([]); setZoomLevel(1); setIsFullscreen(false); setPanPosition({ x: 0, y: 0 }); setTransformOrigin({ x: 50, y: 50 }); }}
+        maxWidth={isFullscreen ? false : "md"}
+        fullScreen={isFullscreen}
+        PaperProps={{
+          sx: isFullscreen ? { bgcolor: 'rgba(0,0,0,0.95)' } : {}
+        }}
       >
-        <DialogTitle>
-          Fotoğraf {selectedImages.length > 1 ? `(${currentImageIndex + 1}/${selectedImages.length})` : ''}
-          <IconButton
-            onClick={() => setSelectedImages([])}
-            sx={{ position: 'absolute', right: 8, top: 8 }}
-          >
-            <Close />
-          </IconButton>
+        <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <span>Fotoğraf {selectedImages.length > 1 ? `(${currentImageIndex + 1}/${selectedImages.length})` : ''}</span>
+          <Box sx={{ display: 'flex', gap: 0.5 }}>
+            <IconButton
+              onClick={() => setZoomLevel(prev => Math.max(0.5, prev - 0.25))}
+              disabled={zoomLevel <= 0.5}
+              title="Küçült"
+            >
+              <ZoomOut />
+            </IconButton>
+            <Typography sx={{ display: 'flex', alignItems: 'center', minWidth: 50, justifyContent: 'center' }}>
+              {Math.round(zoomLevel * 100)}%
+            </Typography>
+            <IconButton
+              onClick={() => setZoomLevel(prev => Math.min(3, prev + 0.25))}
+              disabled={zoomLevel >= 3}
+              title="Büyült"
+            >
+              <ZoomIn />
+            </IconButton>
+            <IconButton
+              onClick={() => setIsFullscreen(prev => !prev)}
+              title={isFullscreen ? 'Normal Mod' : 'Tam Ekran'}
+            >
+              {isFullscreen ? <FullscreenExit /> : <Fullscreen />}
+            </IconButton>
+            <IconButton
+              onClick={() => { setSelectedImages([]); setZoomLevel(1); setIsFullscreen(false); setPanPosition({ x: 0, y: 0 }); setTransformOrigin({ x: 50, y: 50 }); }}
+              title="Kapat"
+            >
+              <Close />
+            </IconButton>
+          </Box>
         </DialogTitle>
-        <DialogContent>
+        <DialogContent sx={{ overflow: 'hidden', display: 'flex', flexDirection: 'column', alignItems: 'center', p: 1 }}>
           {selectedImages.length > 0 && (
-            <Box sx={{ textAlign: 'center' }}>
-              <img 
-                src={selectedImages[currentImageIndex]} 
-                alt="Preview" 
-                style={{ width: '100%', maxHeight: '60vh', objectFit: 'contain' }} 
-              />
+            <Box sx={{ textAlign: 'center', width: '100%' }}>
+              <Box 
+                ref={imageContainerRef}
+                sx={{ 
+                  overflow: 'hidden', 
+                  maxHeight: isFullscreen ? 'calc(100vh - 200px)' : '60vh',
+                  display: 'flex',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  cursor: zoomLevel > 1 ? (isPanning ? 'grabbing' : 'grab') : 'zoom-in',
+                  userSelect: 'none',
+                  position: 'relative',
+                }}
+                onWheel={(e) => {
+                  e.preventDefault();
+                  const rect = e.currentTarget.getBoundingClientRect();
+                  const x = ((e.clientX - rect.left) / rect.width) * 100;
+                  const y = ((e.clientY - rect.top) / rect.height) * 100;
+                  setTransformOrigin({ x, y });
+                  
+                  if (e.deltaY < 0) {
+                    // Scroll up - zoom in
+                    setZoomLevel(prev => Math.min(5, prev + 0.25));
+                  } else {
+                    // Scroll down - zoom out
+                    setZoomLevel(prev => {
+                      const newZoom = Math.max(1, prev - 0.25);
+                      if (newZoom === 1) {
+                        setPanPosition({ x: 0, y: 0 });
+                        setTransformOrigin({ x: 50, y: 50 });
+                      }
+                      return newZoom;
+                    });
+                  }
+                }}
+                onMouseDown={(e) => {
+                  if (zoomLevel > 1) {
+                    setIsPanning(true);
+                    setStartPan({ x: e.clientX - panPosition.x, y: e.clientY - panPosition.y });
+                  }
+                }}
+                onMouseMove={(e) => {
+                  if (isPanning && zoomLevel > 1) {
+                    setPanPosition({
+                      x: e.clientX - startPan.x,
+                      y: e.clientY - startPan.y
+                    });
+                  }
+                }}
+                onMouseUp={() => setIsPanning(false)}
+                onMouseLeave={() => setIsPanning(false)}
+                onClick={(e) => {
+                  if (!isPanning) {
+                    const rect = e.currentTarget.getBoundingClientRect();
+                    const x = ((e.clientX - rect.left) / rect.width) * 100;
+                    const y = ((e.clientY - rect.top) / rect.height) * 100;
+                    
+                    if (zoomLevel === 1) {
+                      setTransformOrigin({ x, y });
+                      setZoomLevel(2);
+                    } else if (zoomLevel >= 2) {
+                      setZoomLevel(1);
+                      setPanPosition({ x: 0, y: 0 });
+                      setTransformOrigin({ x: 50, y: 50 });
+                    }
+                  }
+                }}
+              >
+                <img 
+                  src={selectedImages[currentImageIndex]} 
+                  alt="Preview" 
+                  draggable={false}
+                  style={{ 
+                    transform: `scale(${zoomLevel}) translate(${panPosition.x / zoomLevel}px, ${panPosition.y / zoomLevel}px)`,
+                    transformOrigin: `${transformOrigin.x}% ${transformOrigin.y}%`,
+                    transition: isPanning ? 'none' : 'transform 0.2s ease',
+                    maxWidth: '100%',
+                    maxHeight: isFullscreen ? 'calc(100vh - 200px)' : '60vh',
+                    objectFit: 'contain',
+                    pointerEvents: 'none',
+                  }} 
+                />
+              </Box>
               {selectedImages.length > 1 && (
                 <Box sx={{ display: 'flex', justifyContent: 'center', gap: 2, mt: 2 }}>
                   <Button 
                     variant="outlined" 
-                    onClick={() => setCurrentImageIndex((prev) => (prev - 1 + selectedImages.length) % selectedImages.length)}
+                    onClick={() => { setCurrentImageIndex((prev) => (prev - 1 + selectedImages.length) % selectedImages.length); setZoomLevel(1); setPanPosition({ x: 0, y: 0 }); setTransformOrigin({ x: 50, y: 50 }); }}
                   >
                     ← Önceki
                   </Button>
                   <Button 
                     variant="outlined" 
-                    onClick={() => setCurrentImageIndex((prev) => (prev + 1) % selectedImages.length)}
+                    onClick={() => { setCurrentImageIndex((prev) => (prev + 1) % selectedImages.length); setZoomLevel(1); setPanPosition({ x: 0, y: 0 }); setTransformOrigin({ x: 50, y: 50 }); }}
                   >
                     Sonraki →
                   </Button>
@@ -500,7 +643,7 @@ const SahaKayitlari: React.FC = () => {
                   {selectedImages.map((img, idx) => (
                     <Box 
                       key={idx}
-                      onClick={() => setCurrentImageIndex(idx)}
+                      onClick={() => { setCurrentImageIndex(idx); setZoomLevel(1); setPanPosition({ x: 0, y: 0 }); setTransformOrigin({ x: 50, y: 50 }); }}
                       sx={{ 
                         width: 60, 
                         height: 60, 
