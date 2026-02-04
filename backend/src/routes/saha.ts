@@ -330,15 +330,16 @@ router.get('/all-kayitlar', authenticateToken, async (req: Request, res: Respons
       paramIndex++;
     }
 
-    // Arama filtresi - isim, soyisim, notlar alanlarında ara (case-insensitive)
+    // Arama filtresi - isim, soyisim, notlar alanlarında ara (case-insensitive with Turkish support)
     if (search) {
+      const searchLower = (search as string).toLocaleLowerCase('tr-TR');
       query += ` AND (
-        sk.isim ILIKE $${paramIndex} OR 
-        sk.soyisim ILIKE $${paramIndex} OR 
-        sk.notlar ILIKE $${paramIndex} OR
-        CONCAT(sk.isim, ' ', sk.soyisim) ILIKE $${paramIndex}
+        LOWER(sk.isim) LIKE $${paramIndex} OR 
+        LOWER(sk.soyisim) LIKE $${paramIndex} OR 
+        LOWER(sk.notlar) LIKE $${paramIndex} OR
+        LOWER(CONCAT(sk.isim, ' ', sk.soyisim)) LIKE $${paramIndex}
       )`;
-      params.push(`%${search}%`);
+      params.push(`%${searchLower}%`);
       paramIndex++;
     }
 
