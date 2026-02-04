@@ -330,13 +330,12 @@ router.get('/all-kayitlar', authenticateToken, async (req: Request, res: Respons
       paramIndex++;
     }
 
-    // Arama filtresi - isim, soyisim, telefon, adres alanlarında ara (case-insensitive)
+    // Arama filtresi - isim, soyisim, notlar alanlarında ara (case-insensitive)
     if (search) {
       query += ` AND (
         sk.isim ILIKE $${paramIndex} OR 
         sk.soyisim ILIKE $${paramIndex} OR 
-        sk.telefon ILIKE $${paramIndex} OR 
-        sk.adres ILIKE $${paramIndex} OR
+        sk.notlar ILIKE $${paramIndex} OR
         CONCAT(sk.isim, ' ', sk.soyisim) ILIKE $${paramIndex}
       )`;
       params.push(`%${search}%`);
