@@ -42,6 +42,7 @@ import {
   ZoomOut,
   Fullscreen,
   FullscreenExit,
+  PhotoCamera,
 } from '@mui/icons-material';
 import { useSnackbar } from '../context/SnackbarContext';
 import { sahaService } from '../services/api';
@@ -61,10 +62,14 @@ const SahaKayitlari: React.FC = () => {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [zoomLevel, setZoomLevel] = useState(1);
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const [transformOrigin, setTransformOrigin] = useState({ x: 50, y: 50 }); // yüzde olarak
+  const [transformOrigin, setTransformOrigin] = useState({ x: 50, y: 50 });
   const [isPanning, setIsPanning] = useState(false);
   const [panPosition, setPanPosition] = useState({ x: 0, y: 0 });
   const [startPan, setStartPan] = useState({ x: 0, y: 0 });
+  const [photoLoading, setPhotoLoading] = useState(false);
+  const [photoCache, setPhotoCache] = useState<Record<number, string[]>>({});
+  const [lastTouchDistance, setLastTouchDistance] = useState<number | null>(null);
+  const [lastTouchCenter, setLastTouchCenter] = useState<{ x: number; y: number } | null>(null);
   const imageContainerRef = React.useRef<HTMLDivElement>(null);
   
   const { showSnackbar } = useSnackbar();
@@ -87,6 +92,39 @@ const SahaKayitlari: React.FC = () => {
       showSnackbar('Veriler yüklenirken hata oluştu!', 'error');
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Fotoğrafları lazy load ile aç
+  const handleOpenPhotos = async (kayitId: number) => {
+    // Cache'de varsa direkt aç
+    if (photoCache[kayitId]) {
+      setSelectedImages(photoCache[kayitId]);
+      setCurrentImageIndex(0);
+      return;
+    }
+
+    try {
+      setPhotoLoading(true);
+      const fotoData = await sahaService.getKayitPhotos(kayitId);
+      let fotolar: string[] = [];
+      if (fotoData) {
+        try {
+          const parsed = JSON.parse(fotoData);
+          fotolar = Array.isArray(parsed) ? parsed : [fotoData];
+        } catch {
+          fotolar = [fotoData];
+        }
+      }
+      // Cache'e kaydet
+      setPhotoCache(prev => ({ ...prev, [kayitId]: fotolar }));
+      setSelectedImages(fotolar);
+      setCurrentImageIndex(0);
+    } catch (error) {
+      console.error('Fotoğraflar yüklenirken hata:', error);
+      showSnackbar('Fotoğraflar yüklenirken hata oluştu!', 'error');
+    } finally {
+      setPhotoLoading(false);
     }
   };
 
@@ -303,16 +341,8 @@ const SahaKayitlari: React.FC = () => {
         /* Cards View */
         <Grid container spacing={2}>
           {kayitlar.map((kayit) => {
-            // foto_data'yı parse et
-            let fotolar: string[] = [];
-            if (kayit.foto_data) {
-              try {
-                const parsed = JSON.parse(kayit.foto_data);
-                fotolar = Array.isArray(parsed) ? parsed : [kayit.foto_data];
-              } catch {
-                fotolar = [kayit.foto_data];
-              }
-            }
+            const hasPhotos = (kayit as any).has_photos;
+            const fotoPreview = (kayit as any).foto_preview;
             
             return (
             <Grid item xs={12} sm={6} md={4} lg={3} key={kayit.id}>
@@ -326,29 +356,50 @@ const SahaKayitlari: React.FC = () => {
                   boxShadow: 4,
                 }
               }}>
-                {fotolar.length > 0 ? (
-                  <Box sx={{ position: 'relative' }}>
+                {fotoPreview ? (
+                  <Box sx={{ position: 'relative', cursor: 'pointer' }} onClick={() => handleOpenPhotos(kayit.id)}>
                     <CardMedia
                       component="img"
                       height="180"
-                      image={fotolar[0]}
+                      image={fotoPreview}
                       alt={`${kayit.isim} ${kayit.soyisim}`}
-                      sx={{ objectFit: 'cover', cursor: 'pointer' }}
-                      onClick={() => { setSelectedImages(fotolar); setCurrentImageIndex(0); }}
+                      sx={{ objectFit: 'cover' }}
                     />
-                    {fotolar.length > 1 && (
-                      <Chip 
-                        label={`+${fotolar.length - 1}`} 
-                        size="small"
-                        sx={{ 
-                          position: 'absolute', 
-                          bottom: 8, 
-                          right: 8, 
-                          bgcolor: 'rgba(0,0,0,0.7)',
-                          color: 'white',
-                        }} 
-                      />
-                    )}
+                    <Box sx={{
+                      position: 'absolute',
+                      bottom: 0,
+                      left: 0,
+                      right: 0,
+                      bgcolor: 'rgba(0,0,0,0.5)',
+                      color: 'white',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: 0.5,
+                      py: 0.5,
+                    }}>
+                      <PhotoCamera sx={{ fontSize: 16 }} />
+                      <Typography variant="caption">Fotoğrafları Görüntüle</Typography>
+                    </Box>
+                  </Box>
+                ) : hasPhotos ? (
+                  <Box 
+                    sx={{ 
+                      height: 180, 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      justifyContent: 'center',
+                      bgcolor: '#e3f2fd',
+                      cursor: 'pointer',
+                      position: 'relative',
+                      '&:hover': { bgcolor: '#bbdefb' },
+                    }}
+                    onClick={() => handleOpenPhotos(kayit.id)}
+                  >
+                    <PhotoCamera sx={{ fontSize: 60, color: '#1976d2' }} />
+                    <Typography variant="caption" sx={{ position: 'absolute', bottom: 8, color: '#1976d2', fontWeight: 500 }}>
+                      Fotoğrafları Görüntüle
+                    </Typography>
                   </Box>
                 ) : (
                   <Box
@@ -414,37 +465,50 @@ const SahaKayitlari: React.FC = () => {
             </TableHead>
             <TableBody>
               {kayitlar.map((kayit) => {
-                // foto_data'yı parse et
-                let fotolar: string[] = [];
-                if (kayit.foto_data) {
-                  try {
-                    const parsed = JSON.parse(kayit.foto_data);
-                    fotolar = Array.isArray(parsed) ? parsed : [kayit.foto_data];
-                  } catch {
-                    fotolar = [kayit.foto_data];
-                  }
-                }
+                const hasPhotos = (kayit as any).has_photos;
+                const fotoPreview = (kayit as any).foto_preview;
                 
                 return (
                 <TableRow key={kayit.id} hover>
                   <TableCell>
-                    {fotolar.length > 0 ? (
-                      <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center' }}>
+                    {fotoPreview ? (
+                      <Box 
+                        sx={{ 
+                          width: 50, 
+                          height: 50, 
+                          borderRadius: 1,
+                          overflow: 'hidden',
+                          cursor: 'pointer',
+                          '&:hover': { opacity: 0.8 },
+                        }}
+                        onClick={() => handleOpenPhotos(kayit.id)}
+                      >
                         <img 
-                          src={fotolar[0]} 
+                          src={fotoPreview} 
                           alt={`${kayit.isim} ${kayit.soyisim}`}
                           style={{ 
-                            width: 50, 
-                            height: 50, 
-                            objectFit: 'cover', 
-                            borderRadius: 4,
-                            cursor: 'pointer',
+                            width: '100%', 
+                            height: '100%', 
+                            objectFit: 'cover',
                           }}
-                          onClick={() => { setSelectedImages(fotolar); setCurrentImageIndex(0); }}
                         />
-                        {fotolar.length > 1 && (
-                          <Chip label={`+${fotolar.length - 1}`} size="small" />
-                        )}
+                      </Box>
+                    ) : hasPhotos ? (
+                      <Box 
+                        sx={{ 
+                          width: 50, 
+                          height: 50, 
+                          display: 'flex', 
+                          alignItems: 'center', 
+                          justifyContent: 'center',
+                          bgcolor: '#e3f2fd',
+                          borderRadius: 1,
+                          cursor: 'pointer',
+                          '&:hover': { bgcolor: '#bbdefb' },
+                        }}
+                        onClick={() => handleOpenPhotos(kayit.id)}
+                      >
+                        <PhotoCamera sx={{ color: '#1976d2', fontSize: 24 }} />
                       </Box>
                     ) : (
                       <Box sx={{ 
@@ -492,64 +556,94 @@ const SahaKayitlari: React.FC = () => {
         </TableContainer>
       )}
 
-      {/* Image Preview Dialog - Multiple Photos Support with Zoom */}
+      {/* Photo Loading Overlay */}
+      <Dialog 
+        open={photoLoading} 
+        PaperProps={{ sx: { bgcolor: 'transparent', boxShadow: 'none', overflow: 'hidden' } }}
+      >
+        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', p: 3 }}>
+          <CircularProgress sx={{ color: 'white' }} />
+          <Typography sx={{ color: 'white', mt: 2 }}>Fotoğraflar yükleniyor...</Typography>
+        </Box>
+      </Dialog>
+
+      {/* Image Preview Dialog - Multiple Photos Support with Zoom + Mobile Touch */}
       <Dialog 
         open={selectedImages.length > 0} 
         onClose={() => { setSelectedImages([]); setZoomLevel(1); setIsFullscreen(false); setPanPosition({ x: 0, y: 0 }); setTransformOrigin({ x: 50, y: 50 }); }}
-        maxWidth={isFullscreen ? false : "md"}
-        fullScreen={isFullscreen}
+        maxWidth={isFullscreen ? false : "lg"}
+        fullWidth={!isFullscreen}
+        fullScreen={isFullscreen || window.innerWidth < 600}
         PaperProps={{
-          sx: isFullscreen ? { bgcolor: 'rgba(0,0,0,0.95)' } : {}
+          sx: (isFullscreen || window.innerWidth < 600) ? { bgcolor: 'rgba(0,0,0,0.95)' } : {}
         }}
       >
-        <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <span>Fotoğraf {selectedImages.length > 1 ? `(${currentImageIndex + 1}/${selectedImages.length})` : ''}</span>
-          <Box sx={{ display: 'flex', gap: 0.5 }}>
+        <DialogTitle sx={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          justifyContent: 'space-between',
+          color: (isFullscreen || window.innerWidth < 600) ? 'white' : 'inherit',
+          p: { xs: 1, sm: 2 },
+        }}>
+          <Typography variant="body1" sx={{ fontSize: { xs: '0.85rem', sm: '1rem' } }}>
+            Fotoğraf {selectedImages.length > 1 ? `(${currentImageIndex + 1}/${selectedImages.length})` : ''}
+          </Typography>
+          <Box sx={{ display: 'flex', gap: { xs: 0, sm: 0.5 } }}>
             <IconButton
+              size="small"
               onClick={() => setZoomLevel(prev => Math.max(0.5, prev - 0.25))}
               disabled={zoomLevel <= 0.5}
               title="Küçült"
+              sx={{ color: (isFullscreen || window.innerWidth < 600) ? 'white' : 'inherit' }}
             >
-              <ZoomOut />
+              <ZoomOut fontSize="small" />
             </IconButton>
-            <Typography sx={{ display: 'flex', alignItems: 'center', minWidth: 50, justifyContent: 'center' }}>
+            <Typography sx={{ display: 'flex', alignItems: 'center', minWidth: 40, justifyContent: 'center', fontSize: '0.8rem' }}>
               {Math.round(zoomLevel * 100)}%
             </Typography>
             <IconButton
-              onClick={() => setZoomLevel(prev => Math.min(3, prev + 0.25))}
-              disabled={zoomLevel >= 3}
+              size="small"
+              onClick={() => setZoomLevel(prev => Math.min(5, prev + 0.25))}
+              disabled={zoomLevel >= 5}
               title="Büyült"
+              sx={{ color: (isFullscreen || window.innerWidth < 600) ? 'white' : 'inherit' }}
             >
-              <ZoomIn />
+              <ZoomIn fontSize="small" />
             </IconButton>
             <IconButton
+              size="small"
               onClick={() => setIsFullscreen(prev => !prev)}
               title={isFullscreen ? 'Normal Mod' : 'Tam Ekran'}
+              sx={{ color: (isFullscreen || window.innerWidth < 600) ? 'white' : 'inherit', display: { xs: 'none', sm: 'inline-flex' } }}
             >
-              {isFullscreen ? <FullscreenExit /> : <Fullscreen />}
+              {isFullscreen ? <FullscreenExit fontSize="small" /> : <Fullscreen fontSize="small" />}
             </IconButton>
             <IconButton
+              size="small"
               onClick={() => { setSelectedImages([]); setZoomLevel(1); setIsFullscreen(false); setPanPosition({ x: 0, y: 0 }); setTransformOrigin({ x: 50, y: 50 }); }}
               title="Kapat"
+              sx={{ color: (isFullscreen || window.innerWidth < 600) ? 'white' : 'inherit' }}
             >
-              <Close />
+              <Close fontSize="small" />
             </IconButton>
           </Box>
         </DialogTitle>
-        <DialogContent sx={{ overflow: 'hidden', display: 'flex', flexDirection: 'column', alignItems: 'center', p: 1 }}>
+        <DialogContent sx={{ overflow: 'hidden', display: 'flex', flexDirection: 'column', alignItems: 'center', p: { xs: 0.5, sm: 1 } }}>
           {selectedImages.length > 0 && (
             <Box sx={{ textAlign: 'center', width: '100%' }}>
               <Box 
                 ref={imageContainerRef}
                 sx={{ 
                   overflow: 'hidden', 
-                  maxHeight: isFullscreen ? 'calc(100vh - 200px)' : '60vh',
+                  maxHeight: (isFullscreen || window.innerWidth < 600) ? 'calc(100vh - 180px)' : '70vh',
+                  minHeight: { xs: '50vh', sm: 'auto' },
                   display: 'flex',
                   justifyContent: 'center',
                   alignItems: 'center',
                   cursor: zoomLevel > 1 ? (isPanning ? 'grabbing' : 'grab') : 'zoom-in',
                   userSelect: 'none',
                   position: 'relative',
+                  touchAction: 'none',
                 }}
                 onWheel={(e) => {
                   e.preventDefault();
@@ -559,10 +653,8 @@ const SahaKayitlari: React.FC = () => {
                   setTransformOrigin({ x, y });
                   
                   if (e.deltaY < 0) {
-                    // Scroll up - zoom in
                     setZoomLevel(prev => Math.min(5, prev + 0.25));
                   } else {
-                    // Scroll down - zoom out
                     setZoomLevel(prev => {
                       const newZoom = Math.max(1, prev - 0.25);
                       if (newZoom === 1) {
@@ -573,6 +665,7 @@ const SahaKayitlari: React.FC = () => {
                     });
                   }
                 }}
+                // Mouse events (desktop)
                 onMouseDown={(e) => {
                   if (zoomLevel > 1) {
                     setIsPanning(true);
@@ -605,6 +698,66 @@ const SahaKayitlari: React.FC = () => {
                     }
                   }
                 }}
+                // Touch events (mobile pinch-to-zoom + pan)
+                onTouchStart={(e) => {
+                  if (e.touches.length === 2) {
+                    e.preventDefault();
+                    const dx = e.touches[0].clientX - e.touches[1].clientX;
+                    const dy = e.touches[0].clientY - e.touches[1].clientY;
+                    setLastTouchDistance(Math.hypot(dx, dy));
+                    setLastTouchCenter({
+                      x: (e.touches[0].clientX + e.touches[1].clientX) / 2,
+                      y: (e.touches[0].clientY + e.touches[1].clientY) / 2,
+                    });
+                  } else if (e.touches.length === 1 && zoomLevel > 1) {
+                    setIsPanning(true);
+                    setStartPan({ x: e.touches[0].clientX - panPosition.x, y: e.touches[0].clientY - panPosition.y });
+                  }
+                }}
+                onTouchMove={(e) => {
+                  if (e.touches.length === 2 && lastTouchDistance !== null) {
+                    e.preventDefault();
+                    const dx = e.touches[0].clientX - e.touches[1].clientX;
+                    const dy = e.touches[0].clientY - e.touches[1].clientY;
+                    const newDist = Math.hypot(dx, dy);
+                    const scale = newDist / lastTouchDistance;
+                    
+                    setZoomLevel(prev => {
+                      const newZoom = Math.min(5, Math.max(1, prev * scale));
+                      if (newZoom === 1) {
+                        setPanPosition({ x: 0, y: 0 });
+                        setTransformOrigin({ x: 50, y: 50 });
+                      }
+                      return newZoom;
+                    });
+                    setLastTouchDistance(newDist);
+
+                    // Pan while pinching
+                    if (lastTouchCenter) {
+                      const cx = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+                      const cy = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+                      setPanPosition(prev => ({
+                        x: prev.x + (cx - lastTouchCenter.x),
+                        y: prev.y + (cy - lastTouchCenter.y),
+                      }));
+                      setLastTouchCenter({ x: cx, y: cy });
+                    }
+                  } else if (e.touches.length === 1 && isPanning && zoomLevel > 1) {
+                    setPanPosition({
+                      x: e.touches[0].clientX - startPan.x,
+                      y: e.touches[0].clientY - startPan.y,
+                    });
+                  }
+                }}
+                onTouchEnd={(e) => {
+                  if (e.touches.length < 2) {
+                    setLastTouchDistance(null);
+                    setLastTouchCenter(null);
+                  }
+                  if (e.touches.length === 0) {
+                    setIsPanning(false);
+                  }
+                }}
               >
                 <img 
                   src={selectedImages[currentImageIndex]} 
@@ -615,22 +768,29 @@ const SahaKayitlari: React.FC = () => {
                     transformOrigin: `${transformOrigin.x}% ${transformOrigin.y}%`,
                     transition: isPanning ? 'none' : 'transform 0.2s ease',
                     maxWidth: '100%',
-                    maxHeight: isFullscreen ? 'calc(100vh - 200px)' : '60vh',
+                    maxHeight: (isFullscreen || window.innerWidth < 600) ? 'calc(100vh - 180px)' : '70vh',
                     objectFit: 'contain',
                     pointerEvents: 'none',
+                    imageRendering: zoomLevel > 1 ? 'high-quality' as any : 'auto',
+                    WebkitBackfaceVisibility: 'hidden',
+                    filter: zoomLevel > 1.5 ? 'contrast(1.02) saturate(1.02)' : 'none',
                   }} 
                 />
               </Box>
               {selectedImages.length > 1 && (
-                <Box sx={{ display: 'flex', justifyContent: 'center', gap: 2, mt: 2 }}>
+                <Box sx={{ display: 'flex', justifyContent: 'center', gap: { xs: 1, sm: 2 }, mt: 1.5 }}>
                   <Button 
                     variant="outlined" 
+                    size="small"
+                    sx={{ color: (isFullscreen || window.innerWidth < 600) ? 'white' : 'inherit', borderColor: (isFullscreen || window.innerWidth < 600) ? 'rgba(255,255,255,0.5)' : 'inherit' }}
                     onClick={() => { setCurrentImageIndex((prev) => (prev - 1 + selectedImages.length) % selectedImages.length); setZoomLevel(1); setPanPosition({ x: 0, y: 0 }); setTransformOrigin({ x: 50, y: 50 }); }}
                   >
                     ← Önceki
                   </Button>
                   <Button 
                     variant="outlined" 
+                    size="small"
+                    sx={{ color: (isFullscreen || window.innerWidth < 600) ? 'white' : 'inherit', borderColor: (isFullscreen || window.innerWidth < 600) ? 'rgba(255,255,255,0.5)' : 'inherit' }}
                     onClick={() => { setCurrentImageIndex((prev) => (prev + 1) % selectedImages.length); setZoomLevel(1); setPanPosition({ x: 0, y: 0 }); setTransformOrigin({ x: 50, y: 50 }); }}
                   >
                     Sonraki →
@@ -639,18 +799,19 @@ const SahaKayitlari: React.FC = () => {
               )}
               {/* Thumbnails */}
               {selectedImages.length > 1 && (
-                <Box sx={{ display: 'flex', gap: 1, justifyContent: 'center', mt: 2, flexWrap: 'wrap' }}>
+                <Box sx={{ display: 'flex', gap: 1, justifyContent: 'center', mt: 1.5, flexWrap: 'wrap', pb: 1 }}>
                   {selectedImages.map((img, idx) => (
                     <Box 
                       key={idx}
                       onClick={() => { setCurrentImageIndex(idx); setZoomLevel(1); setPanPosition({ x: 0, y: 0 }); setTransformOrigin({ x: 50, y: 50 }); }}
                       sx={{ 
-                        width: 60, 
-                        height: 60, 
+                        width: { xs: 45, sm: 60 }, 
+                        height: { xs: 45, sm: 60 }, 
                         cursor: 'pointer',
-                        border: idx === currentImageIndex ? '3px solid #0D3282' : '1px solid #ddd',
+                        border: idx === currentImageIndex ? '3px solid #1976d2' : '1px solid rgba(255,255,255,0.3)',
                         borderRadius: 1,
                         overflow: 'hidden',
+                        flexShrink: 0,
                       }}
                     >
                       <img 

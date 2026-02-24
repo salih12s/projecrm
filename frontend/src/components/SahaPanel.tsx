@@ -32,6 +32,8 @@ import {
   CalendarToday,
   FilterList,
   Refresh,
+  ZoomIn,
+  ZoomOut,
 } from '@mui/icons-material';
 import { useSnackbar } from '../context/SnackbarContext';
 import { sahaService } from '../services/api';
@@ -51,6 +53,14 @@ const SahaPanel: React.FC = () => {
   // Fotoğraf galeri state
   const [selectedImages, setSelectedImages] = useState<string[]>([]);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [photoLoading, setPhotoLoading] = useState(false);
+  const [photoCache, setPhotoCache] = useState<Record<number, string[]>>({});
+  const [galleryZoom, setGalleryZoom] = useState(1);
+  const [galleryPan, setGalleryPan] = useState({ x: 0, y: 0 });
+  const [galleryPanning, setGalleryPanning] = useState(false);
+  const [galleryPanStart, setGalleryPanStart] = useState({ x: 0, y: 0 });
+  const [lastTouchDist, setLastTouchDist] = useState<number | null>(null);
+  const [lastTouchCenter, setLastTouchCenter] = useState<{ x: number; y: number } | null>(null);
   
   // Form state
   const [formIsim, setFormIsim] = useState('');
@@ -97,18 +107,34 @@ const SahaPanel: React.FC = () => {
     setTimeout(() => loadKayitlar(), 0);
   };
 
-  const handleOpenDialog = (kayit?: SahaKayit) => {
+  const handleOpenDialog = async (kayit?: SahaKayit) => {
     if (kayit) {
       setEditingKayit(kayit);
       setFormIsim(kayit.isim);
       setFormSoyisim(kayit.soyisim);
       setFormNotlar(kayit.notlar || '');
-      // foto_data JSON array olarak saklanıyor
-      try {
-        const fotolar = kayit.foto_data ? JSON.parse(kayit.foto_data) : [];
-        setFormFotolar(Array.isArray(fotolar) ? fotolar : [kayit.foto_data]);
-      } catch {
-        setFormFotolar(kayit.foto_data ? [kayit.foto_data] : []);
+      // Fotoğrafları lazy load ile getir
+      if (photoCache[kayit.id]) {
+        setFormFotolar(photoCache[kayit.id]);
+      } else if ((kayit as any).has_photos) {
+        try {
+          const fotoData = await sahaService.getKayitPhotos(kayit.id);
+          let fotolar: string[] = [];
+          if (fotoData) {
+            try {
+              const parsed = JSON.parse(fotoData);
+              fotolar = Array.isArray(parsed) ? parsed : [fotoData];
+            } catch {
+              fotolar = [fotoData];
+            }
+          }
+          setPhotoCache(prev => ({ ...prev, [kayit.id]: fotolar }));
+          setFormFotolar(fotolar);
+        } catch {
+          setFormFotolar([]);
+        }
+      } else {
+        setFormFotolar([]);
       }
     } else {
       setEditingKayit(null);
@@ -130,7 +156,7 @@ const SahaPanel: React.FC = () => {
   };
 
   // Fotoğrafı daha iyi sıkıştır (daha küçük boyut ve kalite)
-  const compressImage = (file: File, maxWidth: number = 600, quality: number = 0.4): Promise<string> => {
+  const compressImage = (file: File, maxWidth: number = 1200, quality: number = 0.7): Promise<string> => {
     return new Promise((resolve, reject) => {
       // Önce dosyayı base64 olarak oku (fallback için)
       const fallbackReader = new FileReader();
@@ -170,7 +196,7 @@ const SahaPanel: React.FC = () => {
             }
             
             // Yükseklik de sınırla
-            const maxHeight = 800;
+            const maxHeight = 1600;
             if (height > maxHeight) {
               width = (width * maxHeight) / height;
               height = maxHeight;
@@ -261,8 +287,8 @@ const SahaPanel: React.FC = () => {
       }
 
       try {
-        // Fotoğrafı sıkıştır (600px genişlik, %40 kalite)
-        const compressedData = await compressImage(file, 600, 0.4);
+        // Fotoğrafı sıkıştır (1200px genişlik, %70 kalite)
+        const compressedData = await compressImage(file, 1200, 0.7);
         newPhotos.push(compressedData);
       } catch (error) {
         console.error('Fotoğraf sıkıştırma hatası:', error);
@@ -493,16 +519,38 @@ const SahaPanel: React.FC = () => {
         /* Cards Grid */
         <Grid container spacing={2}>
           {kayitlar.map((kayit) => {
-            // foto_data'yı parse et
-            let fotolar: string[] = [];
-            if (kayit.foto_data) {
-              try {
-                const parsed = JSON.parse(kayit.foto_data);
-                fotolar = Array.isArray(parsed) ? parsed : [kayit.foto_data];
-              } catch {
-                fotolar = [kayit.foto_data];
+            const hasPhotos = (kayit as any).has_photos;
+            const fotoPreview = (kayit as any).foto_preview;
+            
+            const handleViewPhotos = async (e: React.MouseEvent) => {
+              e.stopPropagation();
+              if (!hasPhotos && !fotoPreview) return;
+              if (photoCache[kayit.id]) {
+                setSelectedImages(photoCache[kayit.id]);
+                setCurrentImageIndex(0);
+                return;
               }
-            }
+              try {
+                setPhotoLoading(true);
+                const fotoData = await sahaService.getKayitPhotos(kayit.id);
+                let fotolar: string[] = [];
+                if (fotoData) {
+                  try {
+                    const parsed = JSON.parse(fotoData);
+                    fotolar = Array.isArray(parsed) ? parsed : [fotoData];
+                  } catch {
+                    fotolar = [fotoData];
+                  }
+                }
+                setPhotoCache(prev => ({ ...prev, [kayit.id]: fotolar }));
+                setSelectedImages(fotolar);
+                setCurrentImageIndex(0);
+              } catch {
+                showSnackbar('Fotoğraflar yüklenirken hata oluştu!', 'error');
+              } finally {
+                setPhotoLoading(false);
+              }
+            };
             
             return (
             <Grid item xs={12} sm={6} md={4} lg={3} key={kayit.id}>
@@ -511,41 +559,56 @@ const SahaPanel: React.FC = () => {
                 display: 'flex', 
                 flexDirection: 'column',
                 transition: 'transform 0.2s, box-shadow 0.2s',
-                cursor: fotolar.length > 0 ? 'pointer' : 'default',
+                cursor: (hasPhotos || fotoPreview) ? 'pointer' : 'default',
                 '&:hover': {
                   transform: 'translateY(-4px)',
                   boxShadow: 4,
                 }
               }}
-              onClick={() => {
-                if (fotolar.length > 0) {
-                  setSelectedImages(fotolar);
-                  setCurrentImageIndex(0);
-                }
-              }}
+              onClick={handleViewPhotos}
               >
-                {fotolar.length > 0 ? (
+                {fotoPreview ? (
                   <Box sx={{ position: 'relative' }}>
                     <CardMedia
                       component="img"
                       height="200"
-                      image={fotolar[0]}
+                      image={fotoPreview}
                       alt={`${kayit.isim} ${kayit.soyisim}`}
                       sx={{ objectFit: 'cover' }}
                     />
-                    {fotolar.length > 1 && (
-                      <Chip 
-                        label={`+${fotolar.length - 1}`} 
-                        size="small"
-                        sx={{ 
-                          position: 'absolute', 
-                          bottom: 8, 
-                          right: 8, 
-                          bgcolor: 'rgba(0,0,0,0.7)',
-                          color: 'white',
-                        }} 
-                      />
-                    )}
+                    <Box sx={{
+                      position: 'absolute',
+                      bottom: 0,
+                      left: 0,
+                      right: 0,
+                      bgcolor: 'rgba(0,0,0,0.5)',
+                      color: 'white',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: 0.5,
+                      py: 0.5,
+                    }}>
+                      <PhotoCamera sx={{ fontSize: 16 }} />
+                      <Typography variant="caption">Fotoğrafları Görüntüle</Typography>
+                    </Box>
+                  </Box>
+                ) : hasPhotos ? (
+                  <Box 
+                    sx={{ 
+                      height: 200, 
+                      display: 'flex', 
+                      flexDirection: 'column',
+                      alignItems: 'center', 
+                      justifyContent: 'center',
+                      bgcolor: '#e3f2fd',
+                      '&:hover': { bgcolor: '#bbdefb' },
+                    }}
+                  >
+                    <PhotoCamera sx={{ fontSize: 60, color: '#1976d2' }} />
+                    <Typography variant="caption" sx={{ mt: 1, color: '#1976d2', fontWeight: 500 }}>
+                      Fotoğrafları Görüntüle
+                    </Typography>
                   </Box>
                 ) : (
                   <Box
@@ -762,41 +825,194 @@ const SahaPanel: React.FC = () => {
         </DialogActions>
       </Dialog>
 
-      {/* Image Gallery Dialog */}
+      {/* Photo Loading Overlay */}
+      <Dialog 
+        open={photoLoading} 
+        PaperProps={{ sx: { bgcolor: 'transparent', boxShadow: 'none', overflow: 'hidden' } }}
+      >
+        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', p: 3 }}>
+          <CircularProgress sx={{ color: 'white' }} />
+          <Typography sx={{ color: 'white', mt: 2 }}>Fotoğraflar yükleniyor...</Typography>
+        </Box>
+      </Dialog>
+
+      {/* Image Gallery Dialog - Mobile Friendly with Pinch Zoom */}
       <Dialog 
         open={selectedImages.length > 0} 
-        onClose={() => setSelectedImages([])}
-        maxWidth="md"
+        onClose={() => { setSelectedImages([]); setGalleryZoom(1); setGalleryPan({ x: 0, y: 0 }); }}
+        maxWidth="lg"
         fullWidth
+        fullScreen={window.innerWidth < 600}
+        PaperProps={{
+          sx: window.innerWidth < 600 ? { bgcolor: 'rgba(0,0,0,0.95)' } : {}
+        }}
       >
-        <DialogTitle>
-          Fotoğraflar {selectedImages.length > 1 ? `(${currentImageIndex + 1}/${selectedImages.length})` : ''}
-          <IconButton
-            onClick={() => setSelectedImages([])}
-            sx={{ position: 'absolute', right: 8, top: 8 }}
-          >
-            <Close />
-          </IconButton>
+        <DialogTitle sx={{ 
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          color: window.innerWidth < 600 ? 'white' : 'inherit',
+          p: { xs: 1, sm: 2 },
+        }}>
+          <Typography variant="body1" sx={{ fontSize: { xs: '0.85rem', sm: '1rem' } }}>
+            Fotoğraflar {selectedImages.length > 1 ? `(${currentImageIndex + 1}/${selectedImages.length})` : ''}
+          </Typography>
+          <Box sx={{ display: 'flex', gap: 0, alignItems: 'center' }}>
+            <IconButton
+              size="small"
+              onClick={() => setGalleryZoom(prev => Math.max(1, prev - 0.25))}
+              disabled={galleryZoom <= 1}
+              sx={{ color: window.innerWidth < 600 ? 'white' : 'inherit' }}
+            >
+              <ZoomOut fontSize="small" />
+            </IconButton>
+            <Typography sx={{ fontSize: '0.75rem', minWidth: 35, textAlign: 'center' }}>
+              {Math.round(galleryZoom * 100)}%
+            </Typography>
+            <IconButton
+              size="small"
+              onClick={() => setGalleryZoom(prev => Math.min(5, prev + 0.25))}
+              disabled={galleryZoom >= 5}
+              sx={{ color: window.innerWidth < 600 ? 'white' : 'inherit' }}
+            >
+              <ZoomIn fontSize="small" />
+            </IconButton>
+            <IconButton
+              size="small"
+              onClick={() => { setSelectedImages([]); setGalleryZoom(1); setGalleryPan({ x: 0, y: 0 }); }}
+              sx={{ color: window.innerWidth < 600 ? 'white' : 'inherit' }}
+            >
+              <Close fontSize="small" />
+            </IconButton>
+          </Box>
         </DialogTitle>
-        <DialogContent>
+        <DialogContent sx={{ overflow: 'hidden', p: { xs: 0.5, sm: 1 } }}>
           {selectedImages.length > 0 && (
             <Box sx={{ textAlign: 'center' }}>
-              <img 
-                src={selectedImages[currentImageIndex]} 
-                alt="Preview" 
-                style={{ width: '100%', maxHeight: '60vh', objectFit: 'contain' }} 
-              />
+              <Box
+                sx={{
+                  overflow: 'hidden',
+                  maxHeight: window.innerWidth < 600 ? 'calc(100vh - 180px)' : '70vh',
+                  minHeight: { xs: '50vh', sm: 'auto' },
+                  display: 'flex',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  cursor: galleryZoom > 1 ? (galleryPanning ? 'grabbing' : 'grab') : 'zoom-in',
+                  userSelect: 'none',
+                  touchAction: 'none',
+                }}
+                onWheel={(e) => {
+                  e.preventDefault();
+                  if (e.deltaY < 0) {
+                    setGalleryZoom(prev => Math.min(5, prev + 0.25));
+                  } else {
+                    setGalleryZoom(prev => {
+                      const nz = Math.max(1, prev - 0.25);
+                      if (nz === 1) setGalleryPan({ x: 0, y: 0 });
+                      return nz;
+                    });
+                  }
+                }}
+                onClick={() => {
+                  if (!galleryPanning) {
+                    if (galleryZoom === 1) {
+                      setGalleryZoom(2);
+                    } else {
+                      setGalleryZoom(1);
+                      setGalleryPan({ x: 0, y: 0 });
+                    }
+                  }
+                }}
+                onMouseDown={(e) => {
+                  if (galleryZoom > 1) {
+                    setGalleryPanning(true);
+                    setGalleryPanStart({ x: e.clientX - galleryPan.x, y: e.clientY - galleryPan.y });
+                  }
+                }}
+                onMouseMove={(e) => {
+                  if (galleryPanning && galleryZoom > 1) {
+                    setGalleryPan({ x: e.clientX - galleryPanStart.x, y: e.clientY - galleryPanStart.y });
+                  }
+                }}
+                onMouseUp={() => setGalleryPanning(false)}
+                onMouseLeave={() => setGalleryPanning(false)}
+                // Touch events (mobile pinch-to-zoom + pan)
+                onTouchStart={(e) => {
+                  if (e.touches.length === 2) {
+                    e.preventDefault();
+                    const dx = e.touches[0].clientX - e.touches[1].clientX;
+                    const dy = e.touches[0].clientY - e.touches[1].clientY;
+                    setLastTouchDist(Math.hypot(dx, dy));
+                    setLastTouchCenter({
+                      x: (e.touches[0].clientX + e.touches[1].clientX) / 2,
+                      y: (e.touches[0].clientY + e.touches[1].clientY) / 2,
+                    });
+                  } else if (e.touches.length === 1 && galleryZoom > 1) {
+                    setGalleryPanning(true);
+                    setGalleryPanStart({ x: e.touches[0].clientX - galleryPan.x, y: e.touches[0].clientY - galleryPan.y });
+                  }
+                }}
+                onTouchMove={(e) => {
+                  if (e.touches.length === 2 && lastTouchDist !== null) {
+                    e.preventDefault();
+                    const dx = e.touches[0].clientX - e.touches[1].clientX;
+                    const dy = e.touches[0].clientY - e.touches[1].clientY;
+                    const newDist = Math.hypot(dx, dy);
+                    const scale = newDist / lastTouchDist;
+                    setGalleryZoom(prev => {
+                      const nz = Math.min(5, Math.max(1, prev * scale));
+                      if (nz === 1) setGalleryPan({ x: 0, y: 0 });
+                      return nz;
+                    });
+                    setLastTouchDist(newDist);
+                    if (lastTouchCenter) {
+                      const cx = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+                      const cy = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+                      setGalleryPan(prev => ({
+                        x: prev.x + (cx - lastTouchCenter.x),
+                        y: prev.y + (cy - lastTouchCenter.y),
+                      }));
+                      setLastTouchCenter({ x: cx, y: cy });
+                    }
+                  } else if (e.touches.length === 1 && galleryPanning && galleryZoom > 1) {
+                    setGalleryPan({ x: e.touches[0].clientX - galleryPanStart.x, y: e.touches[0].clientY - galleryPanStart.y });
+                  }
+                }}
+                onTouchEnd={(e) => {
+                  if (e.touches.length < 2) { setLastTouchDist(null); setLastTouchCenter(null); }
+                  if (e.touches.length === 0) setGalleryPanning(false);
+                }}
+              >
+                <img 
+                  src={selectedImages[currentImageIndex]} 
+                  alt="Preview" 
+                  draggable={false}
+                  style={{ 
+                    transform: `scale(${galleryZoom}) translate(${galleryPan.x / galleryZoom}px, ${galleryPan.y / galleryZoom}px)`,
+                    transition: galleryPanning ? 'none' : 'transform 0.2s ease',
+                    maxWidth: '100%', 
+                    maxHeight: window.innerWidth < 600 ? 'calc(100vh - 180px)' : '70vh', 
+                    objectFit: 'contain',
+                    pointerEvents: 'none',
+                    imageRendering: galleryZoom > 1 ? 'high-quality' as any : 'auto',
+                    WebkitBackfaceVisibility: 'hidden',
+                    filter: galleryZoom > 1.5 ? 'contrast(1.02) saturate(1.02)' : 'none',
+                  }} 
+                />
+              </Box>
               {selectedImages.length > 1 && (
-                <Box sx={{ display: 'flex', justifyContent: 'center', gap: 2, mt: 2 }}>
+                <Box sx={{ display: 'flex', justifyContent: 'center', gap: { xs: 1, sm: 2 }, mt: 1.5 }}>
                   <Button 
                     variant="outlined" 
-                    onClick={() => setCurrentImageIndex((prev) => (prev - 1 + selectedImages.length) % selectedImages.length)}
+                    size="small"
+                    sx={{ color: window.innerWidth < 600 ? 'white' : 'inherit', borderColor: window.innerWidth < 600 ? 'rgba(255,255,255,0.5)' : 'inherit' }}
+                    onClick={(e) => { e.stopPropagation(); setCurrentImageIndex((prev) => (prev - 1 + selectedImages.length) % selectedImages.length); setGalleryZoom(1); setGalleryPan({ x: 0, y: 0 }); }}
                   >
                     ← Önceki
                   </Button>
                   <Button 
                     variant="outlined" 
-                    onClick={() => setCurrentImageIndex((prev) => (prev + 1) % selectedImages.length)}
+                    size="small"
+                    sx={{ color: window.innerWidth < 600 ? 'white' : 'inherit', borderColor: window.innerWidth < 600 ? 'rgba(255,255,255,0.5)' : 'inherit' }}
+                    onClick={(e) => { e.stopPropagation(); setCurrentImageIndex((prev) => (prev + 1) % selectedImages.length); setGalleryZoom(1); setGalleryPan({ x: 0, y: 0 }); }}
                   >
                     Sonraki →
                   </Button>
@@ -804,18 +1020,19 @@ const SahaPanel: React.FC = () => {
               )}
               {/* Thumbnails */}
               {selectedImages.length > 1 && (
-                <Box sx={{ display: 'flex', gap: 1, justifyContent: 'center', mt: 2, flexWrap: 'wrap' }}>
+                <Box sx={{ display: 'flex', gap: 1, justifyContent: 'center', mt: 1.5, flexWrap: 'wrap', pb: 1 }}>
                   {selectedImages.map((img, idx) => (
                     <Box 
                       key={idx}
-                      onClick={() => setCurrentImageIndex(idx)}
+                      onClick={(e) => { e.stopPropagation(); setCurrentImageIndex(idx); setGalleryZoom(1); setGalleryPan({ x: 0, y: 0 }); }}
                       sx={{ 
-                        width: 60, 
-                        height: 60, 
+                        width: { xs: 45, sm: 60 }, 
+                        height: { xs: 45, sm: 60 }, 
                         cursor: 'pointer',
-                        border: idx === currentImageIndex ? '3px solid #0D3282' : '1px solid #ddd',
+                        border: idx === currentImageIndex ? '3px solid #1976d2' : '1px solid rgba(255,255,255,0.3)',
                         borderRadius: 1,
                         overflow: 'hidden',
+                        flexShrink: 0,
                       }}
                     >
                       <img 

@@ -11,7 +11,7 @@ console.log('API URL:', API_URL); // Debug için
 
 const api = axios.create({
   baseURL: API_URL,
-  timeout: 10000,
+  timeout: 30000,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -221,10 +221,16 @@ export const sahaService = {
     return response.data;
   },
 
-  // Tüm saha kayıtlarını getir (admin)
+  // Tüm saha kayıtlarını getir (admin) - foto_data hariç
   getAllKayitlar: async (params?: { search?: string; startDate?: string; endDate?: string; sahaElemaniId?: number }): Promise<SahaKayit[]> => {
-    const response = await api.get('/saha/all-kayitlar', { params });
+    const response = await api.get('/saha/all-kayitlar', { params, timeout: 60000 });
     return response.data;
+  },
+
+  // Tek kayıdın fotoğraflarını getir (lazy load)
+  getKayitPhotos: async (id: number): Promise<string | null> => {
+    const response = await api.get(`/saha/kayit-photos/${id}`, { timeout: 60000 });
+    return response.data.foto_data;
   },
 
   // Saha elemanının kayıtlarını getir (admin)

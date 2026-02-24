@@ -195,7 +195,13 @@ router.get('/kayitlar', authenticateToken, async (req: Request, res: Response): 
     const { search, startDate, endDate } = req.query;
 
     let query = `
-      SELECT * FROM saha_kayitlari 
+      SELECT id, saha_elemani_id, saha_elemani_username, isim, soyisim, notlar, created_at, updated_at,
+             CASE WHEN foto_data IS NOT NULL AND foto_data != '' THEN true ELSE false END as has_photos,
+             CASE WHEN foto_data IS NOT NULL AND foto_data != '' THEN
+               CASE WHEN foto_data LIKE '[%' THEN (foto_data::json)->>0
+                    ELSE foto_data END
+             ELSE NULL END as foto_preview
+      FROM saha_kayitlari 
       WHERE saha_elemani_id = $1
     `;
     const params: any[] = [user.id];
@@ -309,13 +315,41 @@ router.delete('/kayit/:id', authenticateToken, async (req: Request, res: Respons
   }
 });
 
-// Tüm Saha Kayıtlarını Getir (Admin için)
+// Tek Kayıdın Fotoğraflarını Getir
+router.get('/kayit-photos/:id', authenticateToken, async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const record = await pool.query(
+      'SELECT foto_data FROM saha_kayitlari WHERE id = $1',
+      [id]
+    );
+
+    if (record.rows.length === 0) {
+      res.status(404).json({ message: 'Kayıt bulunamadı' });
+      return;
+    }
+
+    res.json({ foto_data: record.rows[0].foto_data });
+  } catch (error) {
+    console.error('Fotoğraf getirme hatası:', error);
+    res.status(500).json({ message: 'Sunucu hatası' });
+  }
+});
+
+// Tüm Saha Kayıtlarını Getir (Admin için) - foto_data hariç (performans)
 router.get('/all-kayitlar', authenticateToken, async (req: Request, res: Response): Promise<void> => {
   try {
     const { search, startDate, endDate, sahaElemaniId } = req.query;
 
     let query = `
-      SELECT sk.*, se.ad_soyad as saha_elemani_ad_soyad 
+      SELECT sk.id, sk.saha_elemani_id, sk.saha_elemani_username, sk.isim, sk.soyisim, 
+             sk.notlar, sk.created_at, sk.updated_at,
+             CASE WHEN sk.foto_data IS NOT NULL AND sk.foto_data != '' THEN true ELSE false END as has_photos,
+             CASE WHEN sk.foto_data IS NOT NULL AND sk.foto_data != '' THEN
+               CASE WHEN sk.foto_data LIKE '[%' THEN (sk.foto_data::json)->>0
+                    ELSE sk.foto_data END
+             ELSE NULL END as foto_preview,
+             se.ad_soyad as saha_elemani_ad_soyad 
       FROM saha_kayitlari sk
       LEFT JOIN saha_elemanlari se ON sk.saha_elemani_id = se.id
       WHERE 1=1
@@ -373,7 +407,13 @@ router.get('/user-kayitlar/:username', authenticateToken, async (req: Request, r
     const { username } = req.params;
 
     const records = await pool.query(
-      `SELECT * FROM saha_kayitlari 
+      `SELECT id, saha_elemani_id, saha_elemani_username, isim, soyisim, notlar, created_at, updated_at,
+              CASE WHEN foto_data IS NOT NULL AND foto_data != '' THEN true ELSE false END as has_photos,
+              CASE WHEN foto_data IS NOT NULL AND foto_data != '' THEN
+                CASE WHEN foto_data LIKE '[%' THEN (foto_data::json)->>0
+                     ELSE foto_data END
+              ELSE NULL END as foto_preview
+       FROM saha_kayitlari 
        WHERE saha_elemani_username = $1 
        ORDER BY created_at DESC`,
       [username]
