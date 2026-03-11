@@ -741,6 +741,12 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
       return;
     }
     
+    // Mahalle zorunlu
+    if (!formData.mahalle || formData.mahalle.trim() === '') {
+      showSnackbar('Mahalle alanı zorunludur!', 'error');
+      return;
+    }
+    
     // Cadde veya Sokak'tan en az biri dolu olmalı
     if ((!formData.cadde || formData.cadde.trim() === '') && (!formData.sokak || formData.sokak.trim() === '')) {
       showSnackbar('Cadde veya Sokak alanlarından en az biri doldurulmalıdır!', 'error');

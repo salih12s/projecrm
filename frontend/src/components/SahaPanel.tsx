@@ -155,8 +155,8 @@ const SahaPanel: React.FC = () => {
     setFormFotolar([]);
   };
 
-  // Fotoğrafı daha iyi sıkıştır (daha küçük boyut ve kalite)
-  const compressImage = (file: File, maxWidth: number = 1200, quality: number = 0.7): Promise<string> => {
+  // Fotoğrafı daha iyi sıkıştır (yüksek kalite koruyarak boyutu azalt)
+  const compressImage = (file: File, maxWidth: number = 2400, quality: number = 0.92): Promise<string> => {
     return new Promise((resolve, reject) => {
       // Önce dosyayı base64 olarak oku (fallback için)
       const fallbackReader = new FileReader();
@@ -196,7 +196,7 @@ const SahaPanel: React.FC = () => {
             }
             
             // Yükseklik de sınırla
-            const maxHeight = 1600;
+            const maxHeight = 3200;
             if (height > maxHeight) {
               width = (width * maxHeight) / height;
               height = maxHeight;
@@ -287,8 +287,8 @@ const SahaPanel: React.FC = () => {
       }
 
       try {
-        // Fotoğrafı sıkıştır (1200px genişlik, %70 kalite)
-        const compressedData = await compressImage(file, 1200, 0.7);
+        // Fotoğrafı sıkıştır (2400px genişlik, %92 kalite)
+        const compressedData = await compressImage(file, 2400, 0.92);
         newPhotos.push(compressedData);
       } catch (error) {
         console.error('Fotoğraf sıkıştırma hatası:', error);
@@ -992,9 +992,8 @@ const SahaPanel: React.FC = () => {
                     maxHeight: window.innerWidth < 600 ? 'calc(100vh - 180px)' : '70vh', 
                     objectFit: 'contain',
                     pointerEvents: 'none',
-                    imageRendering: galleryZoom > 1 ? 'high-quality' as any : 'auto',
+                    imageRendering: 'auto',
                     WebkitBackfaceVisibility: 'hidden',
-                    filter: galleryZoom > 1.5 ? 'contrast(1.02) saturate(1.02)' : 'none',
                   }} 
                 />
               </Box>

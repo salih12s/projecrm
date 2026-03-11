@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback, memo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef, memo, startTransition } from 'react';
 import {
   Table,
   TableBody,
@@ -27,6 +27,41 @@ import {
   Skeleton,
   Button,
 } from '@mui/material';
+
+// ⚡ Kendi state'ini yöneten debounced input - parent'ı her tuşta render etmez
+const DebouncedFilterInput = memo(({ placeholder, onChange, sx }: {
+  placeholder: string;
+  onChange: (value: string) => void;
+  sx?: any;
+}) => {
+  const [localValue, setLocalValue] = useState('');
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const onChangeRef = useRef(onChange);
+  onChangeRef.current = onChange;
+
+  const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    setLocalValue(val);
+    if (timerRef.current) clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(() => {
+      onChangeRef.current(val);
+    }, 120);
+  }, []);
+
+  useEffect(() => {
+    return () => { if (timerRef.current) clearTimeout(timerRef.current); };
+  }, []);
+
+  return (
+    <TextField
+      size="small"
+      placeholder={placeholder}
+      value={localValue}
+      onChange={handleChange}
+      sx={sx || { '& .MuiInputBase-input': { fontSize: '0.65rem', py: 0.2, px: 0.2 }, width: '100%' }}
+    />
+  );
+});
 import {
   Edit,
   CheckCircle,
@@ -113,7 +148,7 @@ const IslemTable: React.FC<IslemTableProps> = ({
     durum: '',
   });
   
-  // Filter states
+  // ⚡ Filter state - sadece debounced input'lardan güncellenir, her tuşta değişmez
   const [filters, setFilters] = useState({
     sira: '',
     tarih: '',
@@ -136,164 +171,110 @@ const IslemTable: React.FC<IslemTableProps> = ({
     durum: '',
   });
 
-  // useMemo ile filtrelemeyi optimize et - sadece islemler veya filters değişince hesapla
+  // ⚡ Pre-computed lowercase search index - islemler değişince bir kez hesaplanır
+  const searchIndex = useMemo(() => {
+    return islemler.map(item => ({
+      id: item.id,
+      idStr: item.id.toString(),
+      tarih: item.full_tarih ? new Date(item.full_tarih).toLocaleDateString('tr-TR') : '',
+      ad_soyad: (item.ad_soyad || '').toLocaleLowerCase('tr-TR'),
+      ilce: (item.ilce || '').toLocaleLowerCase('tr-TR'),
+      mahalle: (item.mahalle || '').toLocaleLowerCase('tr-TR'),
+      cadde: (item.cadde || '').toLocaleLowerCase('tr-TR'),
+      sokak: (item.sokak || '').toLocaleLowerCase('tr-TR'),
+      kapi_no: (item.kapi_no || '').toLocaleLowerCase('tr-TR'),
+      apartman_site: (item.apartman_site || '').toLocaleLowerCase('tr-TR'),
+      blok_no: (item.blok_no || '').toLocaleLowerCase('tr-TR'),
+      daire_no: (item.daire_no || '').toLocaleLowerCase('tr-TR'),
+      cep_tel: (item.cep_tel || '').replace(/\D/g, ''),
+      yedek_tel: (item.yedek_tel || '').replace(/\D/g, ''),
+      urun: (item.urun || '').toLocaleLowerCase('tr-TR'),
+      marka: (item.marka || '').toLocaleLowerCase('tr-TR'),
+      sikayet: (item.sikayet || '').toLocaleLowerCase('tr-TR'),
+      yapilan_islem: (item.yapilan_islem || '').toLocaleLowerCase('tr-TR'),
+      teknisyen: (item.teknisyen_ismi || '').toLocaleLowerCase('tr-TR'),
+      tutar: item.tutar?.toString() || '',
+      durum: item.is_durumu === 'tamamlandi' ? 'tamamlandı' :
+             item.is_durumu === 'parca_bekliyor' ? 'parça bekliyor' :
+             item.is_durumu === 'iptal' ? 'iptal' : 'açık',
+    }));
+  }, [islemler]);
+
+  // ⚡ Optimized filtering - pre-computed index ile tek geçişte filtreler
   const filteredIslemler = useMemo(() => {
-    let filtered = [...islemler];
+    const f = filters;
+    const hasAnyFilter = f.sira || f.tarih || f.ad_soyad || f.ilce || f.mahalle ||
+      f.cadde || f.sokak || f.kapi_no || f.apartman_site || f.blok_no ||
+      f.daire_no || f.cep_tel || f.urun || f.marka || f.sikayet ||
+      f.yapilan_islem || f.teknisyen || f.tutar || f.durum;
 
-    // Filter by tarih
-    if (filters.tarih) {
-      filtered = filtered.filter((item) =>
-        item.full_tarih ? new Date(item.full_tarih).toLocaleDateString('tr-TR').includes(filters.tarih) : false
-      );
+    if (!hasAnyFilter) return islemler;
+
+    // Filtre değerlerini bir kez lowercase'e çevir
+    const fLower = {
+      ad_soyad: f.ad_soyad ? f.ad_soyad.toLocaleLowerCase('tr-TR') : '',
+      ilce: f.ilce ? f.ilce.toLocaleLowerCase('tr-TR') : '',
+      mahalle: f.mahalle ? f.mahalle.toLocaleLowerCase('tr-TR') : '',
+      cadde: f.cadde ? f.cadde.toLocaleLowerCase('tr-TR') : '',
+      sokak: f.sokak ? f.sokak.toLocaleLowerCase('tr-TR') : '',
+      kapi_no: f.kapi_no ? f.kapi_no.toLocaleLowerCase('tr-TR') : '',
+      apartman_site: f.apartman_site ? f.apartman_site.toLocaleLowerCase('tr-TR') : '',
+      blok_no: f.blok_no ? f.blok_no.toLocaleLowerCase('tr-TR') : '',
+      daire_no: f.daire_no ? f.daire_no.toLocaleLowerCase('tr-TR') : '',
+      urun: f.urun ? f.urun.toLocaleLowerCase('tr-TR') : '',
+      marka: f.marka ? f.marka.toLocaleLowerCase('tr-TR') : '',
+      sikayet: f.sikayet ? f.sikayet.toLocaleLowerCase('tr-TR') : '',
+      yapilan_islem: f.yapilan_islem ? f.yapilan_islem.toLocaleLowerCase('tr-TR') : '',
+      teknisyen: f.teknisyen ? f.teknisyen.toLocaleLowerCase('tr-TR') : '',
+      durum: f.durum ? f.durum.toLowerCase() : '',
+    };
+    const cleanPhone = f.cep_tel ? f.cep_tel.replace(/\D/g, '') : '';
+
+    const result: Islem[] = [];
+    for (let i = 0; i < islemler.length; i++) {
+      const idx = searchIndex[i];
+      if (!idx) continue;
+
+      if (f.sira && !idx.idStr.includes(f.sira)) continue;
+      if (f.tarih && !idx.tarih.includes(f.tarih)) continue;
+      if (fLower.ad_soyad && !idx.ad_soyad.includes(fLower.ad_soyad)) continue;
+      if (fLower.ilce && !idx.ilce.includes(fLower.ilce)) continue;
+      if (fLower.mahalle && !idx.mahalle.includes(fLower.mahalle)) continue;
+      if (fLower.cadde && !idx.cadde.includes(fLower.cadde)) continue;
+      if (fLower.sokak && !idx.sokak.includes(fLower.sokak)) continue;
+      if (fLower.kapi_no && !idx.kapi_no.includes(fLower.kapi_no)) continue;
+      if (fLower.apartman_site && !idx.apartman_site.includes(fLower.apartman_site)) continue;
+      if (fLower.blok_no && !idx.blok_no.includes(fLower.blok_no)) continue;
+      if (fLower.daire_no && !idx.daire_no.includes(fLower.daire_no)) continue;
+      if (cleanPhone && !idx.cep_tel.includes(cleanPhone) && !idx.yedek_tel.includes(cleanPhone)) continue;
+      if (fLower.urun && !idx.urun.includes(fLower.urun)) continue;
+      if (fLower.marka && !idx.marka.includes(fLower.marka)) continue;
+      if (fLower.sikayet && !idx.sikayet.includes(fLower.sikayet)) continue;
+      if (fLower.yapilan_islem && !idx.yapilan_islem.includes(fLower.yapilan_islem)) continue;
+      if (fLower.teknisyen && !idx.teknisyen.includes(fLower.teknisyen)) continue;
+      if (f.tutar && !idx.tutar.includes(f.tutar)) continue;
+      if (fLower.durum && !idx.durum.includes(fLower.durum)) continue;
+
+      result.push(islemler[i]);
     }
-
-    // Filter by ad_soyad
-    if (filters.ad_soyad) {
-      filtered = filtered.filter((item) =>
-        (item.ad_soyad || '').toLocaleLowerCase('tr-TR').includes(filters.ad_soyad.toLocaleLowerCase('tr-TR'))
-      );
-    }
-
-    // Filter by ilce
-    if (filters.ilce) {
-      filtered = filtered.filter((item) =>
-        (item.ilce || '').toLocaleLowerCase('tr-TR').includes(filters.ilce.toLocaleLowerCase('tr-TR'))
-      );
-    }
-
-    // Filter by mahalle
-    if (filters.mahalle) {
-      filtered = filtered.filter((item) =>
-        (item.mahalle || '').toLocaleLowerCase('tr-TR').includes(filters.mahalle.toLocaleLowerCase('tr-TR'))
-      );
-    }
-
-    // Filter by cadde
-    if (filters.cadde) {
-      filtered = filtered.filter((item) =>
-        (item.cadde || '').toLocaleLowerCase('tr-TR').includes(filters.cadde.toLocaleLowerCase('tr-TR'))
-      );
-    }
-
-    // Filter by sokak
-    if (filters.sokak) {
-      filtered = filtered.filter((item) =>
-        (item.sokak || '').toLocaleLowerCase('tr-TR').includes(filters.sokak.toLocaleLowerCase('tr-TR'))
-      );
-    }
-
-    // Filter by kapi_no
-    if (filters.kapi_no) {
-      filtered = filtered.filter((item) =>
-        (item.kapi_no || '').toLocaleLowerCase('tr-TR').includes(filters.kapi_no.toLocaleLowerCase('tr-TR'))
-      );
-    }
-
-    // Filter by apartman_site
-    if (filters.apartman_site) {
-      filtered = filtered.filter((item) =>
-        (item.apartman_site || '').toLocaleLowerCase('tr-TR').includes(filters.apartman_site.toLocaleLowerCase('tr-TR'))
-      );
-    }
-
-    // Filter by blok_no
-    if (filters.blok_no) {
-      filtered = filtered.filter((item) =>
-        (item.blok_no || '').toLocaleLowerCase('tr-TR').includes(filters.blok_no.toLocaleLowerCase('tr-TR'))
-      );
-    }
-
-    // Filter by daire_no
-    if (filters.daire_no) {
-      filtered = filtered.filter((item) =>
-        (item.daire_no || '').toLocaleLowerCase('tr-TR').includes(filters.daire_no.toLocaleLowerCase('tr-TR'))
-      );
-    }
-
-    // Filter by cep_tel (hem cep telefonu hem de yedek telefon)
-    if (filters.cep_tel) {
-      const cleanPhone = filters.cep_tel.replace(/\D/g, '');
-      filtered = filtered.filter((item) =>
-        (item.cep_tel || '').includes(cleanPhone) || 
-        (item.yedek_tel || '').includes(cleanPhone)
-      );
-    }
-
-    // Filter by urun
-    if (filters.urun) {
-      filtered = filtered.filter((item) =>
-        (item.urun || '').toLocaleLowerCase('tr-TR').includes(filters.urun.toLocaleLowerCase('tr-TR'))
-      );
-    }
-
-    // Filter by marka
-    if (filters.marka) {
-      filtered = filtered.filter((item) =>
-        (item.marka || '').toLocaleLowerCase('tr-TR').includes(filters.marka.toLocaleLowerCase('tr-TR'))
-      );
-    }
-
-    // Filter by sikayet
-    if (filters.sikayet) {
-      filtered = filtered.filter((item) =>
-        (item.sikayet || '').toLocaleLowerCase('tr-TR').includes(filters.sikayet.toLocaleLowerCase('tr-TR'))
-      );
-    }
-
-    // Filter by yapilan_islem
-    if (filters.yapilan_islem) {
-      filtered = filtered.filter((item) =>
-        (item.yapilan_islem || '').toLocaleLowerCase('tr-TR').includes(filters.yapilan_islem.toLocaleLowerCase('tr-TR'))
-      );
-    }
-
-    // Filter by teknisyen - teknisyen_ismi kullan
-    if (filters.teknisyen) {
-      filtered = filtered.filter((item) =>
-        (item.teknisyen_ismi || '').toLocaleLowerCase('tr-TR').includes(filters.teknisyen.toLocaleLowerCase('tr-TR'))
-      );
-    }
-
-    // Filter by tutar
-    if (filters.tutar) {
-      filtered = filtered.filter((item) =>
-        (item.tutar?.toString() || '').includes(filters.tutar)
-      );
-    }
-
-    // Filter by durum - is_durumu kullan
-    if (filters.durum) {
-      const durumText = filters.durum.toLowerCase();
-      filtered = filtered.filter((item) => {
-        const label = item.is_durumu === 'tamamlandi' ? 'tamamlandı' : 
-                      item.is_durumu === 'parca_bekliyor' ? 'parça bekliyor' : 
-                      item.is_durumu === 'iptal' ? 'iptal' :
-                      'açık';
-        return label.includes(durumText);
-      });
-    }
-
-    // Filter by sira - ID bazlı sabit sıra (silince kaymasın)
-    if (filters.sira) {
-      filtered = filtered.filter((item) => {
-        return item.id.toString().includes(filters.sira);
-      });
-    }
-
-    return filtered;
-  }, [islemler, filters]);
+    return result;
+  }, [islemler, filters, searchIndex]);
 
   // Filtrelenmiş liste değiştiğinde parent'a bildir ve displayLimit'i resetle
+  // ⚡ startTransition: parent güncellemesi düşük öncelikli yapılır, input donmaz
   useEffect(() => {
-    if (onFilteredChange) {
-      onFilteredChange(filteredIslemler);
-    }
-    // Filtre değiştiğinde limit'i resetle
-    setDisplayLimit(100);
+    startTransition(() => {
+      if (onFilteredChange) {
+        onFilteredChange(filteredIslemler);
+      }
+      setDisplayLimit(100);
+    });
   }, [filteredIslemler, onFilteredChange]);
 
   const handleFilterChange = useCallback((field: string, value: string) => {
-    setFilters((prev) => ({ ...prev, [field]: value }));
+    startTransition(() => {
+      setFilters((prev) => ({ ...prev, [field]: value }));
+    });
   }, []);
 
   const handlePrintClick = useCallback((islem: Islem) => {
@@ -510,8 +491,8 @@ const IslemTable: React.FC<IslemTableProps> = ({
     }
   }, [resizing, columnWidths]);
 
-  // Sütun konfigürasyonu
-  const columnConfigs: Record<string, ColumnConfig> = {
+  // ⚡ Sütun konfigürasyonu - useMemo ile sadece callback'ler değişince yeniden oluştur
+  const columnConfigs: Record<string, ColumnConfig> = useMemo(() => ({
     tarih: {
       id: 'tarih',
       label: 'Tarih',
@@ -942,7 +923,8 @@ const IslemTable: React.FC<IslemTableProps> = ({
         </TableCell>
       ),
     },
-  };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }), [onEdit, onClone, onToggleDurum, onDelete, isBayi, isAdminMode]);
 
   // Sütun sırasını kaydet
   useEffect(() => {
@@ -1400,15 +1382,9 @@ const IslemTable: React.FC<IslemTableProps> = ({
               maxWidth: columnWidths.sira,
               borderRight: '1px solid rgba(224, 224, 224, 0.6)',
             }}>
-              <TextField
-                size="small"
+              <DebouncedFilterInput
                 placeholder="Sıra"
-                value={filters.sira}
-                onChange={(e) => handleFilterChange('sira', e.target.value)}
-                sx={{
-                  '& .MuiInputBase-input': { fontSize: '0.65rem', py: 0.2, px: 0.2 },
-                  width: '100%'
-                }}
+                onChange={(v) => handleFilterChange('sira', v)}
               />
             </TableCell>
             {columnOrder.map((columnId) => (
@@ -1421,16 +1397,10 @@ const IslemTable: React.FC<IslemTableProps> = ({
                 borderRight: '1px solid rgba(224, 224, 224, 0.6)',
               }}>
                 {columnId !== 'islemler' && columnId !== 'yedek_tel' ? (
-                  <TextField
-                    size="small"
+                  <DebouncedFilterInput
                     placeholder={`${columnConfigs[columnId].label}...`}
-                    value={filters[columnId as keyof typeof filters] || ''}
-                    onChange={(e) => handleFilterChange(columnId, e.target.value)}
-                    sx={{
-                      '& .MuiInputBase-input': { fontSize: '0.65rem', py: 0.2, px: 0.2 },
-                      width: '100%'
-                    }}
-                  /> 
+                    onChange={(v) => handleFilterChange(columnId, v)}
+                  />
                 ) : null}
               </TableCell>
             ))}

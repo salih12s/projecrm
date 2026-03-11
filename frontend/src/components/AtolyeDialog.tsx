@@ -133,8 +133,10 @@ const AtolyeDialog: React.FC<AtolyeDialogProps> = ({ open, onClose, atolyeId }) 
       console.log('Final processedYapilmaTarihi:', processedYapilmaTarihi);
       console.log('================================');
       
+      setBayiInputValue(data.bayi_adi || '');
+      setMarkaInputValue(data.marka || '');
       setFormData({
-        bayi_adi: data.bayi_adi,
+        bayi_adi: data.bayi_adi || '',
         musteri_ad_soyad: data.musteri_ad_soyad,
         tel_no: data.tel_no,
         marka: data.marka,
@@ -155,6 +157,8 @@ const AtolyeDialog: React.FC<AtolyeDialogProps> = ({ open, onClose, atolyeId }) 
   };
 
   const resetForm = () => {
+    setBayiInputValue('');
+    setMarkaInputValue('');
     setFormData({
       bayi_adi: '',
       musteri_ad_soyad: '',
@@ -349,6 +353,7 @@ const AtolyeDialog: React.FC<AtolyeDialogProps> = ({ open, onClose, atolyeId }) 
               }}
               onInputChange={(_, value, reason) => {
                 if (reason === 'input') {
+                  setBayiInputValue(value);
                   const filtered = bayiler.filter(bayi => 
                     bayi.isim.toLocaleLowerCase('tr-TR').includes(value.toLocaleLowerCase('tr-TR'))
                   );
@@ -356,11 +361,12 @@ const AtolyeDialog: React.FC<AtolyeDialogProps> = ({ open, onClose, atolyeId }) 
                   if (filtered.length === 1 && value.length > 0) {
                     handleChange('bayi_adi', filtered[0].isim);
                     setBayiInputValue(filtered[0].isim);
-                  } else if (filtered.length > 1) {
-                    setBayiInputValue(value);
                   }
                 } else if (reason === 'reset') {
                   setBayiInputValue(value);
+                } else if (reason === 'clear') {
+                  handleChange('bayi_adi', '');
+                  setBayiInputValue('');
                 }
               }}
               autoHighlight
