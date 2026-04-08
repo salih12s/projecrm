@@ -94,8 +94,9 @@ const Dashboard: React.FC = () => {
   const [activeHoldIndex, setActiveHoldIndex] = useState<number | null>(null); // Hangi hold form aktif
   const [shouldRestoreForm, setShouldRestoreForm] = useState(false); // Beklemeden dönülüyor mu?
   const [serverStats, setServerStats] = useState<any>(null);
-  const [columnFilters, setColumnFilters] = useState<Record<string, string>>({});
   const columnFiltersRef = useRef<Record<string, string>>({});
+  const columnFilterTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isFirstColumnFilterRef = useRef(true);
   
   // Güvenli rol kontrolü - eğer user yoksa veya role tanımlı değilse en kısıtlı mod
   const isBayi = user?.role === 'bayi';
@@ -234,22 +235,28 @@ const Dashboard: React.FC = () => {
 
   // IslemTable kolon filtreleri değiştiğinde sunucudan yeniden çek
   const handleColumnFiltersChange = useCallback((filters: Record<string, string>) => {
-    columnFiltersRef.current = filters;
-    setColumnFilters({ ...filters });
-  }, []);
-
-  // Kolon filtreleri değiştiğinde debounced server-side arama
-  useEffect(() => {
-    const hasAnyFilter = Object.values(columnFilters).some(v => v);
-    // İlk mount'ta çalışmasın
-    if (!hasAnyFilter && Object.keys(columnFilters).length === 0) return;
+    // İlk mount'ta gelen boş filtreleri yoksay
+    const hasAnyFilter = Object.values(filters).some(v => v);
+    const hadAnyFilter = Object.values(columnFiltersRef.current).some(v => v);
     
-    const timer = setTimeout(() => {
+    columnFiltersRef.current = filters;
+    
+    // İlk çağrıyı (mount) atla
+    if (isFirstColumnFilterRef.current) {
+      isFirstColumnFilterRef.current = false;
+      return;
+    }
+    
+    // Filtre yoksa ve önceden de yoksa, tekrar çekme
+    if (!hasAnyFilter && !hadAnyFilter) return;
+    
+    // Önceki timer'ı iptal et
+    if (columnFilterTimerRef.current) clearTimeout(columnFilterTimerRef.current);
+    
+    columnFilterTimerRef.current = setTimeout(() => {
       loadIslemler(1, false);
     }, 400);
-    return () => clearTimeout(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [columnFilters]);
+  }, []);
 
   const handleLogout = () => {
     logout();
