@@ -85,45 +85,9 @@ const IslemFilters: React.FC<IslemFiltersProps> = ({
       });
     }
 
-    // Bugün alınan işler filtresi
-    if (showTodayOnly) {
-      const todayStart = new Date().setHours(0, 0, 0, 0);
-      const todayEnd = new Date().setHours(23, 59, 59, 999);
-      
-      result = result.filter((islem) => {
-        try {
-          const islemTime = new Date(islem.full_tarih).getTime();
-          return islemTime >= todayStart && islemTime <= todayEnd;
-        } catch {
-          return false;
-        }
-      });
-    }
-
-    // Tarih filtresi (Dashboard'dan gelen)
-    if (dateFilter) {
-      const selectedStart = new Date(dateFilter).setHours(0, 0, 0, 0);
-      const selectedEnd = new Date(dateFilter).setHours(23, 59, 59, 999);
-      
-      result = result.filter((islem) => {
-        try {
-          const islemTime = new Date(islem.full_tarih).getTime();
-          return islemTime >= selectedStart && islemTime <= selectedEnd;
-        } catch {
-          return false;
-        }
-      });
-    }
-
-    // StatsCard'dan gelen durum filtresi
-    if (statusFilter !== 'all') {
-      result = result.filter((islem) => islem.is_durumu === statusFilter);
-    }
-
-    // Yazdırılmamış işler filtresi
-    if (showYazdirilmamis) {
-      result = result.filter((islem) => !islem.yazdirildi);
-    }
+    // Bugün alınan işler filtresi - artık sunucu tarafında yapılıyor, client'da tekrar filtreleme
+    // StatsCard'dan gelen durum filtresi - artık sunucu tarafında yapılıyor
+    // Yazdırılmamış işler filtresi - artık sunucu tarafında yapılıyor
 
     // Montaj filtresi
     if (isAdmin && selectedMontajlar.length > 0) {

@@ -5,6 +5,27 @@ import { IslemCreateDto } from '../types';
 
 const router = express.Router();
 
+// İstatistikler endpoint - hafif, sadece sayılar döner
+router.get('/stats', authMiddleware, async (_req: Request, res: Response): Promise<void> => {
+  try {
+    const result = await pool.query(`
+      SELECT 
+        COUNT(*) as total,
+        COUNT(*) FILTER (WHERE is_durumu = 'acik') as acik,
+        COUNT(*) FILTER (WHERE is_durumu = 'parca_bekliyor') as parca_bekliyor,
+        COUNT(*) FILTER (WHERE is_durumu = 'tamamlandi') as tamamlandi,
+        COUNT(*) FILTER (WHERE is_durumu = 'iptal') as iptal,
+        COUNT(*) FILTER (WHERE full_tarih >= CURRENT_DATE AND full_tarih < CURRENT_DATE + INTERVAL '1 day') as bugun,
+        COUNT(*) FILTER (WHERE (yazdirildi IS NULL OR yazdirildi = false)) as yazdirilmamis
+      FROM islemler
+    `);
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('İstatistik hatası:', error);
+    res.status(500).json({ message: 'Sunucu hatası' });
+  }
+});
+
 // Tüm işlemleri getir (filtreleme ile)
 router.get('/', authMiddleware, async (req: Request, res: Response): Promise<void> => {
   try {
@@ -25,13 +46,11 @@ router.get('/', authMiddleware, async (req: Request, res: Response): Promise<voi
       sikayet,
       teknisyen_ismi,
       is_durumu,
+      today,
+      yazdirilmamis,
       page,
       limit: limitParam
     } = req.query;
-
-    const pageNum = Math.max(1, parseInt(page as string) || 1);
-    const limitNum = Math.min(500, Math.max(1, parseInt(limitParam as string) || 100));
-    const offset = (pageNum - 1) * limitNum;
 
     let whereClause = ' WHERE 1=1';
     const params: any[] = [];
@@ -134,24 +153,42 @@ router.get('/', authMiddleware, async (req: Request, res: Response): Promise<voi
       paramIndex++;
     }
 
-    // Count query
-    const countResult = await pool.query(`SELECT COUNT(*) as total FROM islemler${whereClause}`, params);
-    const total = parseInt(countResult.rows[0].total);
+    if (today === 'true') {
+      whereClause += ` AND full_tarih >= CURRENT_DATE AND full_tarih < CURRENT_DATE + INTERVAL '1 day'`;
+    }
 
-    // Data query with pagination
-    const dataQuery = `SELECT * FROM islemler${whereClause} ORDER BY full_tarih DESC LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`;
-    params.push(limitNum, offset);
-    const result = await pool.query(dataQuery, params);
+    if (yazdirilmamis === 'true') {
+      whereClause += ` AND (yazdirildi IS NULL OR yazdirildi = false)`;
+    }
 
-    res.json({
-      data: result.rows,
-      pagination: {
-        page: pageNum,
-        limit: limitNum,
-        total,
-        totalPages: Math.ceil(total / limitNum)
-      }
-    });
+    // Pagination opsiyonel - page/limit gönderilmezse tüm veriyi döndür
+    const usePagination = page || limitParam;
+
+    if (usePagination) {
+      const pageNum = Math.max(1, parseInt(page as string) || 1);
+      const limitNum = Math.min(500, Math.max(1, parseInt(limitParam as string) || 100));
+      const offset = (pageNum - 1) * limitNum;
+
+      const countResult = await pool.query(`SELECT COUNT(*) as total FROM islemler${whereClause}`, params);
+      const total = parseInt(countResult.rows[0].total);
+
+      const dataQuery = `SELECT * FROM islemler${whereClause} ORDER BY full_tarih DESC LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`;
+      params.push(limitNum, offset);
+      const result = await pool.query(dataQuery, params);
+
+      res.json({
+        data: result.rows,
+        pagination: {
+          page: pageNum,
+          limit: limitNum,
+          total,
+          totalPages: Math.ceil(total / limitNum)
+        }
+      });
+    } else {
+      const result = await pool.query(`SELECT * FROM islemler${whereClause} ORDER BY full_tarih DESC`, params);
+      res.json(result.rows);
+    }
   } catch (error) {
     console.error('İşlemleri getirme hatası:', error);
     res.status(500).json({ message: 'Sunucu hatası' });

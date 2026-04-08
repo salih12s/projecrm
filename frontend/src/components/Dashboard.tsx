@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo, lazy, Suspense, useTransition } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, lazy, Suspense } from 'react';
 import {
   Box,
   Container,
@@ -25,6 +25,7 @@ import {
   ListItemText,
   useMediaQuery,
   useTheme,
+  CircularProgress,
 } from '@mui/material';
 import { 
   Logout as LogoutIcon, 
@@ -71,6 +72,11 @@ const Dashboard: React.FC = () => {
   const [filteredIslemler, setFilteredIslemler] = useState<Islem[]>([]);
   const [tableFilteredIslemler, setTableFilteredIslemler] = useState<Islem[]>([]); // IslemTable'dan gelen filtrelenmiş liste
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const [totalRecords, setTotalRecords] = useState(0);
+  const PAGE_SIZE = 100;
   const [openDialog, setOpenDialog] = useState(false);
   const [selectedIslem, setSelectedIslem] = useState<Islem | null>(null);
   const [cloneFromRecord, setCloneFromRecord] = useState<Islem | null>(null); // Çift tıklama ile klonlama
@@ -87,9 +93,7 @@ const Dashboard: React.FC = () => {
   const [onHoldFormData, setOnHoldFormData] = useState<any[]>([]); // Beklemedeki formlar (array)
   const [activeHoldIndex, setActiveHoldIndex] = useState<number | null>(null); // Hangi hold form aktif
   const [shouldRestoreForm, setShouldRestoreForm] = useState(false); // Beklemeden dönülüyor mu?
-  
-  // ⚡ PERFORMANS: useTransition ile durum geçişlerini optimize et
-  const [_, startTransition] = useTransition();
+  const [serverStats, setServerStats] = useState<any>(null);
   
   // Güvenli rol kontrolü - eğer user yoksa veya role tanımlı değilse en kısıtlı mod
   const isBayi = user?.role === 'bayi';
@@ -120,6 +124,7 @@ const Dashboard: React.FC = () => {
     newSocket.on('yeni-islem', (islem: Islem) => {
       if (islem && islem.id) {
         setIslemler((prev) => [islem, ...prev]);
+        loadStats();
         showSnackbar('Yeni işlem eklendi!', 'info');
       }
     });
@@ -129,6 +134,7 @@ const Dashboard: React.FC = () => {
         setIslemler((prev) =>
           prev.map((islem) => (islem.id === updatedIslem.id ? updatedIslem : islem))
         );
+        loadStats();
         showSnackbar('İşlem güncellendi!', 'info');
       }
     });
@@ -136,6 +142,7 @@ const Dashboard: React.FC = () => {
     newSocket.on('islem-silindi', (id: number) => {
       if (id) {
         setIslemler((prev) => prev.filter((islem) => islem.id !== id));
+        loadStats();
         showSnackbar('İşlem silindi!', 'info');
       }
     });
@@ -145,6 +152,7 @@ const Dashboard: React.FC = () => {
         setIslemler((prev) =>
           prev.map((islem) => (islem.id === updatedIslem.id ? updatedIslem : islem))
         );
+        loadStats();
         showSnackbar('İş durumu güncellendi!', 'success');
       }
     });
@@ -157,22 +165,58 @@ const Dashboard: React.FC = () => {
 
   useEffect(() => {
     loadIslemler();
+    loadStats();
   }, []);
 
-  const loadIslemler = async () => {
+  // Sunucu taraflı filtre parametrelerini oluştur
+  const getServerFilters = (overrides?: { status?: string; todayOnly?: boolean; yazdirilmamisOnly?: boolean }) => {
+    const s = overrides?.status ?? statusFilter;
+    const t = overrides?.todayOnly ?? showTodayOnly;
+    const y = overrides?.yazdirilmamisOnly ?? showYazdirilmamis;
+    const params: any = {};
+    if (s && s !== 'all') params.is_durumu = s;
+    if (t) params.today = 'true';
+    if (y) params.yazdirilmamis = 'true';
+    return params;
+  };
+
+  const loadIslemler = async (page = 1, append = false, overrides?: { status?: string; todayOnly?: boolean; yazdirilmamisOnly?: boolean }) => {
     try {
-      setLoading(true);
+      if (page === 1) setLoading(true); else setLoadingMore(true);
       setError(null);
-      const response = await islemService.getAll({ page: 1, limit: 100 });
-      // En yeni kayıtlar en üstte (id'ye göre büyükten küçüğe sırala)
-      const sortedData = response.data.sort((a, b) => b.id - a.id);
-      setIslemler(sortedData);
-      setFilteredIslemler(sortedData);
+      const filters = { ...getServerFilters(overrides), page, limit: PAGE_SIZE };
+      const response = await islemService.getAll(filters) as { data: Islem[]; pagination: { page: number; limit: number; total: number; totalPages: number } };
+      const newData = response.data.sort((a, b) => b.id - a.id);
+      
+      if (append) {
+        setIslemler(prev => [...prev, ...newData]);
+      } else {
+        setIslemler(newData);
+      }
+      setCurrentPage(response.pagination.page);
+      setTotalRecords(response.pagination.total);
+      setHasMore(response.pagination.page < response.pagination.totalPages);
     } catch (error: any) {
       console.error('İşlemler yüklenirken hata:', error);
       setError(error.response?.data?.message || 'İşlemler yüklenirken bir hata oluştu');
     } finally {
       setLoading(false);
+      setLoadingMore(false);
+    }
+  };
+
+  const loadStats = async () => {
+    try {
+      const data = await islemService.getStats();
+      setServerStats(data);
+    } catch (error) {
+      console.error('İstatistikler yüklenirken hata:', error);
+    }
+  };
+
+  const handleLoadMore = () => {
+    if (!loadingMore && hasMore) {
+      loadIslemler(currentPage + 1, true);
     }
   };
 
@@ -313,42 +357,31 @@ const Dashboard: React.FC = () => {
   }, []);
 
   const handleStatusFilterClick = useCallback((filter: 'all' | 'acik' | 'parca_bekliyor' | 'tamamlandi' | 'iptal') => {
-    // ⚡ PERFORMANS: Filtrelemeyi non-blocking yaparak UI donmasını engelle
-    startTransition(() => {
-      setStatusFilter(filter);
-      // Diğer filtreleri kapat
-      setShowTodayOnly(false);
-      setShowYazdirilmamis(false);
-    });
-  }, [startTransition]);
+    setStatusFilter(filter);
+    setShowTodayOnly(false);
+    setShowYazdirilmamis(false);
+    loadIslemler(1, false, { status: filter, todayOnly: false, yazdirilmamisOnly: false });
+  }, []);
 
   const handleTodayFilter = useCallback(() => {
-    startTransition(() => {
-      setShowTodayOnly(prev => {
-        const newValue = !prev;
-        // Eğer aktif edildiyse diğerlerini kapat
-        if (newValue) {
-          setStatusFilter('all');
-          setShowYazdirilmamis(false);
-        }
-        return newValue;
-      });
-    });
-  }, [startTransition]);
+    const newValue = !showTodayOnly;
+    setShowTodayOnly(newValue);
+    if (newValue) {
+      setStatusFilter('all');
+      setShowYazdirilmamis(false);
+    }
+    loadIslemler(1, false, { status: 'all', todayOnly: newValue, yazdirilmamisOnly: false });
+  }, [showTodayOnly]);
 
   const handleYazdirilmamisFilter = useCallback(() => {
-    startTransition(() => {
-      setShowYazdirilmamis(prev => {
-        const newValue = !prev;
-        // Eğer aktif edildiyse diğerlerini kapat
-        if (newValue) {
-          setStatusFilter('all');
-          setShowTodayOnly(false);
-        }
-        return newValue;
-      });
-    });
-  }, [startTransition]);
+    const newValue = !showYazdirilmamis;
+    setShowYazdirilmamis(newValue);
+    if (newValue) {
+      setStatusFilter('all');
+      setShowTodayOnly(false);
+    }
+    loadIslemler(1, false, { status: 'all', todayOnly: false, yazdirilmamisOnly: newValue });
+  }, [showYazdirilmamis]);
 
   const handleClearDateFilters = () => {
     setShowTodayOnly(false);
@@ -389,29 +422,36 @@ const Dashboard: React.FC = () => {
     ] : [])
   ];
 
-  // ⚡ PERFORMANS: İşlem istatistiklerini useMemo ile cache'le
-  // Her render'da yeniden hesaplamak yerine sadece islemler değişince hesapla
+  // ⚡ PERFORMANS: İşlem istatistiklerini sunucudan al - tüm veritabanını kapsar
   const stats = useMemo(() => {
-    const acikCount = islemler.filter(i => i.is_durumu === 'acik').length;
-    const parcaBekleCount = islemler.filter(i => i.is_durumu === 'parca_bekliyor').length;
-    const tamamlandiCount = islemler.filter(i => i.is_durumu === 'tamamlandi').length;
-    const iptalCount = islemler.filter(i => i.is_durumu === 'iptal').length;
-    const totalCount = islemler.length;
-    
-    const toplamTutar = isAdmin ? islemler.reduce((sum, i) => {
-      const tutar = typeof i.tutar === 'number' ? i.tutar : parseFloat(String(i.tutar || 0));
-      return sum + (isNaN(tutar) ? 0 : tutar);
-    }, 0) : 0;
+    if (serverStats) {
+      const toplamTutar = isAdmin ? islemler.reduce((sum, i) => {
+        const tutar = typeof i.tutar === 'number' ? i.tutar : parseFloat(String(i.tutar || 0));
+        return sum + (isNaN(tutar) ? 0 : tutar);
+      }, 0) : 0;
 
+      return {
+        acikCount: parseInt(serverStats.acik) || 0,
+        parcaBekleCount: parseInt(serverStats.parca_bekliyor) || 0,
+        tamamlandiCount: parseInt(serverStats.tamamlandi) || 0,
+        iptalCount: parseInt(serverStats.iptal) || 0,
+        totalCount: parseInt(serverStats.total) || 0,
+        bugunCount: parseInt(serverStats.bugun) || 0,
+        yazdirilmamisCount: parseInt(serverStats.yazdirilmamis) || 0,
+        toplamTutar
+      };
+    }
     return {
-      acikCount,
-      parcaBekleCount,
-      tamamlandiCount,
-      iptalCount,
-      totalCount,
-      toplamTutar
+      acikCount: 0,
+      parcaBekleCount: 0,
+      tamamlandiCount: 0,
+      iptalCount: 0,
+      totalCount: 0,
+      bugunCount: 0,
+      yazdirilmamisCount: 0,
+      toplamTutar: 0
     };
-  }, [islemler, isAdmin]);
+  }, [serverStats, islemler, isAdmin]);
 
   return (
     <Box sx={{ flexGrow: 1 }}>
@@ -772,7 +812,7 @@ const Dashboard: React.FC = () => {
                       }
                     }}
                   >
-                    Yazdırılmamış iş: {islemler.filter(i => !i.yazdirildi).length}
+                    Yazdırılmamış iş: {stats.yazdirilmamisCount}
                   </Button>
                   
                   {/* Bugün Alınan İşler - Daha küçük */}
@@ -794,15 +834,7 @@ const Dashboard: React.FC = () => {
                       }
                     }}
                   >
-                    Bugün alınan iş: {(() => {
-                      const today = new Date();
-                      today.setHours(0, 0, 0, 0);
-                      return islemler.filter(islem => {
-                        const islemDate = new Date(islem.full_tarih);
-                        islemDate.setHours(0, 0, 0, 0);
-                        return islemDate.getTime() === today.getTime();
-                      }).length;
-                    })()}
+                    Bugün alınan iş: {stats.bugunCount}
                   </Button>
                   
                   {showTodayOnly && (
@@ -884,6 +916,29 @@ const Dashboard: React.FC = () => {
               isBayi={isBayi}
               onFilteredChange={handleTableFilterChange}
             />
+
+            {/* Daha Fazla Yükle Butonu */}
+            {hasMore && !loading && (
+              <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2, mb: 2 }}>
+                <Button
+                  variant="outlined"
+                  onClick={handleLoadMore}
+                  disabled={loadingMore}
+                  sx={{
+                    px: 4,
+                    py: 1,
+                    borderColor: '#0D3282',
+                    color: '#0D3282',
+                    '&:hover': { bgcolor: 'rgba(13, 50, 130, 0.04)' },
+                  }}
+                >
+                  {loadingMore ? (
+                    <CircularProgress size={20} sx={{ mr: 1 }} />
+                  ) : null}
+                  {loadingMore ? 'Yükleniyor...' : `Daha Fazla Yükle (${islemler.length} / ${totalRecords})`}
+                </Button>
+              </Box>
+            )}
           </>
         )) : activeTab === 1 ? (
           // Müşteri Geçmişi Tab - Lazy loaded

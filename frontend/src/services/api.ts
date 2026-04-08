@@ -92,8 +92,13 @@ export const authService = {
 
 // İşlem servisleri
 export const islemService = {
-  getAll: async (filters?: FilterParams & { page?: number; limit?: number }): Promise<{ data: Islem[]; pagination: { page: number; limit: number; total: number; totalPages: number } }> => {
+  getAll: async (filters?: FilterParams & { page?: number; limit?: number; today?: string; yazdirilmamis?: string }): Promise<Islem[] | { data: Islem[]; pagination: { page: number; limit: number; total: number; totalPages: number } }> => {
     const response = await api.get('/islemler', { params: filters });
+    return response.data;
+  },
+
+  getStats: async (): Promise<{ total: string; acik: string; parca_bekliyor: string; tamamlandi: string; iptal: string; bugun: string; yazdirilmamis: string }> => {
+    const response = await api.get('/islemler/stats');
     return response.data;
   },
 
