@@ -39,7 +39,7 @@ router.get('/', auth, async (req: Request, res: Response) => {
 
     if (noPagination) {
       const result = await pool.query<Atolye>(
-        'SELECT * FROM atolye ORDER BY created_at DESC'
+        'SELECT * FROM atolye ORDER BY created_at DESC LIMIT 1000'
       );
       return res.json(result.rows);
     }

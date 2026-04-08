@@ -24,116 +24,175 @@ router.get('/', authMiddleware, async (req: Request, res: Response): Promise<voi
       marka,
       sikayet,
       teknisyen_ismi,
-      is_durumu
+      is_durumu,
+      page,
+      limit: limitParam
     } = req.query;
 
-    let query = 'SELECT * FROM islemler WHERE 1=1';
+    const pageNum = Math.max(1, parseInt(page as string) || 1);
+    const limitNum = Math.min(500, Math.max(1, parseInt(limitParam as string) || 100));
+    const offset = (pageNum - 1) * limitNum;
+
+    let whereClause = ' WHERE 1=1';
     const params: any[] = [];
     let paramIndex = 1;
 
     if (ad_soyad) {
-      query += ` AND ad_soyad ILIKE $${paramIndex}`;
+      whereClause += ` AND ad_soyad ILIKE $${paramIndex}`;
       params.push(`%${ad_soyad}%`);
       paramIndex++;
     }
 
     if (ilce) {
-      query += ` AND ilce ILIKE $${paramIndex}`;
+      whereClause += ` AND ilce ILIKE $${paramIndex}`;
       params.push(`%${ilce}%`);
       paramIndex++;
     }
 
     if (mahalle) {
-      query += ` AND mahalle ILIKE $${paramIndex}`;
+      whereClause += ` AND mahalle ILIKE $${paramIndex}`;
       params.push(`%${mahalle}%`);
       paramIndex++;
     }
 
     if (cadde) {
-      query += ` AND cadde ILIKE $${paramIndex}`;
+      whereClause += ` AND cadde ILIKE $${paramIndex}`;
       params.push(`%${cadde}%`);
       paramIndex++;
     }
 
     if (sokak) {
-      query += ` AND sokak ILIKE $${paramIndex}`;
+      whereClause += ` AND sokak ILIKE $${paramIndex}`;
       params.push(`%${sokak}%`);
       paramIndex++;
     }
 
     if (kapi_no) {
-      query += ` AND kapi_no ILIKE $${paramIndex}`;
+      whereClause += ` AND kapi_no ILIKE $${paramIndex}`;
       params.push(`%${kapi_no}%`);
       paramIndex++;
     }
 
     if (apartman_site) {
-      query += ` AND apartman_site ILIKE $${paramIndex}`;
+      whereClause += ` AND apartman_site ILIKE $${paramIndex}`;
       params.push(`%${apartman_site}%`);
       paramIndex++;
     }
 
     if (blok_no) {
-      query += ` AND blok_no ILIKE $${paramIndex}`;
+      whereClause += ` AND blok_no ILIKE $${paramIndex}`;
       params.push(`%${blok_no}%`);
       paramIndex++;
     }
 
     if (daire_no) {
-      query += ` AND daire_no ILIKE $${paramIndex}`;
+      whereClause += ` AND daire_no ILIKE $${paramIndex}`;
       params.push(`%${daire_no}%`);
       paramIndex++;
     }
 
     if (sabit_tel) {
-      query += ` AND sabit_tel ILIKE $${paramIndex}`;
+      whereClause += ` AND sabit_tel ILIKE $${paramIndex}`;
       params.push(`%${sabit_tel}%`);
       paramIndex++;
     }
 
     if (cep_tel) {
-      query += ` AND (cep_tel ILIKE $${paramIndex} OR yedek_tel ILIKE $${paramIndex + 1})`;
+      whereClause += ` AND (cep_tel ILIKE $${paramIndex} OR yedek_tel ILIKE $${paramIndex + 1})`;
       params.push(`%${cep_tel}%`);
       params.push(`%${cep_tel}%`);
       paramIndex += 2;
     }
 
     if (urun) {
-      query += ` AND urun ILIKE $${paramIndex}`;
+      whereClause += ` AND urun ILIKE $${paramIndex}`;
       params.push(`%${urun}%`);
       paramIndex++;
     }
 
     if (marka) {
-      query += ` AND marka ILIKE $${paramIndex}`;
+      whereClause += ` AND marka ILIKE $${paramIndex}`;
       params.push(`%${marka}%`);
       paramIndex++;
     }
 
     if (sikayet) {
-      query += ` AND sikayet ILIKE $${paramIndex}`;
+      whereClause += ` AND sikayet ILIKE $${paramIndex}`;
       params.push(`%${sikayet}%`);
       paramIndex++;
     }
 
     if (teknisyen_ismi) {
-      query += ` AND teknisyen_ismi ILIKE $${paramIndex}`;
+      whereClause += ` AND teknisyen_ismi ILIKE $${paramIndex}`;
       params.push(`%${teknisyen_ismi}%`);
       paramIndex++;
     }
 
     if (is_durumu) {
-      query += ` AND is_durumu = $${paramIndex}`;
+      whereClause += ` AND is_durumu = $${paramIndex}`;
       params.push(is_durumu);
       paramIndex++;
     }
 
-    query += ' ORDER BY full_tarih DESC';
+    // Count query
+    const countResult = await pool.query(`SELECT COUNT(*) as total FROM islemler${whereClause}`, params);
+    const total = parseInt(countResult.rows[0].total);
 
-    const result = await pool.query(query, params);
-    res.json(result.rows);
+    // Data query with pagination
+    const dataQuery = `SELECT * FROM islemler${whereClause} ORDER BY full_tarih DESC LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`;
+    params.push(limitNum, offset);
+    const result = await pool.query(dataQuery, params);
+
+    res.json({
+      data: result.rows,
+      pagination: {
+        page: pageNum,
+        limit: limitNum,
+        total,
+        totalPages: Math.ceil(total / limitNum)
+      }
+    });
   } catch (error) {
     console.error('İşlemleri getirme hatası:', error);
+    res.status(500).json({ message: 'Sunucu hatası' });
+  }
+});
+
+// Telefon numarasına göre kayıt ara (duplicate kontrolü için - hafif endpoint)
+router.get('/search-by-phone', authMiddleware, async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { phone } = req.query;
+    if (!phone) {
+      res.json([]);
+      return;
+    }
+    const cleanedPhone = (phone as string).replace(/\D/g, '');
+    const result = await pool.query(
+      `SELECT * FROM islemler WHERE cep_tel LIKE $1 OR yedek_tel LIKE $1 ORDER BY id DESC LIMIT 50`,
+      [`%${cleanedPhone}%`]
+    );
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Telefon arama hatası:', error);
+    res.status(500).json({ message: 'Sunucu hatası' });
+  }
+});
+
+// İsme göre müşteri geçmişi ara (hafif endpoint)
+router.get('/search-by-name', authMiddleware, async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { name } = req.query;
+    if (!name) {
+      res.json([]);
+      return;
+    }
+    const result = await pool.query(
+      `SELECT * FROM islemler WHERE ad_soyad ILIKE $1 ORDER BY id DESC LIMIT 200`,
+      [`%${name}%`]
+    );
+    res.json(result.rows);
+  } catch (error) {
+    console.error('İsim arama hatası:', error);
     res.status(500).json({ message: 'Sunucu hatası' });
   }
 });

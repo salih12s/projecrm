@@ -163,9 +163,9 @@ const Dashboard: React.FC = () => {
     try {
       setLoading(true);
       setError(null);
-      const data = await islemService.getAll();
+      const response = await islemService.getAll({ page: 1, limit: 100 });
       // En yeni kayıtlar en üstte (id'ye göre büyükten küçüğe sırala)
-      const sortedData = data.sort((a, b) => b.id - a.id);
+      const sortedData = response.data.sort((a, b) => b.id - a.id);
       setIslemler(sortedData);
       setFilteredIslemler(sortedData);
     } catch (error: any) {

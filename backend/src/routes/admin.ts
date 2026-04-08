@@ -218,13 +218,29 @@ router.get('/user-atolye-records/:username', authenticateToken, async (req: Requ
 });
 
 // Tüm İşlemleri Getir (Admin için - tamamlananlar dahil düzenlenebilir)
-router.get('/all-records', authenticateToken, async (_req: Request, res: Response): Promise<void> => {
+router.get('/all-records', authenticateToken, async (req: Request, res: Response): Promise<void> => {
   try {
+    const pageNum = Math.max(1, parseInt(req.query.page as string) || 1);
+    const limitNum = Math.min(500, Math.max(1, parseInt(req.query.limit as string) || 100));
+    const offset = (pageNum - 1) * limitNum;
+
+    const countResult = await pool.query('SELECT COUNT(*) as total FROM islemler');
+    const total = parseInt(countResult.rows[0].total);
+
     const records = await pool.query(
-      `SELECT * FROM islemler ORDER BY full_tarih DESC`
+      `SELECT * FROM islemler ORDER BY full_tarih DESC LIMIT $1 OFFSET $2`,
+      [limitNum, offset]
     );
 
-    res.json(records.rows);
+    res.json({
+      data: records.rows,
+      pagination: {
+        page: pageNum,
+        limit: limitNum,
+        total,
+        totalPages: Math.ceil(total / limitNum)
+      }
+    });
   } catch (error) {
     console.error('Tüm kayıtları getirme hatası:', error);
     res.status(500).json({ message: 'Sunucu hatası' });

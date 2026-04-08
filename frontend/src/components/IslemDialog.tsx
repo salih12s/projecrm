@@ -482,19 +482,8 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
     }
 
     try {
-      const response = await islemService.getAll();
       const cleanedPhone = cleanPhoneNumber(phoneNumber);
-      
-      // Response'un array olduğunu kontrol et
-      if (!response || !Array.isArray(response)) {
-        console.error('API response is not an array:', response);
-        showSnackbar('Veri yüklenirken hata oluştu! Lütfen tekrar deneyin.', 'error');
-        // Yeni kayıt olarak devam et
-        setFormData({ ...formData, cep_tel: phoneNumber });
-        setShowPhoneQuery(false);
-        setShowForm(true);
-        return;
-      }
+      const response = await islemService.searchByPhone(cleanedPhone);
       
       // 1. Tamamlanmamış kayıt kontrolü (açık veya parça bekliyor)
       const incompleteRecord = response.find((item: Islem) => 
@@ -607,11 +596,9 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
       const loadHistory = async () => {
         setHistoryLoading(true);
         try {
-          const allIslemler = await islemService.getAll();
-          const customerIslemler = allIslemler
-            .filter((i: Islem) => i.ad_soyad && i.ad_soyad.toLowerCase().includes(existingRecord.ad_soyad!.toLowerCase()))
-            .sort((a: Islem, b: Islem) => b.id - a.id);
-          setCustomerHistory(customerIslemler);
+          const customerIslemler = await islemService.searchByName(existingRecord.ad_soyad!);
+          const sorted = customerIslemler.sort((a: Islem, b: Islem) => b.id - a.id);
+          setCustomerHistory(sorted);
         } catch (error) {
           console.error('Müşteri geçmişi yüklenirken hata:', error);
           setCustomerHistory([]);
@@ -821,22 +808,15 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
     // "BİLGİLERİ GETİR" kullanıldıysa veya clone mode'daysa duplicate kontrolü yapma
     if (!islem && !usedExistingData && !isCloneMode) { // Sadece yeni kayıt eklerken, mevcut kayıt kullanılmadıysa ve clone mode değilse kontrol et
       try {
-        const allRecords = await islemService.getAll();
+        const cleanedPhone = cleanPhoneNumber(formData.cep_tel);
+        const allRecords = await islemService.searchByPhone(cleanedPhone);
         
-        // Response'un array olduğunu kontrol et
-        if (!allRecords || !Array.isArray(allRecords)) {
-          console.error('API response is not an array:', allRecords);
-          // Hata durumunda duplicate kontrolü atlayıp kayda devam et
-          console.warn('Duplicate kontrolü atlanıyor, kayıt devam ediyor...');
-        } else {
-          const cleanedPhone = cleanPhoneNumber(formData.cep_tel);
-          
-          const foundDuplicate = allRecords.find((record: Islem) => 
-            cleanPhoneNumber(record.cep_tel) === cleanedPhone &&
-            record.urun === formData.urun &&
-            record.marka === formData.marka &&
-            (record.is_durumu === 'acik' || record.is_durumu === 'parca_bekliyor')
-          );
+        const foundDuplicate = allRecords.find((record: Islem) => 
+          cleanPhoneNumber(record.cep_tel) === cleanedPhone &&
+          record.urun === formData.urun &&
+          record.marka === formData.marka &&
+          (record.is_durumu === 'acik' || record.is_durumu === 'parca_bekliyor')
+        );
           
           if (foundDuplicate) {
             // Tamamlanmamış aynı kayıt var - modal göster
@@ -844,7 +824,6 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
             setShowDuplicateDialog(true);
             return; // Kaydetme, kullanıcı onay verirse devam edecek
           }
-        }
       } catch (error) {
         console.error('Duplicate kontrolü hatası:', error);
         // Hata olsa bile devam et

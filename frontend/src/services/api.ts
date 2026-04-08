@@ -92,8 +92,20 @@ export const authService = {
 
 // İşlem servisleri
 export const islemService = {
-  getAll: async (filters?: FilterParams): Promise<Islem[]> => {
+  getAll: async (filters?: FilterParams & { page?: number; limit?: number }): Promise<{ data: Islem[]; pagination: { page: number; limit: number; total: number; totalPages: number } }> => {
     const response = await api.get('/islemler', { params: filters });
+    return response.data;
+  },
+
+  // Telefon numarasına göre arama (duplicate kontrolü için)
+  searchByPhone: async (phone: string): Promise<Islem[]> => {
+    const response = await api.get('/islemler/search-by-phone', { params: { phone } });
+    return response.data;
+  },
+
+  // İsme göre müşteri geçmişi arama
+  searchByName: async (name: string): Promise<Islem[]> => {
+    const response = await api.get('/islemler/search-by-name', { params: { name } });
     return response.data;
   },
 
@@ -149,8 +161,8 @@ export const adminService = {
     return response.data;
   },
 
-  getAllRecords: async (): Promise<Islem[]> => {
-    const response = await api.get('/admin/all-records');
+  getAllRecords: async (params?: { page?: number; limit?: number }): Promise<{ data: Islem[]; pagination: { page: number; limit: number; total: number; totalPages: number } }> => {
+    const response = await api.get('/admin/all-records', { params });
     return response.data;
   },
 };
@@ -221,8 +233,8 @@ export const sahaService = {
     return response.data;
   },
 
-  // Tüm saha kayıtlarını getir (admin) - foto_data hariç
-  getAllKayitlar: async (params?: { search?: string; startDate?: string; endDate?: string; sahaElemaniId?: number }): Promise<SahaKayit[]> => {
+  // Tüm saha kayıtlarını getir (admin) - foto_data hariç, paginated
+  getAllKayitlar: async (params?: { search?: string; startDate?: string; endDate?: string; sahaElemaniId?: number; page?: number; limit?: number }): Promise<{ data: SahaKayit[]; pagination: { page: number; limit: number; total: number; totalPages: number } }> => {
     const response = await api.get('/saha/all-kayitlar', { params, timeout: 60000 });
     return response.data;
   },

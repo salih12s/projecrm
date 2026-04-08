@@ -196,11 +196,7 @@ router.get('/kayitlar', authenticateToken, async (req: Request, res: Response): 
 
     let query = `
       SELECT id, saha_elemani_id, saha_elemani_username, isim, soyisim, notlar, created_at, updated_at,
-             CASE WHEN foto_data IS NOT NULL AND foto_data != '' THEN true ELSE false END as has_photos,
-             CASE WHEN foto_data IS NOT NULL AND foto_data != '' THEN
-               CASE WHEN foto_data LIKE '[%' THEN (foto_data::json)->>0
-                    ELSE foto_data END
-             ELSE NULL END as foto_preview
+             CASE WHEN foto_data IS NOT NULL AND foto_data != '' THEN true ELSE false END as has_photos
       FROM saha_kayitlari 
       WHERE saha_elemani_id = $1
     `;
@@ -339,16 +335,23 @@ router.get('/kayit-photos/:id', authenticateToken, async (req: Request, res: Res
 // Tüm Saha Kayıtlarını Getir (Admin için) - foto_data hariç (performans)
 router.get('/all-kayitlar', authenticateToken, async (req: Request, res: Response): Promise<void> => {
   try {
-    const { search, startDate, endDate, sahaElemaniId } = req.query;
+    const { search, startDate, endDate, sahaElemaniId, page, limit } = req.query;
+
+    const pageNum = Math.max(1, parseInt(page as string) || 1);
+    const limitNum = Math.min(200, Math.max(1, parseInt(limit as string) || 50));
+    const offset = (pageNum - 1) * limitNum;
+
+    let countQuery = `
+      SELECT COUNT(*) as total
+      FROM saha_kayitlari sk
+      LEFT JOIN saha_elemanlari se ON sk.saha_elemani_id = se.id
+      WHERE 1=1
+    `;
 
     let query = `
       SELECT sk.id, sk.saha_elemani_id, sk.saha_elemani_username, sk.isim, sk.soyisim, 
              sk.notlar, sk.created_at, sk.updated_at,
              CASE WHEN sk.foto_data IS NOT NULL AND sk.foto_data != '' THEN true ELSE false END as has_photos,
-             CASE WHEN sk.foto_data IS NOT NULL AND sk.foto_data != '' THEN
-               CASE WHEN sk.foto_data LIKE '[%' THEN (sk.foto_data::json)->>0
-                    ELSE sk.foto_data END
-             ELSE NULL END as foto_preview,
              se.ad_soyad as saha_elemani_ad_soyad 
       FROM saha_kayitlari sk
       LEFT JOIN saha_elemanlari se ON sk.saha_elemani_id = se.id
@@ -359,7 +362,9 @@ router.get('/all-kayitlar', authenticateToken, async (req: Request, res: Respons
 
     // Saha elemanı filtresi
     if (sahaElemaniId) {
-      query += ` AND sk.saha_elemani_id = $${paramIndex}`;
+      const filter = ` AND sk.saha_elemani_id = $${paramIndex}`;
+      query += filter;
+      countQuery += filter;
       params.push(sahaElemaniId);
       paramIndex++;
     }
@@ -367,34 +372,52 @@ router.get('/all-kayitlar', authenticateToken, async (req: Request, res: Respons
     // Arama filtresi - isim, soyisim, notlar alanlarında ara (case-insensitive with Turkish support)
     if (search) {
       const searchLower = (search as string).toLocaleLowerCase('tr-TR');
-      query += ` AND (
+      const filter = ` AND (
         LOWER(sk.isim) LIKE $${paramIndex} OR 
         LOWER(sk.soyisim) LIKE $${paramIndex} OR 
         LOWER(sk.notlar) LIKE $${paramIndex} OR
         LOWER(CONCAT(sk.isim, ' ', sk.soyisim)) LIKE $${paramIndex}
       )`;
+      query += filter;
+      countQuery += filter;
       params.push(`%${searchLower}%`);
       paramIndex++;
     }
 
     // Tarih filtreleri
     if (startDate) {
-      query += ` AND sk.created_at >= $${paramIndex}`;
+      const filter = ` AND sk.created_at >= $${paramIndex}`;
+      query += filter;
+      countQuery += filter;
       params.push(startDate);
       paramIndex++;
     }
 
     if (endDate) {
-      query += ` AND sk.created_at <= $${paramIndex}`;
+      const filter = ` AND sk.created_at <= $${paramIndex}`;
+      query += filter;
+      countQuery += filter;
       params.push(endDate);
       paramIndex++;
     }
 
-    query += ' ORDER BY sk.created_at DESC';
+    query += ` ORDER BY sk.created_at DESC LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`;
 
+    const countResult = await pool.query(countQuery, params);
+    const total = parseInt(countResult.rows[0].total);
+
+    params.push(limitNum, offset);
     const records = await pool.query(query, params);
 
-    res.json(records.rows);
+    res.json({
+      data: records.rows,
+      pagination: {
+        page: pageNum,
+        limit: limitNum,
+        total,
+        totalPages: Math.ceil(total / limitNum)
+      }
+    });
   } catch (error) {
     console.error('Tüm saha kayıtlarını getirme hatası:', error);
     res.status(500).json({ message: 'Sunucu hatası' });
@@ -408,11 +431,7 @@ router.get('/user-kayitlar/:username', authenticateToken, async (req: Request, r
 
     const records = await pool.query(
       `SELECT id, saha_elemani_id, saha_elemani_username, isim, soyisim, notlar, created_at, updated_at,
-              CASE WHEN foto_data IS NOT NULL AND foto_data != '' THEN true ELSE false END as has_photos,
-              CASE WHEN foto_data IS NOT NULL AND foto_data != '' THEN
-                CASE WHEN foto_data LIKE '[%' THEN (foto_data::json)->>0
-                     ELSE foto_data END
-              ELSE NULL END as foto_preview
+              CASE WHEN foto_data IS NOT NULL AND foto_data != '' THEN true ELSE false END as has_photos
        FROM saha_kayitlari 
        WHERE saha_elemani_username = $1 
        ORDER BY created_at DESC`,

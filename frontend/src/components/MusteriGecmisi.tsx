@@ -212,15 +212,7 @@ const MusteriGecmisi: React.FC = () => {
 
     setLoading(true);
     try {
-      const fetchedIslemler = await islemService.getAll();
-      
-      // Arama metnini ve kayıt adını temizle (boşluksuz, küçük harf)
-      const cleanSearchName = searchName.toLowerCase().replace(/\s+/g, '');
-      
-      const filtered = fetchedIslemler.filter((islem) => {
-        const cleanIslemName = islem.ad_soyad.toLowerCase().replace(/\s+/g, '');
-        return cleanIslemName.includes(cleanSearchName);
-      });
+      const filtered = await islemService.searchByName(searchName.trim());
 
       // ID bazlı sıralama (büyük ID en üstte - en yeni)
       filtered.sort((a, b) => b.id - a.id);

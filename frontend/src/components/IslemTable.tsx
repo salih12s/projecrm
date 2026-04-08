@@ -315,14 +315,12 @@ const IslemTable: React.FC<IslemTableProps> = ({
     setHistoryLoading(true);
 
     try {
-      const allIslemler = await islemService.getAll();
-      // Müşteri adına göre filtrele ve en yeni en üstte sırala (ID'ye göre azalan)
-      const customerIslemler = allIslemler
-        .filter(i => i.ad_soyad && i.ad_soyad.toLowerCase().includes(customerName.toLowerCase()))
-        .sort((a, b) => b.id - a.id); // En yeni en üstte
+      const customerIslemler = await islemService.searchByName(customerName);
+      // En yeni en üstte sırala (ID'ye göre azalan)
+      const sorted = customerIslemler.sort((a, b) => b.id - a.id);
       
-      setCustomerHistory(customerIslemler);
-      setFilteredHistory(customerIslemler);
+      setCustomerHistory(sorted);
+      setFilteredHistory(sorted);
     } catch (error) {
       console.error('Müşteri geçmişi yüklenirken hata:', error);
       setCustomerHistory([]);

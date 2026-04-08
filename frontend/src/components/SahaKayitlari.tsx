@@ -70,6 +70,10 @@ const SahaKayitlari: React.FC = () => {
   const [photoCache, setPhotoCache] = useState<Record<number, string[]>>({});
   const [lastTouchDistance, setLastTouchDistance] = useState<number | null>(null);
   const [lastTouchCenter, setLastTouchCenter] = useState<{ x: number; y: number } | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalRecords, setTotalRecords] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
+  const pageSize = 50;
   const imageContainerRef = React.useRef<HTMLDivElement>(null);
   
   const { showSnackbar } = useSnackbar();
@@ -78,14 +82,17 @@ const SahaKayitlari: React.FC = () => {
     loadData();
   }, []);
 
-  const loadData = async () => {
+  const loadData = async (page = 1) => {
     try {
       setLoading(true);
-      const [kayitlarData, sahaElemanlariData] = await Promise.all([
-        sahaService.getAllKayitlar(),
+      const [kayitlarResponse, sahaElemanlariData] = await Promise.all([
+        sahaService.getAllKayitlar({ page, limit: pageSize }),
         sahaService.getSahaElemanlari(),
       ]);
-      setKayitlar(kayitlarData);
+      setKayitlar(kayitlarResponse.data);
+      setTotalRecords(kayitlarResponse.pagination.total);
+      setTotalPages(kayitlarResponse.pagination.totalPages);
+      setCurrentPage(kayitlarResponse.pagination.page);
       setSahaElemanlari(sahaElemanlariData);
     } catch (error: any) {
       console.error('Veriler yüklenirken hata:', error);
@@ -131,17 +138,42 @@ const SahaKayitlari: React.FC = () => {
   const handleSearch = async () => {
     try {
       setLoading(true);
-      const params: any = {};
+      const params: any = { page: 1, limit: pageSize };
       if (searchText) params.search = searchText;
       if (startDate) params.startDate = startDate;
       if (endDate) params.endDate = endDate;
       if (selectedSahaElemani) params.sahaElemaniId = selectedSahaElemani;
       
-      const data = await sahaService.getAllKayitlar(params);
-      setKayitlar(data);
+      const response = await sahaService.getAllKayitlar(params);
+      setKayitlar(response.data);
+      setTotalRecords(response.pagination.total);
+      setTotalPages(response.pagination.totalPages);
+      setCurrentPage(response.pagination.page);
     } catch (error: any) {
       console.error('Arama yapılırken hata:', error);
       showSnackbar('Arama yapılırken hata oluştu!', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handlePageChange = async (newPage: number) => {
+    try {
+      setLoading(true);
+      const params: any = { page: newPage, limit: pageSize };
+      if (searchText) params.search = searchText;
+      if (startDate) params.startDate = startDate;
+      if (endDate) params.endDate = endDate;
+      if (selectedSahaElemani) params.sahaElemaniId = selectedSahaElemani;
+      
+      const response = await sahaService.getAllKayitlar(params);
+      setKayitlar(response.data);
+      setTotalRecords(response.pagination.total);
+      setTotalPages(response.pagination.totalPages);
+      setCurrentPage(response.pagination.page);
+    } catch (error: any) {
+      console.error('Sayfa değiştirilirken hata:', error);
+      showSnackbar('Sayfa değiştirilirken hata oluştu!', 'error');
     } finally {
       setLoading(false);
     }
@@ -152,12 +184,13 @@ const SahaKayitlari: React.FC = () => {
     setStartDate('');
     setEndDate('');
     setSelectedSahaElemani('');
-    loadData();
+    setCurrentPage(1);
+    loadData(1);
   };
 
   // İstatistikler
   const stats = {
-    toplam: kayitlar.length,
+    toplam: totalRecords,
     bugun: kayitlar.filter(k => {
       const today = new Date().toDateString();
       return new Date(k.created_at).toDateString() === today;
@@ -554,6 +587,31 @@ const SahaKayitlari: React.FC = () => {
             </TableBody>
           </Table>
         </TableContainer>
+      )}
+
+      {/* Pagination */}
+      {!loading && kayitlar.length > 0 && totalPages > 1 && (
+        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 2, mt: 3 }}>
+          <Button
+            variant="outlined"
+            size="small"
+            disabled={currentPage <= 1}
+            onClick={() => handlePageChange(currentPage - 1)}
+          >
+            Önceki
+          </Button>
+          <Typography variant="body2">
+            Sayfa {currentPage} / {totalPages} (Toplam: {totalRecords})
+          </Typography>
+          <Button
+            variant="outlined"
+            size="small"
+            disabled={currentPage >= totalPages}
+            onClick={() => handlePageChange(currentPage + 1)}
+          >
+            Sonraki
+          </Button>
+        </Box>
       )}
 
       {/* Photo Loading Overlay */}
