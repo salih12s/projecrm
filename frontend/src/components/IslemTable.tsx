@@ -25,7 +25,6 @@ import {
   useTheme,
   Divider,
   Skeleton,
-  Button,
 } from '@mui/material';
 
 // ⚡ Kendi state'ini yöneten debounced input - parent'ı her tuşta render etmez
@@ -97,6 +96,7 @@ interface IslemTableProps {
   isAdminMode?: boolean; // Admin için tamamlanan işlemleri de düzenleme izni
   isBayi?: boolean; // Bayi kullanıcıları için düzenleme/silme işlemlerini gizle
   onFilteredChange?: (filtered: Islem[]) => void; // Filtrelenmiş liste değiştiğinde callback
+  onColumnFiltersChange?: (filters: Record<string, string>) => void; // Kolon filtreleri değiştiğinde callback
 }
 
 interface ColumnConfig {
@@ -115,14 +115,12 @@ const IslemTable: React.FC<IslemTableProps> = ({
   isAdminMode = false,
   isBayi = false,
   onFilteredChange,
+  onColumnFiltersChange,
 }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const [printEditorOpen, setPrintEditorOpen] = useState(false);
   const [selectedIslemForPrint, setSelectedIslemForPrint] = useState<Islem | null>(null);
-  
-  // ⚡ PAGINATION: Sayfa başına 100 kayıt göster
-  const [displayLimit, setDisplayLimit] = useState(100);
   
   // Müşteri Geçmişi Dialog states
   const [historyDialogOpen, setHistoryDialogOpen] = useState(false);
@@ -260,16 +258,22 @@ const IslemTable: React.FC<IslemTableProps> = ({
     return result;
   }, [islemler, filters, searchIndex]);
 
-  // Filtrelenmiş liste değiştiğinde parent'a bildir ve displayLimit'i resetle
+  // Filtrelenmiş liste değiştiğinde parent'a bildir
   // ⚡ startTransition: parent güncellemesi düşük öncelikli yapılır, input donmaz
   useEffect(() => {
     startTransition(() => {
       if (onFilteredChange) {
         onFilteredChange(filteredIslemler);
       }
-      setDisplayLimit(100);
     });
   }, [filteredIslemler, onFilteredChange]);
+
+  // Kolon filtreleri değiştiğinde parent'a bildir (server-side arama için)
+  useEffect(() => {
+    if (onColumnFiltersChange) {
+      onColumnFiltersChange(filters);
+    }
+  }, [filters, onColumnFiltersChange]);
 
   const handleFilterChange = useCallback((field: string, value: string) => {
     startTransition(() => {
@@ -1406,7 +1410,7 @@ const IslemTable: React.FC<IslemTableProps> = ({
         </TableHead>
         {/* ⚡ OPTIMIZED RENDERING: Sadece ilk 100 satırı göster, daha fazlası için scroll */}
         <TableBody>
-          {filteredIslemler.slice(0, displayLimit).map((islem) => {
+          {filteredIslemler.map((islem) => {
             const siraNo = islem.id;
             
             return (
@@ -1452,20 +1456,7 @@ const IslemTable: React.FC<IslemTableProps> = ({
             </TableRow>
           );
           })}
-          {/* Daha fazla göster satırı */}
-          {filteredIslemler.length > displayLimit && (
-            <TableRow>
-              <TableCell colSpan={columnOrder.length + 1} sx={{ textAlign: 'center', py: 2 }}>
-                <Button 
-                  variant="outlined" 
-                  size="small"
-                  onClick={() => setDisplayLimit(prev => prev + 100)}
-                >
-                  Daha Fazla Göster ({filteredIslemler.length - displayLimit} kayıt daha)
-                </Button>
-              </TableCell>
-            </TableRow>
-          )}
+          {/* Daha fazla göster - Dashboard'daki Daha Fazla Yükle butonu kullanılıyor */}
         </TableBody>
       </Table>
     </TableContainer>

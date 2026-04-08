@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo, lazy, Suspense } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef, lazy, Suspense } from 'react';
 import {
   Box,
   Container,
@@ -94,6 +94,8 @@ const Dashboard: React.FC = () => {
   const [activeHoldIndex, setActiveHoldIndex] = useState<number | null>(null); // Hangi hold form aktif
   const [shouldRestoreForm, setShouldRestoreForm] = useState(false); // Beklemeden dönülüyor mu?
   const [serverStats, setServerStats] = useState<any>(null);
+  const [columnFilters, setColumnFilters] = useState<Record<string, string>>({});
+  const columnFiltersRef = useRef<Record<string, string>>({});
   
   // Güvenli rol kontrolü - eğer user yoksa veya role tanımlı değilse en kısıtlı mod
   const isBayi = user?.role === 'bayi';
@@ -177,6 +179,16 @@ const Dashboard: React.FC = () => {
     if (s && s !== 'all') params.is_durumu = s;
     if (t) params.today = 'true';
     if (y) params.yazdirilmamis = 'true';
+    
+    // Kolon filtrelerini ekle (IslemTable'dan gelen)
+    const cf = columnFiltersRef.current;
+    for (const [key, value] of Object.entries(cf)) {
+      if (!value) continue;
+      if (key === 'teknisyen') params.teknisyen_ismi = value;
+      else if (key === 'durum' || key === 'sira' || key === 'tarih') continue; // client-side kalacak
+      else params[key] = value;
+    }
+    
     return params;
   };
 
@@ -219,6 +231,25 @@ const Dashboard: React.FC = () => {
       loadIslemler(currentPage + 1, true);
     }
   };
+
+  // IslemTable kolon filtreleri değiştiğinde sunucudan yeniden çek
+  const handleColumnFiltersChange = useCallback((filters: Record<string, string>) => {
+    columnFiltersRef.current = filters;
+    setColumnFilters({ ...filters });
+  }, []);
+
+  // Kolon filtreleri değiştiğinde debounced server-side arama
+  useEffect(() => {
+    const hasAnyFilter = Object.values(columnFilters).some(v => v);
+    // İlk mount'ta çalışmasın
+    if (!hasAnyFilter && Object.keys(columnFilters).length === 0) return;
+    
+    const timer = setTimeout(() => {
+      loadIslemler(1, false);
+    }, 400);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [columnFilters]);
 
   const handleLogout = () => {
     logout();
@@ -915,6 +946,7 @@ const Dashboard: React.FC = () => {
               isAdminMode={isAdmin}
               isBayi={isBayi}
               onFilteredChange={handleTableFilterChange}
+              onColumnFiltersChange={handleColumnFiltersChange}
             />
 
             {/* Daha Fazla Yükle Butonu */}

@@ -45,6 +45,8 @@ router.get('/', authMiddleware, async (req: Request, res: Response): Promise<voi
       marka,
       sikayet,
       teknisyen_ismi,
+      yapilan_islem,
+      tutar,
       is_durumu,
       today,
       yazdirilmamis,
@@ -144,6 +146,18 @@ router.get('/', authMiddleware, async (req: Request, res: Response): Promise<voi
     if (teknisyen_ismi) {
       whereClause += ` AND teknisyen_ismi ILIKE $${paramIndex}`;
       params.push(`%${teknisyen_ismi}%`);
+      paramIndex++;
+    }
+
+    if (yapilan_islem) {
+      whereClause += ` AND yapilan_islem ILIKE $${paramIndex}`;
+      params.push(`%${yapilan_islem}%`);
+      paramIndex++;
+    }
+
+    if (tutar) {
+      whereClause += ` AND tutar::text ILIKE $${paramIndex}`;
+      params.push(`%${tutar}%`);
       paramIndex++;
     }
 
