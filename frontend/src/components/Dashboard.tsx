@@ -97,6 +97,7 @@ const Dashboard: React.FC = () => {
   const columnFiltersRef = useRef<Record<string, string>>({});
   const columnFilterTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isFirstColumnFilterRef = useRef(true);
+  const adminFiltersActiveRef = useRef(false);
   
   // Güvenli rol kontrolü - eğer user yoksa veya role tanımlı değilse en kısıtlı mod
   const isBayi = user?.role === 'bayi';
@@ -193,22 +194,38 @@ const Dashboard: React.FC = () => {
     return params;
   };
 
-  const loadIslemler = async (page = 1, append = false, overrides?: { status?: string; todayOnly?: boolean; yazdirilmamisOnly?: boolean }) => {
+  const loadIslemler = async (page = 1, append = false, overrides?: { status?: string; todayOnly?: boolean; yazdirilmamisOnly?: boolean }, silent = false) => {
     try {
-      if (page === 1) setLoading(true); else setLoadingMore(true);
+      if (!silent) { if (page === 1) setLoading(true); else setLoadingMore(true); }
       setError(null);
-      const filters = { ...getServerFilters(overrides), page, limit: PAGE_SIZE };
-      const response = await islemService.getAll(filters) as { data: Islem[]; pagination: { page: number; limit: number; total: number; totalPages: number } };
-      const newData = response.data.sort((a, b) => b.id - a.id);
       
-      if (append) {
-        setIslemler(prev => [...prev, ...newData]);
+      const hasAdminActiveFilters = adminFiltersActiveRef.current;
+      
+      if (hasAdminActiveFilters) {
+        // Filtre aktifken tüm veriyi çek (pagination yok)
+        const filters = getServerFilters(overrides);
+        const response = await islemService.getAll(filters);
+        const data = Array.isArray(response) ? response : response.data;
+        const sortedData = [...data].sort((a: Islem, b: Islem) => b.id - a.id);
+        setIslemler(sortedData);
+        setCurrentPage(1);
+        setTotalRecords(sortedData.length);
+        setHasMore(false);
       } else {
-        setIslemler(newData);
+        // Normal sayfalanmış yükleme
+        const filters = { ...getServerFilters(overrides), page, limit: PAGE_SIZE };
+        const response = await islemService.getAll(filters) as { data: Islem[]; pagination: { page: number; limit: number; total: number; totalPages: number } };
+        const newData = response.data.sort((a, b) => b.id - a.id);
+      
+        if (append) {
+          setIslemler(prev => [...prev, ...newData]);
+        } else {
+          setIslemler(newData);
+        }
+        setCurrentPage(response.pagination.page);
+        setTotalRecords(response.pagination.total);
+        setHasMore(response.pagination.page < response.pagination.totalPages);
       }
-      setCurrentPage(response.pagination.page);
-      setTotalRecords(response.pagination.total);
-      setHasMore(response.pagination.page < response.pagination.totalPages);
     } catch (error: any) {
       console.error('İşlemler yüklenirken hata:', error);
       setError(error.response?.data?.message || 'İşlemler yüklenirken bir hata oluştu');
@@ -254,8 +271,18 @@ const Dashboard: React.FC = () => {
     if (columnFilterTimerRef.current) clearTimeout(columnFilterTimerRef.current);
     
     columnFilterTimerRef.current = setTimeout(() => {
-      loadIslemler(1, false);
+      loadIslemler(1, false, undefined, true);
     }, 400);
+  }, []);
+
+  // Admin filtreleri aktif/pasif durumu (IslemFilters'dan gelir)
+  const handleAdminFiltersActiveChange = useCallback((active: boolean) => {
+    const wasActive = adminFiltersActiveRef.current;
+    adminFiltersActiveRef.current = active;
+    // Sadece geçişlerde veriyi yeniden yükle (aktif→pasif veya pasif→aktif)
+    if (active !== wasActive) {
+      loadIslemler(1, false, undefined, true); // silent=true, loading spinner gösterme
+    }
   }, []);
 
   const handleLogout = () => {
@@ -902,6 +929,7 @@ const Dashboard: React.FC = () => {
                     dateFilter=""
                     showTodayOnly={showTodayOnly}
                     showYazdirilmamis={showYazdirilmamis}
+                    onAdminFiltersActive={handleAdminFiltersActiveChange}
                   />
                   
                   <Button

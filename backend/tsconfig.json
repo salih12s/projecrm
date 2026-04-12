@@ -12,7 +12,7 @@
     "resolveJsonModule": true,
     "moduleResolution": "node",
     "declaration": true,
-    "declarationMap": true,
+    "declarationMap": true, 
     "sourceMap": true,
     "noImplicitAny": true,
     "strictNullChecks": true,

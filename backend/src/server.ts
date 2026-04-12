@@ -22,6 +22,7 @@ import urunlerRoutes from './routes/urunler';
 import locationsRoutes from './routes/locations';
 import printerSettingsRoutes from './routes/printerSettings';
 import sahaRoutes from './routes/saha';
+import karalisteRoutes, { createKaralisteTable } from './routes/karaliste';
 
 dotenv.config();
 
@@ -99,6 +100,7 @@ app.use('/api/ilceler', locationsRoutes);
 app.use('/api/locations/ilceler', locationsRoutes);
 app.use('/api/printer-settings', printerSettingsRoutes);
 app.use('/api/saha', sahaRoutes);
+app.use('/api/karaliste', karalisteRoutes);
 
 // Serve static files from frontend build (production only)
 if (process.env.NODE_ENV === 'production') {
@@ -145,6 +147,7 @@ async function startServer() {
     await withRetry(() => createTables(), 'Tablo oluşturma');
     await withRetry(() => addNoteNoToAtolyeTable(), 'Migration');
     await withRetry(() => initLocations(), 'Location data');
+    await withRetry(() => createKaralisteTable(), 'Karaliste tablosu');
     
     server.listen(PORT, () => {
       console.log(`✅ Server ${PORT} portunda çalışıyor`);

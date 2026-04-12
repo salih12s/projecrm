@@ -25,6 +25,8 @@ import {
   useTheme,
   Divider,
   Skeleton,
+  Button,
+  DialogActions,
 } from '@mui/material';
 
 // ⚡ Kendi state'ini yöneten debounced input - parent'ı her tuşta render etmez
@@ -70,11 +72,12 @@ import {
   DragIndicator,
   History,
   Delete,
+  Block,
 } from '@mui/icons-material';
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
 import { Islem } from '../types';
 import PrintEditor from './PrintEditor';
-import { islemService } from '../services/api';
+import { islemService, karalisteService } from '../services/api';
 
 // Telefon numarasını formatla: 0544 448 88 88
 const formatPhoneNumber = (phone: string | undefined): string => {
@@ -128,6 +131,15 @@ const IslemTable: React.FC<IslemTableProps> = ({
   const [filteredHistory, setFilteredHistory] = useState<Islem[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [selectedCustomerName, setSelectedCustomerName] = useState('');
+  
+  // Karaliste state
+  const [karalisteDialogOpen, setKaralisteDialogOpen] = useState(false);
+  const [karalisteLoading, setKaralisteLoading] = useState(false);
+
+  // ⚡ Performance: Render limiti - büyük verilerde kasma önlenir
+  const DISPLAY_CHUNK = 150;
+  const [displayLimit, setDisplayLimit] = useState(DISPLAY_CHUNK);
+  
   const [historyFilters, setHistoryFilters] = useState({
     sira: '',
     tarih: '',
@@ -258,15 +270,19 @@ const IslemTable: React.FC<IslemTableProps> = ({
     return result;
   }, [islemler, filters, searchIndex]);
 
-  // Filtrelenmiş liste değiştiğinde parent'a bildir
+  // Filtrelenmiş liste değiştiğinde parent'a bildir ve displayLimit sıfırla
   // ⚡ startTransition: parent güncellemesi düşük öncelikli yapılır, input donmaz
   useEffect(() => {
+    setDisplayLimit(DISPLAY_CHUNK);
     startTransition(() => {
       if (onFilteredChange) {
         onFilteredChange(filteredIslemler);
       }
     });
   }, [filteredIslemler, onFilteredChange]);
+
+  // ⚡ Ekranda gösterilecek satırlar (performans için sınırlı)
+  const visibleIslemler = useMemo(() => filteredIslemler.slice(0, displayLimit), [filteredIslemler, displayLimit]);
 
   // Kolon filtreleri değiştiğinde parent'a bildir (server-side arama için)
   useEffect(() => {
@@ -338,6 +354,7 @@ const IslemTable: React.FC<IslemTableProps> = ({
     setCustomerHistory([]);
     setFilteredHistory([]);
     setSelectedCustomerName('');
+    setKaralisteDialogOpen(false);
     setHistoryFilters({
       sira: '',
       tarih: '',
@@ -356,6 +373,31 @@ const IslemTable: React.FC<IslemTableProps> = ({
       durum: '',
     });
   }, []);
+
+  // Karalisteye ekleme handler
+  const handleAddToKaraliste = useCallback(async () => {
+    if (customerHistory.length === 0) return;
+    setKaralisteLoading(true);
+    try {
+      const firstRecord = customerHistory[0];
+      await karalisteService.add({
+        ad_soyad: firstRecord.ad_soyad,
+        cep_tel: firstRecord.cep_tel,
+        yedek_tel: firstRecord.yedek_tel,
+        mahalle: firstRecord.mahalle,
+        cadde: firstRecord.cadde,
+        sokak: firstRecord.sokak,
+        kapi_no: firstRecord.kapi_no,
+      });
+      alert('Müşteri karalisteye eklendi!');
+      setKaralisteDialogOpen(false);
+    } catch (error) {
+      console.error('Karaliste ekleme hatası:', error);
+      alert('Karalisteye eklerken hata oluştu!');
+    } finally {
+      setKaralisteLoading(false);
+    }
+  }, [customerHistory]);
 
   // Müşteri geçmişi filtreleme fonksiyonu
   const handleHistoryFilterChange = useCallback((field: string, value: string) => {
@@ -981,7 +1023,7 @@ const IslemTable: React.FC<IslemTableProps> = ({
     return (
       <>
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-          {filteredIslemler.map((islem) => {
+          {visibleIslemler.map((islem) => {
             // Sabit ID bazlı sıra - silince kaymasın
             const siraNo = islem.id;
 
@@ -1151,6 +1193,19 @@ const IslemTable: React.FC<IslemTableProps> = ({
             );
           })}
         </Box>
+        {/* ⚡ Mobil "Daha Fazla Göster" */}
+        {displayLimit < filteredIslemler.length && (
+          <Box sx={{ display: 'flex', justifyContent: 'center', mt: 1, mb: 1 }}>
+            <Button
+              variant="text"
+              size="small"
+              onClick={() => setDisplayLimit(prev => prev + DISPLAY_CHUNK)}
+              sx={{ color: '#0D3282', fontSize: '0.8rem' }}
+            >
+              Daha Fazla Göster ({visibleIslemler.length} / {filteredIslemler.length})
+            </Button>
+          </Box>
+        )}
 
         {/* Müşteri Geçmişi Dialog - Mobil için */}
         <Dialog 
@@ -1161,7 +1216,19 @@ const IslemTable: React.FC<IslemTableProps> = ({
           fullScreen={isMobile}
         >
           <DialogTitle>
-            Müşteri Geçmişi: {selectedCustomerName}
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <Typography variant="subtitle1">Müşteri Geçmişi: {selectedCustomerName}</Typography>
+              <Button
+                variant="contained"
+                color="error"
+                size="small"
+                startIcon={<Block />}
+                onClick={() => setKaralisteDialogOpen(true)}
+                sx={{ textTransform: 'none', fontSize: '0.7rem', ml: 1 }}
+              >
+                Karaliste
+              </Button>
+            </Box>
           </DialogTitle>
           <DialogContent>
             {historyLoading ? (
@@ -1408,9 +1475,9 @@ const IslemTable: React.FC<IslemTableProps> = ({
             ))}
           </TableRow>
         </TableHead>
-        {/* ⚡ OPTIMIZED RENDERING: Sadece ilk 100 satırı göster, daha fazlası için scroll */}
+        {/* ⚡ OPTIMIZED RENDERING: Performans için satır limiti */}
         <TableBody>
-          {filteredIslemler.map((islem) => {
+          {visibleIslemler.map((islem) => {
             const siraNo = islem.id;
             
             return (
@@ -1456,10 +1523,22 @@ const IslemTable: React.FC<IslemTableProps> = ({
             </TableRow>
           );
           })}
-          {/* Daha fazla göster - Dashboard'daki Daha Fazla Yükle butonu kullanılıyor */}
         </TableBody>
       </Table>
     </TableContainer>
+    {/* ⚡ Tablo içi "Daha Fazla Göster" - render limiti aşıldıysa */}
+    {displayLimit < filteredIslemler.length && (
+      <Box sx={{ display: 'flex', justifyContent: 'center', mt: 1, mb: 1 }}>
+        <Button
+          variant="text"
+          size="small"
+          onClick={() => setDisplayLimit(prev => prev + DISPLAY_CHUNK)}
+          sx={{ color: '#0D3282', fontSize: '0.8rem' }}
+        >
+          Daha Fazla Göster ({visibleIslemler.length} / {filteredIslemler.length})
+        </Button>
+      </Box>
+    )}
 
     {/* Müşteri Geçmişi Dialog */}
     <Dialog 
@@ -1473,9 +1552,21 @@ const IslemTable: React.FC<IslemTableProps> = ({
           <Typography variant="h6">
             Müşteri Geçmişi: {selectedCustomerName}
           </Typography>
-          <Typography variant="body2" color="text.secondary">
-            Toplam {customerHistory.length} kayıt
-          </Typography>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <Button
+              variant="contained"
+              color="error"
+              size="small"
+              startIcon={<Block />}
+              onClick={() => setKaralisteDialogOpen(true)}
+              sx={{ textTransform: 'none', fontSize: '0.75rem' }}
+            >
+              Karalisteye Ekle
+            </Button>
+            <Typography variant="body2" color="text.secondary">
+              Toplam {customerHistory.length} kayıt
+            </Typography>
+          </Box>
         </Box>
       </DialogTitle>
       <DialogContent>
@@ -1717,6 +1808,25 @@ const IslemTable: React.FC<IslemTableProps> = ({
           </TableContainer>
         )}
       </DialogContent>
+    </Dialog>
+
+    {/* Karaliste Onay Dialog */}
+    <Dialog open={karalisteDialogOpen} onClose={() => setKaralisteDialogOpen(false)} maxWidth="xs" fullWidth>
+      <DialogTitle sx={{ color: 'error.main' }}>⚠️ Karalisteye Ekle</DialogTitle>
+      <DialogContent>
+        <Typography>
+          <strong>{selectedCustomerName}</strong> isimli müşteriyi karalisteye eklemek istediğinize emin misiniz?
+        </Typography>
+        <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+          Bu müşterinin telefon numarası ve adresi ile yeni kayıt oluşturulduğunda uyarı verilecektir.
+        </Typography>
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={() => setKaralisteDialogOpen(false)} disabled={karalisteLoading}>İptal</Button>
+        <Button onClick={handleAddToKaraliste} variant="contained" color="error" disabled={karalisteLoading}>
+          {karalisteLoading ? 'Ekleniyor...' : 'Karalisteye Ekle'}
+        </Button>
+      </DialogActions>
     </Dialog>
 
     {/* Yazdırma Düzenleyici */}

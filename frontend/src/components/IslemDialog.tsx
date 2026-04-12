@@ -30,7 +30,7 @@ import {
   Tooltip,
 } from '@mui/material';
 import { Islem, IslemCreateDto, IslemUpdateDto, Teknisyen, Marka, Montaj, Aksesuar, Urun } from '../types';
-import { islemService } from '../services/api';
+import { islemService, karalisteService } from '../services/api';
 import { api } from '../services/api';
 import { useSnackbar } from '../context/SnackbarContext';
 
@@ -91,6 +91,12 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
   const [showDuplicateDialog, setShowDuplicateDialog] = useState(false); // Duplicate modal
   const [isOnHold, setIsOnHold] = useState(false); // Beklemeye alınma durumu
   const [usedExistingData, setUsedExistingData] = useState(false); // BİLGİLERİ GETİR kullanıldı mı?
+  
+  // Karaliste state'leri
+  const [showKaralisteDialog, setShowKaralisteDialog] = useState(false);
+  const [karalisteRecord, setKaralisteRecord] = useState<any>(null);
+  const [karalisteType, setKaralisteType] = useState<'phone' | 'address'>('phone');
+  const [pendingAfterKaraliste, setPendingAfterKaraliste] = useState<(() => void) | null>(null);
   
   // Müşteri Geçmişi Dialog state'leri
   const [historyDialogOpen, setHistoryDialogOpen] = useState(false);
@@ -485,21 +491,59 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
       const cleanedPhone = cleanPhoneNumber(phoneNumber);
       const response = await islemService.searchByPhone(cleanedPhone);
       
-      // 1. Tamamlanmamış kayıt kontrolü (açık veya parça bekliyor)
+      // 1. Karaliste kontrolü (telefon) - EN ÖNCE
+      try {
+        const karalisteResult = await karalisteService.checkPhone(cleanedPhone);
+        if (karalisteResult.blacklisted) {
+          setKaralisteRecord(karalisteResult.record);
+          setKaralisteType('phone');
+          setPendingAfterKaraliste(() => () => {
+            // Karaliste onaylandıktan sonra duplicate + normal akışa devam et
+            const incompleteRec = response.find((item: Islem) => 
+              (cleanPhoneNumber(item.cep_tel) === cleanedPhone || cleanPhoneNumber(item.yedek_tel || '') === cleanedPhone) &&
+              (item.is_durumu === 'acik' || item.is_durumu === 'parca_bekliyor')
+            );
+            if (incompleteRec) {
+              setDuplicateRecord(incompleteRec);
+              setShowDuplicateDialog(true);
+              return;
+            }
+            const existingRec = response.find((item: Islem) => 
+              cleanPhoneNumber(item.cep_tel) === cleanedPhone || 
+              cleanPhoneNumber(item.yedek_tel || '') === cleanedPhone
+            );
+            if (existingRec) {
+              setExistingRecord(existingRec);
+              setShowConfirmDialog(true);
+              setShowPhoneQuery(false);
+            } else {
+              setFormData((prev: any) => ({ ...prev, cep_tel: phoneNumber }));
+              setShowPhoneQuery(false);
+              setShowForm(true);
+            }
+          });
+          setShowKaralisteDialog(true);
+          setShowPhoneQuery(false);
+          return;
+        }
+      } catch (err) {
+        console.error('Karaliste kontrol hatası:', err);
+      }
+
+      // 2. Tamamlanmamış kayıt kontrolü (açık veya parça bekliyor)
       const incompleteRecord = response.find((item: Islem) => 
         (cleanPhoneNumber(item.cep_tel) === cleanedPhone || cleanPhoneNumber(item.yedek_tel || '') === cleanedPhone) &&
         (item.is_durumu === 'acik' || item.is_durumu === 'parca_bekliyor')
       );
       
       if (incompleteRecord) {
-        // Tamamlanmamış kayıt var - duplicate uyarısı göster
         setDuplicateRecord(incompleteRecord);
         setShowDuplicateDialog(true);
         setShowPhoneQuery(false);
         return;
       }
       
-      // 2. Normal kayıt kontrolü (tamamlanmış kayıt)
+      // 3. Normal kayıt kontrolü (tamamlanmış kayıt)
       const existing = response.find((item: Islem) => 
         cleanPhoneNumber(item.cep_tel) === cleanedPhone || 
         cleanPhoneNumber(item.yedek_tel || '') === cleanedPhone
@@ -827,6 +871,29 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
       } catch (error) {
         console.error('Duplicate kontrolü hatası:', error);
         // Hata olsa bile devam et
+      }
+    }
+    
+    // Karaliste adres kontrolü (yeni kayıt + güncelleme)
+    if (!islem) {
+      try {
+        const adresResult = await karalisteService.checkAddress({
+          mahalle: formData.mahalle,
+          cadde: formData.cadde,
+          sokak: formData.sokak,
+          kapi_no: formData.kapi_no,
+        });
+        if (adresResult.blacklisted) {
+          setKaralisteRecord(adresResult.record);
+          setKaralisteType('address');
+          setPendingAfterKaraliste(() => async () => {
+            await saveIslem();
+          });
+          setShowKaralisteDialog(true);
+          return;
+        }
+      } catch (err) {
+        console.error('Karaliste adres kontrol hatası:', err);
       }
     }
     
@@ -1719,7 +1786,7 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
                   control={
                     <Checkbox
                       size="small"
-                      checked={formData.sikayet === 'MONTAJ'}
+                      checked={formData.sikayet.toUpperCase().startsWith('MONTAJ')}
                       onChange={(e) => {
                         if (e.target.checked) {
                           setFormData({ ...formData, sikayet: 'MONTAJ' });
@@ -1731,7 +1798,7 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
                         // Space ile seçim yap ve bir sonraki elemana geç
                         if (e.key === ' ') {
                           e.preventDefault();
-                          setFormData({ ...formData, sikayet: formData.sikayet === 'MONTAJ' ? '' : 'MONTAJ' });
+                          setFormData({ ...formData, sikayet: formData.sikayet.toUpperCase().startsWith('MONTAJ') ? '' : 'MONTAJ' });
                           // Sonraki checkbox'a focus
                           setTimeout(() => {
                             const nextCheckbox = document.querySelector('[data-checkbox="ariza"]') as HTMLElement;
@@ -1757,7 +1824,7 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
                   control={
                     <Checkbox
                       size="small"
-                      checked={formData.sikayet === 'ARIZA'}
+                      checked={formData.sikayet.toUpperCase().startsWith('ARIZA')}
                       onChange={(e) => {
                         if (e.target.checked) {
                           setFormData({ ...formData, sikayet: 'ARIZA' });
@@ -1769,7 +1836,7 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
                         // Space ile seçim yap ve bir sonraki elemana geç
                         if (e.key === ' ') {
                           e.preventDefault();
-                          setFormData({ ...formData, sikayet: formData.sikayet === 'ARIZA' ? '' : 'ARIZA' });
+                          setFormData({ ...formData, sikayet: formData.sikayet.toUpperCase().startsWith('ARIZA') ? '' : 'ARIZA' });
                           // Sonraki checkbox'a focus
                           setTimeout(() => {
                             const nextCheckbox = document.querySelector('[data-checkbox="diger"]') as HTMLElement;
@@ -1795,7 +1862,7 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
                   control={
                     <Checkbox
                       size="small"
-                      checked={formData.sikayet === 'DİĞER'}
+                      checked={formData.sikayet.toUpperCase().startsWith('DİĞER')}
                       onChange={(e) => {
                         if (e.target.checked) {
                           setFormData({ ...formData, sikayet: 'DİĞER' });
@@ -1807,7 +1874,7 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
                         // Space ile seçim yap ve şikayet detay alanına geç
                         if (e.key === ' ') {
                           e.preventDefault();
-                          setFormData({ ...formData, sikayet: formData.sikayet === 'DİĞER' ? '' : 'DİĞER' });
+                          setFormData({ ...formData, sikayet: formData.sikayet.toUpperCase().startsWith('DİĞER') ? '' : 'DİĞER' });
                           // Şikayet detay alanına focus
                           setTimeout(() => {
                             const sikayetField = document.querySelector('[name="sikayet-detay"]') as HTMLElement;
@@ -2284,6 +2351,88 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
         <DialogActions>
           <Button onClick={handleCloseHistoryDialog} variant="outlined">
             Kapat
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Karaliste Uyarı Dialog */}
+      <Dialog
+        open={showKaralisteDialog}
+        onClose={() => {
+          setShowKaralisteDialog(false);
+          setPendingAfterKaraliste(null);
+        }}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle sx={{ bgcolor: 'error.main', color: 'error.contrastText', py: 1.5 }}>
+          🚫 UYARI - Karaliste Kaydı
+        </DialogTitle>
+        <DialogContent sx={{ mt: 2 }}>
+          <Alert severity="error" sx={{ mb: 2 }}>
+            <AlertTitle>Bu {karalisteType === 'phone' ? 'telefon numarası' : 'adres'} karalistede kayıtlıdır!</AlertTitle>
+            Bu kişi daha önce karalisteye eklenmiştir. Devam etmek istiyor musunuz?
+          </Alert>
+          
+          {karalisteRecord && (
+            <Box sx={{ bgcolor: 'grey.100', p: 2, borderRadius: 1 }}>
+              <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                Karaliste Kayıt Bilgileri:
+              </Typography>
+              <Grid container spacing={1}>
+                <Grid item xs={6}>
+                  <Typography variant="body2">
+                    <strong>Ad Soyad:</strong> {karalisteRecord.ad_soyad}
+                  </Typography>
+                </Grid>
+                <Grid item xs={6}>
+                  <Typography variant="body2">
+                    <strong>Telefon:</strong> {karalisteRecord.cep_tel ? formatPhoneNumber(karalisteRecord.cep_tel) : '-'}
+                  </Typography>
+                </Grid>
+                {karalisteRecord.mahalle && (
+                  <Grid item xs={12}>
+                    <Typography variant="body2">
+                      <strong>Adres:</strong> {[karalisteRecord.mahalle, karalisteRecord.cadde, karalisteRecord.sokak, karalisteRecord.kapi_no].filter(Boolean).join(', ')}
+                    </Typography>
+                  </Grid>
+                )}
+                {karalisteRecord.sebep && (
+                  <Grid item xs={12}>
+                    <Typography variant="body2">
+                      <strong>Sebep:</strong> {karalisteRecord.sebep}
+                    </Typography>
+                  </Grid>
+                )}
+              </Grid>
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions sx={{ px: 2, py: 1.5 }}>
+          <Button 
+            onClick={() => {
+              setShowKaralisteDialog(false);
+              setPendingAfterKaraliste(null);
+            }} 
+            variant="contained" 
+            color="error" 
+            size="small"
+          >
+            Vazgeç
+          </Button>
+          <Button 
+            onClick={() => {
+              setShowKaralisteDialog(false);
+              if (pendingAfterKaraliste) {
+                pendingAfterKaraliste();
+                setPendingAfterKaraliste(null);
+              }
+            }} 
+            variant="contained" 
+            color="warning" 
+            size="small"
+          >
+            Yine de Devam Et
           </Button>
         </DialogActions>
       </Dialog>

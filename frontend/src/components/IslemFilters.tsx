@@ -8,7 +8,7 @@ import {
   Chip,
 } from '@mui/material';
 import debounce from 'lodash.debounce';
-import { Islem, Montaj, Aksesuar } from '../types';
+import { Islem, Montaj, Aksesuar, Teknisyen, Marka } from '../types';
 import { api } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 
@@ -19,7 +19,23 @@ interface IslemFiltersProps {
   dateFilter?: string;
   showTodayOnly?: boolean;
   showYazdirilmamis?: boolean; // Yazdırılmamış işler filtresi
+  onAdminFiltersActive?: (active: boolean) => void; // Admin filtreleri aktif/pasif bildirimi
 }
+
+const AYLAR = [
+  { value: 1, label: 'Ocak' },
+  { value: 2, label: 'Şubat' },
+  { value: 3, label: 'Mart' },
+  { value: 4, label: 'Nisan' },
+  { value: 5, label: 'Mayıs' },
+  { value: 6, label: 'Haziran' },
+  { value: 7, label: 'Temmuz' },
+  { value: 8, label: 'Ağustos' },
+  { value: 9, label: 'Eylül' },
+  { value: 10, label: 'Ekim' },
+  { value: 11, label: 'Kasım' },
+  { value: 12, label: 'Aralık' },
+];
 
 const IslemFilters: React.FC<IslemFiltersProps> = ({ 
   islemler, 
@@ -27,7 +43,8 @@ const IslemFilters: React.FC<IslemFiltersProps> = ({
   statusFilter = 'all', 
   dateFilter = '', 
   showTodayOnly = false, 
-  showYazdirilmamis = false
+  showYazdirilmamis = false,
+  onAdminFiltersActive
 }) => {
   const { user } = useAuth();
   const isAdmin = user?.role === 'admin';
@@ -40,6 +57,17 @@ const IslemFilters: React.FC<IslemFiltersProps> = ({
   const [selectedMontajlar, setSelectedMontajlar] = useState<string[]>([]);
   const [selectedAksesuarlar, setSelectedAksesuarlar] = useState<string[]>([]);
   const [filteredTutar, setFilteredTutar] = useState<number>(0);
+  
+  // Teknisyen filtresi (sadece admin için)
+  const [teknisyenler, setTeknisyenler] = useState<Teknisyen[]>([]);
+  const [selectedTeknisyenler, setSelectedTeknisyenler] = useState<string[]>([]);
+  
+  // Marka filtresi (sadece admin için)
+  const [markaListesi, setMarkaListesi] = useState<Marka[]>([]);
+  const [selectedMarkalar, setSelectedMarkalar] = useState<string[]>([]);
+  
+  // Ay filtresi (sadece admin için)
+  const [selectedAy, setSelectedAy] = useState<number | null>(null);
   
   // Tarih aralığı filtreleri (sadece admin için Montaj/Aksesuar ile birlikte)
   const [startDate, setStartDate] = useState<string>('');
@@ -54,14 +82,18 @@ const IslemFilters: React.FC<IslemFiltersProps> = ({
 
   const loadMontajVeAksesuar = async () => {
     try {
-      const [montajResponse, aksesuarResponse] = await Promise.all([
+      const [montajResponse, aksesuarResponse, teknisyenResponse, markaResponse] = await Promise.all([
         api.get<Montaj[]>('/montajlar'),
         api.get<Aksesuar[]>('/aksesuarlar'),
+        api.get<Teknisyen[]>('/teknisyenler'),
+        api.get<Marka[]>('/markalar'),
       ]);
       setMontajlar(montajResponse.data);
       setAksesuarlar(aksesuarResponse.data);
+      setTeknisyenler(teknisyenResponse.data);
+      setMarkaListesi(markaResponse.data);
     } catch (error) {
-      console.error('Montaj/Aksesuar yükleme hatası:', error);
+      console.error('Filtre seçenekleri yükleme hatası:', error);
     }
   };
 
@@ -109,9 +141,41 @@ const IslemFilters: React.FC<IslemFiltersProps> = ({
       });
     }
 
+    // Teknisyen filtresi
+    if (isAdmin && selectedTeknisyenler.length > 0) {
+      result = result.filter((islem) => {
+        const teknisyen = (islem.teknisyen_ismi || '').toLocaleLowerCase('tr-TR');
+        return selectedTeknisyenler.some(tek => 
+          teknisyen.includes(tek.toLocaleLowerCase('tr-TR'))
+        );
+      });
+    }
+
+    // Ay filtresi (client-side)
+    if (isAdmin && selectedAy !== null) {
+      result = result.filter((islem) => {
+        try {
+          const d = new Date(islem.full_tarih);
+          return d.getMonth() + 1 === selectedAy;
+        } catch {
+          return false;
+        }
+      });
+    }
+
+    // Marka filtresi (client-side)
+    if (isAdmin && selectedMarkalar.length > 0) {
+      result = result.filter((islem) => {
+        const marka = (islem.marka || '').toLocaleLowerCase('tr-TR');
+        return selectedMarkalar.some(m => 
+          marka.includes(m.toLocaleLowerCase('tr-TR'))
+        );
+      });
+    }
+
     // Sıralama (en yeni en üstte)
     return [...result].sort((a, b) => b.id - a.id);
-  }, [islemler, statusFilter, dateFilter, showTodayOnly, showYazdirilmamis, startDate, endDate, selectedMontajlar, selectedAksesuarlar, isAdmin]);
+  }, [islemler, statusFilter, dateFilter, showTodayOnly, showYazdirilmamis, startDate, endDate, selectedMontajlar, selectedAksesuarlar, selectedTeknisyenler, selectedAy, selectedMarkalar, isAdmin]);
 
   // Filtrelenmiş tutar hesaplama (sadece admin için)
   const calculatedTutar = useMemo(() => {
@@ -141,6 +205,14 @@ const IslemFilters: React.FC<IslemFiltersProps> = ({
       debouncedFilterChange.cancel();
     };
   }, [filtered, calculatedTutar, debouncedFilterChange]);
+
+  // Admin filtreleri aktif/pasif durumunu parent'a bildir
+  useEffect(() => {
+    if (onAdminFiltersActive) {
+      const hasActiveFilters = selectedMontajlar.length > 0 || selectedAksesuarlar.length > 0 || selectedTeknisyenler.length > 0 || selectedMarkalar.length > 0 || selectedAy !== null || !!startDate || !!endDate;
+      onAdminFiltersActive(hasActiveFilters);
+    }
+  }, [selectedMontajlar, selectedAksesuarlar, selectedTeknisyenler, selectedMarkalar, selectedAy, startDate, endDate, onAdminFiltersActive]);
 
 
 
@@ -214,6 +286,92 @@ const IslemFilters: React.FC<IslemFiltersProps> = ({
             sx={{ width: '140px' }}
           />
           
+          {/* Teknisyen filtresi */}
+          <Autocomplete
+            multiple
+            size="small"
+            options={teknisyenler.map(t => t.isim)}
+            value={selectedTeknisyenler}
+            onChange={(_, newValue) => setSelectedTeknisyenler(newValue)}
+            renderInput={(params) => (
+              <TextField 
+                {...params} 
+                placeholder="Teknisyen..." 
+                sx={{ 
+                  '& .MuiInputBase-root': { fontSize: '0.65rem' },
+                  '& .MuiInputBase-input': { py: 0.5, px: 0.7 }
+                }} 
+              />
+            )}
+            renderTags={(value, getTagProps) =>
+              value.map((option, index) => (
+                <Chip
+                  {...getTagProps({ index })}
+                  key={index}
+                  label={option}
+                  size="small"
+                  color="success"
+                  variant="outlined"
+                  sx={{ fontSize: '0.6rem', height: '16px' }}
+                />
+              ))
+            }
+            sx={{ width: '150px' }}
+          />
+
+          {/* Ay filtresi */}
+          <Autocomplete
+            size="small"
+            options={AYLAR}
+            getOptionLabel={(option) => option.label}
+            value={AYLAR.find(a => a.value === selectedAy) || null}
+            onChange={(_, newValue) => setSelectedAy(newValue?.value || null)}
+            renderInput={(params) => (
+              <TextField 
+                {...params} 
+                placeholder="Ay..." 
+                sx={{ 
+                  '& .MuiInputBase-root': { fontSize: '0.65rem' },
+                  '& .MuiInputBase-input': { py: 0.5, px: 0.7 }
+                }} 
+              />
+            )}
+            sx={{ width: '120px' }}
+          />
+
+          {/* Marka filtresi */}
+          <Autocomplete
+            multiple
+            size="small"
+            options={markaListesi.map(m => m.isim)}
+            value={selectedMarkalar}
+            onChange={(_, newValue) => setSelectedMarkalar(newValue)}
+            renderInput={(params) => (
+              <TextField 
+                {...params} 
+                placeholder="Marka..." 
+                sx={{ 
+                  '& .MuiInputBase-root': { fontSize: '0.65rem' },
+                  '& .MuiInputBase-input': { py: 0.5, px: 0.7 }
+                }} 
+              />
+            )}
+            renderTags={(value, getTagProps) =>
+              value.map((option, index) => (
+                <Chip
+                  {...getTagProps({ index })}
+                  key={index}
+                  label={option}
+                  size="small"
+                  color="warning"
+                  variant="outlined"
+                  sx={{ fontSize: '0.6rem', height: '16px' }}
+                />
+              ))
+            }
+            sx={{ width: '140px' }}
+          />
+
           {/* Tarih Aralığı Filtreleri - Montaj/Aksesuar için */}
           <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'flex-end' }}>
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.2 }}>
@@ -276,13 +434,13 @@ const IslemFilters: React.FC<IslemFiltersProps> = ({
       )}
       
       {/* Kayıt sayısı ve tutar */}
-      {(selectedMontajlar.length > 0 || selectedAksesuarlar.length > 0 || startDate || endDate) && (
+      {(selectedMontajlar.length > 0 || selectedAksesuarlar.length > 0 || selectedTeknisyenler.length > 0 || selectedMarkalar.length > 0 || selectedAy !== null || startDate || endDate) && (
         <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
           <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
             {filteredCount}/{islemler.length}
           </Typography>
           
-          {isAdmin && (selectedMontajlar.length > 0 || selectedAksesuarlar.length > 0) && (
+          {isAdmin && (selectedMontajlar.length > 0 || selectedAksesuarlar.length > 0 || selectedTeknisyenler.length > 0 || selectedMarkalar.length > 0 || selectedAy !== null) && (
             <Typography variant="caption" color="success.main" sx={{ fontSize: '0.7rem', fontWeight: 600 }}>
               {filteredTutar.toLocaleString('tr-TR', { minimumFractionDigits: 2 })} ₺
             </Typography>

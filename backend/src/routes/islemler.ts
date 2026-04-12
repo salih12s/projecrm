@@ -50,6 +50,8 @@ router.get('/', authMiddleware, async (req: Request, res: Response): Promise<voi
       is_durumu,
       today,
       yazdirilmamis,
+      ay,
+      yil,
       page,
       limit: limitParam
     } = req.query;
@@ -173,6 +175,18 @@ router.get('/', authMiddleware, async (req: Request, res: Response): Promise<voi
 
     if (yazdirilmamis === 'true') {
       whereClause += ` AND (yazdirildi IS NULL OR yazdirildi = false)`;
+    }
+
+    if (ay) {
+      whereClause += ` AND EXTRACT(MONTH FROM full_tarih) = $${paramIndex}`;
+      params.push(parseInt(ay as string));
+      paramIndex++;
+    }
+
+    if (yil) {
+      whereClause += ` AND EXTRACT(YEAR FROM full_tarih) = $${paramIndex}`;
+      params.push(parseInt(yil as string));
+      paramIndex++;
     }
 
     // Pagination opsiyonel - page/limit gönderilmezse tüm veriyi döndür
