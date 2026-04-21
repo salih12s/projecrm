@@ -73,6 +73,8 @@ const SahaKayitlari: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalRecords, setTotalRecords] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
+  const [todayFilter, setTodayFilter] = useState(false);
+  const [globalStats, setGlobalStats] = useState<{ toplam: number; bugun: number }>({ toplam: 0, bugun: 0 });
   const pageSize = 50;
   const imageContainerRef = React.useRef<HTMLDivElement>(null);
   
@@ -93,6 +95,7 @@ const SahaKayitlari: React.FC = () => {
       setTotalRecords(kayitlarResponse.pagination.total);
       setTotalPages(kayitlarResponse.pagination.totalPages);
       setCurrentPage(kayitlarResponse.pagination.page);
+      setGlobalStats(kayitlarResponse.stats);
       setSahaElemanlari(sahaElemanlariData);
     } catch (error: any) {
       console.error('Veriler yüklenirken hata:', error);
@@ -135,48 +138,45 @@ const SahaKayitlari: React.FC = () => {
     }
   };
 
-  const handleSearch = async () => {
+  const buildParams = (page: number, overrides?: { today?: boolean; search?: string; startDate?: string; endDate?: string; sahaElemaniId?: number | '' }) => {
+    const params: any = { page, limit: pageSize };
+    const s = overrides?.search !== undefined ? overrides.search : searchText;
+    const sd = overrides?.startDate !== undefined ? overrides.startDate : startDate;
+    const ed = overrides?.endDate !== undefined ? overrides.endDate : endDate;
+    const se = overrides?.sahaElemaniId !== undefined ? overrides.sahaElemaniId : selectedSahaElemani;
+    const td = overrides?.today !== undefined ? overrides.today : todayFilter;
+    if (s) params.search = s;
+    if (sd) params.startDate = sd;
+    if (ed) params.endDate = ed;
+    if (se) params.sahaElemaniId = se;
+    if (td) params.today = true;
+    return params;
+  };
+
+  const applyLoad = async (page: number, overrides?: { today?: boolean; search?: string; startDate?: string; endDate?: string; sahaElemaniId?: number | '' }) => {
     try {
       setLoading(true);
-      const params: any = { page: 1, limit: pageSize };
-      if (searchText) params.search = searchText;
-      if (startDate) params.startDate = startDate;
-      if (endDate) params.endDate = endDate;
-      if (selectedSahaElemani) params.sahaElemaniId = selectedSahaElemani;
-      
-      const response = await sahaService.getAllKayitlar(params);
+      const response = await sahaService.getAllKayitlar(buildParams(page, overrides));
       setKayitlar(response.data);
       setTotalRecords(response.pagination.total);
       setTotalPages(response.pagination.totalPages);
       setCurrentPage(response.pagination.page);
+      setGlobalStats(response.stats);
     } catch (error: any) {
-      console.error('Arama yapılırken hata:', error);
-      showSnackbar('Arama yapılırken hata oluştu!', 'error');
+      console.error('Yükleme hatası:', error);
+      showSnackbar(error?.response?.data?.message || 'Yükleme sırasında hata oluştu!', 'error');
     } finally {
       setLoading(false);
     }
   };
 
-  const handlePageChange = async (newPage: number) => {
-    try {
-      setLoading(true);
-      const params: any = { page: newPage, limit: pageSize };
-      if (searchText) params.search = searchText;
-      if (startDate) params.startDate = startDate;
-      if (endDate) params.endDate = endDate;
-      if (selectedSahaElemani) params.sahaElemaniId = selectedSahaElemani;
-      
-      const response = await sahaService.getAllKayitlar(params);
-      setKayitlar(response.data);
-      setTotalRecords(response.pagination.total);
-      setTotalPages(response.pagination.totalPages);
-      setCurrentPage(response.pagination.page);
-    } catch (error: any) {
-      console.error('Sayfa değiştirilirken hata:', error);
-      showSnackbar('Sayfa değiştirilirken hata oluştu!', 'error');
-    } finally {
-      setLoading(false);
-    }
+  const handleSearch = () => applyLoad(1);
+  const handlePageChange = (newPage: number) => applyLoad(newPage);
+
+  const handleToggleToday = () => {
+    const next = !todayFilter;
+    setTodayFilter(next);
+    applyLoad(1, { today: next });
   };
 
   const handleClearFilters = () => {
@@ -184,17 +184,14 @@ const SahaKayitlari: React.FC = () => {
     setStartDate('');
     setEndDate('');
     setSelectedSahaElemani('');
-    setCurrentPage(1);
-    loadData(1);
+    setTodayFilter(false);
+    applyLoad(1, { search: '', startDate: '', endDate: '', sahaElemaniId: '', today: false });
   };
 
   // İstatistikler
   const stats = {
-    toplam: totalRecords,
-    bugun: kayitlar.filter(k => {
-      const today = new Date().toDateString();
-      return new Date(k.created_at).toDateString() === today;
-    }).length,
+    toplam: globalStats.toplam,
+    bugun: globalStats.bugun,
   };
 
   return (
@@ -211,7 +208,20 @@ const SahaKayitlari: React.FC = () => {
         <Typography variant="h5" fontWeight={600} sx={{ fontSize: { xs: '1.25rem', sm: '1.5rem' }, color: '#2C3E82' }}>
           Saha Kayıtları Görüntüleme
         </Typography>
-        <Box sx={{ display: 'flex', gap: 1 }}>
+        <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+          <Button
+            variant={todayFilter ? 'contained' : 'outlined'}
+            size="small"
+            color={todayFilter ? 'success' : 'primary'}
+            onClick={handleToggleToday}
+            sx={!todayFilter ? {
+              borderColor: '#0D3282',
+              color: '#0D3282',
+              '&:hover': { borderColor: '#082052', bgcolor: 'rgba(13, 50, 130, 0.04)' },
+            } : undefined}
+          >
+            BUGÜN ({globalStats.bugun})
+          </Button>
           <Button
             variant={viewMode === 'cards' ? 'contained' : 'outlined'}
             size="small"
@@ -357,8 +367,17 @@ const SahaKayitlari: React.FC = () => {
         <Chip 
           label={`Bugün: ${stats.bugun}`} 
           color="success" 
-          variant="outlined" 
+          variant={todayFilter ? 'filled' : 'outlined'}
+          onClick={handleToggleToday}
+          sx={{ cursor: 'pointer' }}
         />
+        {(searchText || startDate || endDate || selectedSahaElemani || todayFilter) && (
+          <Chip
+            label={`Filtreli Sonuç: ${totalRecords}`}
+            color="info"
+            variant="outlined"
+          />
+        )}
       </Box>
 
       {/* Loading */}

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box,
   Paper,
@@ -13,13 +13,13 @@ import {
   Dialog,
   DialogTitle,
   DialogContent,
-  DialogActions,
   IconButton,
   InputAdornment,
   Chip,
   Alert,
   Tooltip,
   CircularProgress,
+  Pagination,
 } from '@mui/material';
 import {
   Add,
@@ -34,22 +34,34 @@ import {
   Refresh,
   ZoomIn,
   ZoomOut,
+  Today,
 } from '@mui/icons-material';
 import { useSnackbar } from '../context/SnackbarContext';
 import { sahaService } from '../services/api';
-import { SahaKayit, SahaKayitCreateDto } from '../types';
+import { SahaKayit } from '../types';
 import { useAuth } from '../context/AuthContext';
+import SahaKayitDialog from './SahaKayitDialog';
+
+const PAGE_SIZE = 50;
 
 const SahaPanel: React.FC = () => {
   const [kayitlar, setKayitlar] = useState<SahaKayit[]>([]);
   const [loading, setLoading] = useState(true);
   const [openDialog, setOpenDialog] = useState(false);
   const [editingKayit, setEditingKayit] = useState<SahaKayit | null>(null);
+  const [dialogInitialPhotos, setDialogInitialPhotos] = useState<string[]>([]);
   const [searchText, setSearchText] = useState('');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
+  const [todayFilter, setTodayFilter] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
-  
+
+  // Pagination + stats
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalRecords, setTotalRecords] = useState(0);
+  const [totalStats, setTotalStats] = useState<{ toplam: number; bugun: number }>({ toplam: 0, bugun: 0 });
+
   // Fotoğraf galeri state
   const [selectedImages, setSelectedImages] = useState<string[]>([]);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
@@ -61,61 +73,64 @@ const SahaPanel: React.FC = () => {
   const [galleryPanStart, setGalleryPanStart] = useState({ x: 0, y: 0 });
   const [lastTouchDist, setLastTouchDist] = useState<number | null>(null);
   const [lastTouchCenter, setLastTouchCenter] = useState<{ x: number; y: number } | null>(null);
-  
-  // Form state
-  const [formIsim, setFormIsim] = useState('');
-  const [formSoyisim, setFormSoyisim] = useState('');
-  const [formNotlar, setFormNotlar] = useState('');
-  const [formFotolar, setFormFotolar] = useState<string[]>([]); // Birden fazla fotoğraf
-  const [formSubmitting, setFormSubmitting] = useState(false);
-  
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const cameraInputRef = useRef<HTMLInputElement>(null);
+
   const { showSnackbar } = useSnackbar();
   const { user } = useAuth();
 
-  useEffect(() => {
-    loadKayitlar();
-  }, []);
-
-  const loadKayitlar = async () => {
+  const loadKayitlar = useCallback(async (page = 1, overrides?: { search?: string; startDate?: string; endDate?: string; today?: boolean }) => {
     try {
       setLoading(true);
-      const params: any = {};
-      if (searchText) params.search = searchText;
-      if (startDate) params.startDate = startDate;
-      if (endDate) params.endDate = endDate;
-      
-      const data = await sahaService.getKayitlar(params);
-      setKayitlar(data);
+      const params: any = { page, limit: PAGE_SIZE };
+      const s = overrides?.search !== undefined ? overrides.search : searchText;
+      const sd = overrides?.startDate !== undefined ? overrides.startDate : startDate;
+      const ed = overrides?.endDate !== undefined ? overrides.endDate : endDate;
+      const td = overrides?.today !== undefined ? overrides.today : todayFilter;
+      if (s) params.search = s;
+      if (sd) params.startDate = sd;
+      if (ed) params.endDate = ed;
+      if (td) params.today = true;
+      const resp = await sahaService.getKayitlar(params);
+      setKayitlar(resp.data);
+      setCurrentPage(resp.pagination.page);
+      setTotalPages(resp.pagination.totalPages);
+      setTotalRecords(resp.pagination.total);
+      setTotalStats(resp.stats);
     } catch (error: any) {
       console.error('Kayıtlar yüklenirken hata:', error);
-      showSnackbar('Kayıtlar yüklenirken hata oluştu!', 'error');
+      showSnackbar(error?.response?.data?.message || 'Kayıtlar yüklenirken hata oluştu!', 'error');
     } finally {
       setLoading(false);
     }
-  };
+  }, [searchText, startDate, endDate, todayFilter, showSnackbar]);
+
+  useEffect(() => {
+    loadKayitlar(1);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleSearch = () => {
-    loadKayitlar();
+    loadKayitlar(1);
   };
 
   const handleClearFilters = () => {
     setSearchText('');
     setStartDate('');
     setEndDate('');
-    setTimeout(() => loadKayitlar(), 0);
+    setTodayFilter(false);
+    loadKayitlar(1, { search: '', startDate: '', endDate: '', today: false });
+  };
+
+  const handleToggleToday = () => {
+    const next = !todayFilter;
+    setTodayFilter(next);
+    loadKayitlar(1, { today: next });
   };
 
   const handleOpenDialog = async (kayit?: SahaKayit) => {
     if (kayit) {
       setEditingKayit(kayit);
-      setFormIsim(kayit.isim);
-      setFormSoyisim(kayit.soyisim);
-      setFormNotlar(kayit.notlar || '');
-      // Fotoğrafları lazy load ile getir
       if (photoCache[kayit.id]) {
-        setFormFotolar(photoCache[kayit.id]);
+        setDialogInitialPhotos(photoCache[kayit.id]);
       } else if ((kayit as any).has_photos) {
         try {
           const fotoData = await sahaService.getKayitPhotos(kayit.id);
@@ -129,236 +144,36 @@ const SahaPanel: React.FC = () => {
             }
           }
           setPhotoCache(prev => ({ ...prev, [kayit.id]: fotolar }));
-          setFormFotolar(fotolar);
+          setDialogInitialPhotos(fotolar);
         } catch {
-          setFormFotolar([]);
+          setDialogInitialPhotos([]);
         }
       } else {
-        setFormFotolar([]);
+        setDialogInitialPhotos([]);
       }
     } else {
       setEditingKayit(null);
-      setFormIsim('');
-      setFormSoyisim('');
-      setFormNotlar('');
-      setFormFotolar([]);
+      setDialogInitialPhotos([]);
     }
     setOpenDialog(true);
   };
 
-  const handleCloseDialog = () => {
+  const handleCloseDialog = useCallback(() => {
     setOpenDialog(false);
     setEditingKayit(null);
-    setFormIsim('');
-    setFormSoyisim('');
-    setFormNotlar('');
-    setFormFotolar([]);
-  };
+    setDialogInitialPhotos([]);
+  }, []);
 
-  // Fotoğrafı daha iyi sıkıştır (yüksek kalite koruyarak boyutu azalt)
-  const compressImage = (file: File, maxWidth: number = 2400, quality: number = 0.92): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      // Önce dosyayı base64 olarak oku (fallback için)
-      const fallbackReader = new FileReader();
-      let fallbackBase64 = '';
-      
-      fallbackReader.onload = (fallbackEvent) => {
-        fallbackBase64 = fallbackEvent.target?.result as string;
-      };
-      fallbackReader.readAsDataURL(file);
-      
-      // Asıl sıkıştırma işlemi
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const img = new Image();
-        
-        // Timeout ile sıkıştırma - 10 saniye içinde tamamlanmazsa fallback kullan
-        const timeout = setTimeout(() => {
-          console.warn('Sıkıştırma zaman aşımı, orijinal kullanılıyor');
-          if (fallbackBase64) {
-            resolve(fallbackBase64);
-          } else {
-            reject(new Error('Sıkıştırma zaman aşımı'));
-          }
-        }, 10000);
-        
-        img.onload = () => {
-          clearTimeout(timeout);
-          try {
-            const canvas = document.createElement('canvas');
-            let width = img.width;
-            let height = img.height;
-            
-            // Oranı koru ve maxWidth'e göre küçült
-            if (width > maxWidth) {
-              height = (height * maxWidth) / width;
-              width = maxWidth;
-            }
-            
-            // Yükseklik de sınırla
-            const maxHeight = 3200;
-            if (height > maxHeight) {
-              width = (width * maxHeight) / height;
-              height = maxHeight;
-            }
-            
-            canvas.width = Math.floor(width);
-            canvas.height = Math.floor(height);
-            
-            const ctx = canvas.getContext('2d');
-            if (ctx) {
-              ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-              try {
-                const compressedData = canvas.toDataURL('image/jpeg', quality);
-                resolve(compressedData);
-              } catch (canvasError) {
-                console.warn('Canvas toDataURL hatası, orijinal kullanılıyor:', canvasError);
-                if (fallbackBase64) {
-                  resolve(fallbackBase64);
-                } else {
-                  reject(canvasError);
-                }
-              }
-            } else {
-              console.warn('Canvas context yok, orijinal kullanılıyor');
-              if (fallbackBase64) {
-                resolve(fallbackBase64);
-              } else {
-                reject(new Error('Canvas context not available'));
-              }
-            }
-          } catch (error) {
-            console.warn('Sıkıştırma hatası, orijinal kullanılıyor:', error);
-            if (fallbackBase64) {
-              resolve(fallbackBase64);
-            } else {
-              reject(error);
-            }
-          }
-        };
-        
-        img.onerror = (error) => {
-          clearTimeout(timeout);
-          console.warn('Resim yüklenemedi, orijinal kullanılıyor:', error);
-          // Resim yüklenemezse fallback kullan
-          if (fallbackBase64) {
-            resolve(fallbackBase64);
-          } else {
-            reject(error);
-          }
-        };
-        
-        img.src = e.target?.result as string;
-      };
-      
-      reader.onerror = (error) => {
-        console.warn('Dosya okunamadı, fallback deneniyor:', error);
-        if (fallbackBase64) {
-          resolve(fallbackBase64);
-        } else {
-          reject(error);
-        }
-      };
-      
-      reader.readAsDataURL(file);
-    });
-  };
+  const handleDialogSaved = useCallback(() => {
+    setOpenDialog(false);
+    setEditingKayit(null);
+    setDialogInitialPhotos([]);
+    loadKayitlar(currentPage);
+  }, [loadKayitlar, currentPage]);
 
-  const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const files = event.target.files;
-    if (!files || files.length === 0) return;
-
-    // Maksimum 5 fotoğraf
-    const maxPhotos = 5;
-    if (formFotolar.length + files.length > maxPhotos) {
-      showSnackbar(`Maksimum ${maxPhotos} fotoğraf yükleyebilirsiniz!`, 'warning');
-      return;
-    }
-
-    const newPhotos: string[] = [];
-    
-    for (let i = 0; i < files.length; i++) {
-      const file = files[i];
-      
-      // Dosya boyutu kontrolü (10MB max - sıkıştırmadan önce)
-      if (file.size > 10 * 1024 * 1024) {
-        showSnackbar(`${file.name} dosyası 10MB'dan büyük, atlandı!`, 'warning');
-        continue;
-      }
-
-      try {
-        // Fotoğrafı sıkıştır (2400px genişlik, %92 kalite)
-        const compressedData = await compressImage(file, 2400, 0.92);
-        newPhotos.push(compressedData);
-      } catch (error) {
-        console.error('Fotoğraf sıkıştırma hatası:', error);
-        // Sıkıştırma başarısız olursa, orijinal dosyayı base64 olarak dene
-        try {
-          const reader = new FileReader();
-          const base64 = await new Promise<string>((resolve, reject) => {
-            reader.onload = () => resolve(reader.result as string);
-            reader.onerror = reject;
-            reader.readAsDataURL(file);
-          });
-          newPhotos.push(base64);
-          console.log('Fallback: Orijinal fotoğraf kullanıldı');
-        } catch (fallbackError) {
-          console.error('Fallback da başarısız:', fallbackError);
-          showSnackbar(`${file.name} yüklenemedi!`, 'warning');
-        }
-      }
-    }
-
-    if (newPhotos.length > 0) {
-      setFormFotolar(prev => [...prev, ...newPhotos]);
-      showSnackbar(`${newPhotos.length} fotoğraf yüklendi!`, 'success');
-    }
-    
-    // Input'ları temizle (aynı dosyaları tekrar seçebilmek için)
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
-    }
-    if (cameraInputRef.current) {
-      cameraInputRef.current.value = '';
-    }
-  };
-
-  const handleRemovePhoto = (index: number) => {
-    setFormFotolar(prev => prev.filter((_, i) => i !== index));
-  };
-
-  const handleSubmit = async () => {
-    if (!formIsim.trim() || !formSoyisim.trim()) {
-      showSnackbar('İsim ve soyisim zorunludur!', 'warning');
-      return;
-    }
-
-    try {
-      setFormSubmitting(true);
-      const data: SahaKayitCreateDto = {
-        isim: formIsim.trim(),
-        soyisim: formSoyisim.trim(),
-        notlar: formNotlar.trim() || undefined,
-        foto_data: formFotolar.length > 0 ? JSON.stringify(formFotolar) : undefined,
-      };
-
-      if (editingKayit) {
-        await sahaService.updateKayit(editingKayit.id, data);
-        showSnackbar('Kayıt başarıyla güncellendi!', 'success');
-      } else {
-        await sahaService.createKayit(data);
-        showSnackbar('Kayıt başarıyla eklendi!', 'success');
-      }
-
-      handleCloseDialog();
-      loadKayitlar();
-    } catch (error: any) {
-      console.error('Kayıt kaydedilirken hata:', error);
-      showSnackbar(error.response?.data?.message || 'Kayıt kaydedilirken hata oluştu!', 'error');
-    } finally {
-      setFormSubmitting(false);
-    }
-  };
+  const handlePhotosCached = useCallback((id: number, photos: string[]) => {
+    setPhotoCache(prev => ({ ...prev, [id]: photos }));
+  }, []);
 
   const handleDelete = async (kayit: SahaKayit) => {
     if (!window.confirm(`${kayit.isim} ${kayit.soyisim} kaydını silmek istediğinize emin misiniz?`)) {
@@ -368,7 +183,7 @@ const SahaPanel: React.FC = () => {
     try {
       await sahaService.deleteKayit(kayit.id);
       showSnackbar('Kayıt başarıyla silindi!', 'success');
-      loadKayitlar();
+      loadKayitlar(currentPage);
     } catch (error: any) {
       console.error('Kayıt silinirken hata:', error);
       showSnackbar('Kayıt silinirken hata oluştu!', 'error');
@@ -395,6 +210,20 @@ const SahaPanel: React.FC = () => {
           </Typography>
         </Box>
         <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+          <Button
+            variant={todayFilter ? 'contained' : 'outlined'}
+            startIcon={<Today />}
+            onClick={handleToggleToday}
+            size="small"
+            color={todayFilter ? 'success' : 'primary'}
+            sx={!todayFilter ? {
+              borderColor: '#0D3282',
+              color: '#0D3282',
+              '&:hover': { borderColor: '#082052', bgcolor: 'rgba(13, 50, 130, 0.04)' }
+            } : undefined}
+          >
+            BUGÜN
+          </Button>
           <Button
             variant="outlined"
             startIcon={<FilterList />}
@@ -498,12 +327,26 @@ const SahaPanel: React.FC = () => {
       )}
 
       {/* Stats */}
-      <Box sx={{ mb: 3 }}>
-        <Chip 
-          label={`Toplam: ${kayitlar.length} kayıt`} 
-          color="primary" 
-          variant="outlined" 
+      <Box sx={{ mb: 3, display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+        <Chip
+          label={`Toplam Kayıtlarım: ${totalStats.toplam}`}
+          color="primary"
+          variant="outlined"
         />
+        <Chip
+          label={`Bugünkü Kayıtlarım: ${totalStats.bugun}`}
+          color="success"
+          variant={todayFilter ? 'filled' : 'outlined'}
+          onClick={handleToggleToday}
+          sx={{ cursor: 'pointer' }}
+        />
+        {(searchText || startDate || endDate || todayFilter) && (
+          <Chip
+            label={`Filtreli Sonuç: ${totalRecords}`}
+            color="info"
+            variant="outlined"
+          />
+        )}
       </Box>
 
       {/* Loading */}
@@ -664,166 +507,28 @@ const SahaPanel: React.FC = () => {
         </Grid>
       )}
 
-      {/* Add/Edit Dialog */}
-      <Dialog open={openDialog} onClose={handleCloseDialog} maxWidth="sm" fullWidth>
-        <DialogTitle>
-          {editingKayit ? 'Kaydı Düzenle' : 'Yeni Kayıt Ekle'}
-          <IconButton
-            onClick={handleCloseDialog}
-            sx={{ position: 'absolute', right: 8, top: 8 }}
-          >
-            <Close />
-          </IconButton>
-        </DialogTitle>
-        <DialogContent>
-          <Box sx={{ mt: 2 }}>
-            {/* Photo Upload - Multiple Photos */}
-            <Box sx={{ 
-              textAlign: 'center', 
-              mb: 3, 
-              p: 2, 
-              border: '2px dashed #ccc', 
-              borderRadius: 2,
-              bgcolor: '#fafafa',
-            }}>
-              {formFotolar.length > 0 ? (
-                <Box sx={{ mb: 2 }}>
-                  <Typography variant="body2" color="text.secondary" gutterBottom>
-                    {formFotolar.length}/5 fotoğraf yüklendi
-                  </Typography>
-                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, justifyContent: 'center' }}>
-                    {formFotolar.map((foto, index) => (
-                      <Box key={index} sx={{ position: 'relative', display: 'inline-block' }}>
-                        <img 
-                          src={foto} 
-                          alt={`Preview ${index + 1}`} 
-                          style={{ 
-                            width: 80, 
-                            height: 80, 
-                            borderRadius: 8,
-                            objectFit: 'cover',
-                            border: '1px solid #ddd',
-                          }} 
-                        />
-                        <IconButton
-                          size="small"
-                          onClick={() => handleRemovePhoto(index)}
-                          sx={{ 
-                            position: 'absolute', 
-                            top: -8, 
-                            right: -8, 
-                            bgcolor: 'error.main',
-                            color: 'white',
-                            padding: 0.3,
-                            '&:hover': { bgcolor: 'error.dark' },
-                          }}
-                        >
-                          <Close sx={{ fontSize: 14 }} />
-                        </IconButton>
-                      </Box>
-                    ))}
-                  </Box>
-                </Box>
-              ) : (
-                <>
-                  <PhotoCamera sx={{ fontSize: 48, color: '#ccc', mb: 1 }} />
-                  <Typography variant="body2" color="text.secondary" gutterBottom>
-                    Fotoğraf yüklemek için aşağıdaki butonları kullanın (maks. 5 adet)
-                  </Typography>
-                </>
-              )}
-              
-              {/* Kamera input - capture="environment" ile arka kamerayı aç */}
-              <input
-                type="file"
-                accept="image/*"
-                capture="environment"
-                ref={cameraInputRef}
-                onChange={handleFileSelect}
-                style={{ display: 'none' }}
-              />
-              
-              {/* Galeri input - capture yok, galeriden seç */}
-              <input
-                type="file"
-                accept="image/*"
-                multiple
-                ref={fileInputRef}
-                onChange={handleFileSelect}
-                style={{ display: 'none' }}
-              />
-              
-              {formFotolar.length < 5 && (
-                <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', justifyContent: 'center', mt: 1 }}>
-                  {/* Kamera Aç Butonu - Öncelikli ve Büyük */}
-                  <Button
-                    variant="contained"
-                    color="primary"
-                    startIcon={<PhotoCamera />}
-                    onClick={() => cameraInputRef.current?.click()}
-                    sx={{ 
-                      minWidth: 150,
-                      py: 1.5,
-                      fontSize: '1rem',
-                      fontWeight: 600,
-                    }}
-                  >
-                    KAMERA AÇ
-                  </Button>
-                  
-                  {/* Galeriden Seç Butonu */}
-                  <Button
-                    variant="outlined"
-                    onClick={() => fileInputRef.current?.click()}
-                    sx={{ minWidth: 120 }}
-                  >
-                    Galeriden Seç
-                  </Button>
-                </Box>
-              )}
-            </Box>
+      {/* Pagination */}
+      {!loading && totalPages > 1 && (
+        <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3 }}>
+          <Pagination
+            count={totalPages}
+            page={currentPage}
+            onChange={(_, value) => loadKayitlar(value)}
+            color="primary"
+            size="medium"
+          />
+        </Box>
+      )}
 
-            {/* Form Fields */}
-            <TextField
-              autoFocus
-              fullWidth
-              label="İsim"
-              value={formIsim}
-              onChange={(e) => setFormIsim(e.target.value)}
-              sx={{ mb: 2 }}
-              required
-            />
-            <TextField
-              fullWidth
-              label="Soyisim"
-              value={formSoyisim}
-              onChange={(e) => setFormSoyisim(e.target.value)}
-              sx={{ mb: 2 }}
-              required
-            />
-            <TextField
-              fullWidth
-              label="Notlar"
-              value={formNotlar}
-              onChange={(e) => setFormNotlar(e.target.value)}
-              multiline
-              rows={3}
-              placeholder="Opsiyonel notlar..."
-            />
-          </Box>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleCloseDialog}>İptal</Button>
-          <Button 
-            onClick={handleSubmit} 
-            variant="contained"
-            disabled={formSubmitting}
-            sx={{ bgcolor: '#0D3282', '&:hover': { bgcolor: '#082052' } }}
-          >
-            {formSubmitting ? <CircularProgress size={20} /> : (editingKayit ? 'Güncelle' : 'Kaydet')}
-          </Button>
-        </DialogActions>
-      </Dialog>
+      {/* Add/Edit Dialog (extracted for performance) */}
+      <SahaKayitDialog
+        open={openDialog}
+        editingKayit={editingKayit}
+        initialPhotos={dialogInitialPhotos}
+        onClose={handleCloseDialog}
+        onSaved={handleDialogSaved}
+        onPhotosCached={handlePhotosCached}
+      />
 
       {/* Photo Loading Overlay */}
       <Dialog 

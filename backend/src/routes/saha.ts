@@ -188,52 +188,93 @@ router.post('/kayit', authenticateToken, async (req: Request, res: Response): Pr
   }
 });
 
-// Kendi Kayıtlarını Getir (Saha Elemanı)
+// Kendi Kayıtlarını Getir (Saha Elemanı) - paginated + search + today
 router.get('/kayitlar', authenticateToken, async (req: Request, res: Response): Promise<void> => {
   try {
     const user = (req as any).user;
-    const { search, startDate, endDate } = req.query;
+    const { search, startDate, endDate, today, page, limit } = req.query;
 
-    let query = `
-      SELECT id, saha_elemani_id, saha_elemani_username, isim, soyisim, notlar, created_at, updated_at,
-             CASE WHEN foto_data IS NOT NULL AND foto_data != '' THEN true ELSE false END as has_photos
-      FROM saha_kayitlari 
-      WHERE saha_elemani_id = $1
-    `;
+    const pageNum = Math.max(1, parseInt(page as string) || 1);
+    const limitNum = Math.min(200, Math.max(1, parseInt(limit as string) || 50));
+    const offset = (pageNum - 1) * limitNum;
+
+    // Ortak WHERE parçası
+    let whereSql = ' WHERE saha_elemani_id = $1';
     const params: any[] = [user.id];
     let paramIndex = 2;
 
-    // Arama filtresi - isim, soyisim, telefon, adres alanlarında ara (case-insensitive)
+    // Arama filtresi - sadece mevcut kolonlarda ara (isim, soyisim, notlar)
     if (search) {
-      query += ` AND (
-        isim ILIKE $${paramIndex} OR 
-        soyisim ILIKE $${paramIndex} OR 
-        telefon ILIKE $${paramIndex} OR 
-        adres ILIKE $${paramIndex} OR
-        CONCAT(isim, ' ', soyisim) ILIKE $${paramIndex}
+      const searchLower = (search as string).toLocaleLowerCase('tr-TR');
+      whereSql += ` AND (
+        LOWER(isim) LIKE $${paramIndex} OR
+        LOWER(soyisim) LIKE $${paramIndex} OR
+        LOWER(COALESCE(notlar, '')) LIKE $${paramIndex} OR
+        LOWER(CONCAT(isim, ' ', soyisim)) LIKE $${paramIndex}
       )`;
-      params.push(`%${search}%`);
+      params.push(`%${searchLower}%`);
       paramIndex++;
     }
 
-    // Tarih filtreleri
+    // Bugün filtresi (saha elemanının kendi yerel gününe göre değil, server gününe göre)
+    if (today === 'true' || today === '1') {
+      whereSql += ` AND created_at >= CURRENT_DATE AND created_at < CURRENT_DATE + INTERVAL '1 day'`;
+    }
+
     if (startDate) {
-      query += ` AND created_at >= $${paramIndex}`;
+      whereSql += ` AND created_at >= $${paramIndex}`;
       params.push(startDate);
       paramIndex++;
     }
 
     if (endDate) {
-      query += ` AND created_at <= $${paramIndex}`;
+      whereSql += ` AND created_at <= $${paramIndex}`;
       params.push(endDate);
       paramIndex++;
     }
 
-    query += ' ORDER BY created_at DESC';
+    const countQuery = `SELECT COUNT(*) as total FROM saha_kayitlari${whereSql}`;
+    const dataQuery = `
+      SELECT id, saha_elemani_id, saha_elemani_username, isim, soyisim, notlar, created_at, updated_at,
+             (foto_data IS NOT NULL) as has_photos
+      FROM saha_kayitlari${whereSql}
+      ORDER BY created_at DESC
+      LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
+    `;
 
-    const records = await pool.query(query, params);
+    const dataParams = [...params, limitNum, offset];
 
-    res.json(records.rows);
+    // Paralel çalıştır: count + data + stats. Birini bekletmek diğerini bekletmesin.
+    const [countResult, records, statsResult] = await Promise.all([
+      pool.query(countQuery, params),
+      pool.query(dataQuery, dataParams),
+      pool.query(
+        `SELECT
+           COUNT(*)::int AS toplam,
+           COUNT(*) FILTER (
+             WHERE created_at >= CURRENT_DATE AND created_at < CURRENT_DATE + INTERVAL '1 day'
+           )::int AS bugun
+         FROM saha_kayitlari
+         WHERE saha_elemani_id = $1`,
+        [user.id]
+      ),
+    ]);
+
+    const total = parseInt(countResult.rows[0].total);
+
+    res.json({
+      data: records.rows,
+      pagination: {
+        page: pageNum,
+        limit: limitNum,
+        total,
+        totalPages: Math.ceil(total / limitNum) || 1
+      },
+      stats: {
+        toplam: statsResult.rows[0].toplam,
+        bugun: statsResult.rows[0].bugun
+      }
+    });
   } catch (error) {
     console.error('Kayıtları getirme hatası:', error);
     res.status(500).json({ message: 'Sunucu hatası' });
@@ -335,23 +376,20 @@ router.get('/kayit-photos/:id', authenticateToken, async (req: Request, res: Res
 // Tüm Saha Kayıtlarını Getir (Admin için) - foto_data hariç (performans)
 router.get('/all-kayitlar', authenticateToken, async (req: Request, res: Response): Promise<void> => {
   try {
-    const { search, startDate, endDate, sahaElemaniId, page, limit } = req.query;
+    const { search, startDate, endDate, sahaElemaniId, today, page, limit } = req.query;
 
     const pageNum = Math.max(1, parseInt(page as string) || 1);
     const limitNum = Math.min(200, Math.max(1, parseInt(limit as string) || 50));
     const offset = (pageNum - 1) * limitNum;
 
-    let countQuery = `
-      SELECT COUNT(*) as total
-      FROM saha_kayitlari sk
-      LEFT JOIN saha_elemanlari se ON sk.saha_elemani_id = se.id
-      WHERE 1=1
-    `;
+    // COUNT için JOIN'e gerek yok (se kolonu filtre/ORDER'da kullanılmıyor).
+    // JOIN'siz COUNT çok daha hızlı çalışır.
+    let countQuery = `SELECT COUNT(*) as total FROM saha_kayitlari sk WHERE 1=1`;
 
     let query = `
       SELECT sk.id, sk.saha_elemani_id, sk.saha_elemani_username, sk.isim, sk.soyisim, 
              sk.notlar, sk.created_at, sk.updated_at,
-             CASE WHEN sk.foto_data IS NOT NULL AND sk.foto_data != '' THEN true ELSE false END as has_photos,
+             (sk.foto_data IS NOT NULL) as has_photos,
              se.ad_soyad as saha_elemani_ad_soyad 
       FROM saha_kayitlari sk
       LEFT JOIN saha_elemanlari se ON sk.saha_elemani_id = se.id
@@ -401,13 +439,32 @@ router.get('/all-kayitlar', authenticateToken, async (req: Request, res: Respons
       paramIndex++;
     }
 
+    // Bugün filtresi
+    if (today === 'true' || today === '1') {
+      const filter = ` AND sk.created_at >= CURRENT_DATE AND sk.created_at < CURRENT_DATE + INTERVAL '1 day'`;
+      query += filter;
+      countQuery += filter;
+    }
+
     query += ` ORDER BY sk.created_at DESC LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`;
 
-    const countResult = await pool.query(countQuery, params);
-    const total = parseInt(countResult.rows[0].total);
+    const dataParams = [...params, limitNum, offset];
 
-    params.push(limitNum, offset);
-    const records = await pool.query(query, params);
+    // Paralel çalıştır: count + data + global stats
+    const [countResult, records, statsResult] = await Promise.all([
+      pool.query(countQuery, params),
+      pool.query(query, dataParams),
+      pool.query(
+        `SELECT
+           COUNT(*)::int AS toplam,
+           COUNT(*) FILTER (
+             WHERE created_at >= CURRENT_DATE AND created_at < CURRENT_DATE + INTERVAL '1 day'
+           )::int AS bugun
+         FROM saha_kayitlari`
+      ),
+    ]);
+
+    const total = parseInt(countResult.rows[0].total);
 
     res.json({
       data: records.rows,
@@ -416,6 +473,10 @@ router.get('/all-kayitlar', authenticateToken, async (req: Request, res: Respons
         limit: limitNum,
         total,
         totalPages: Math.ceil(total / limitNum)
+      },
+      stats: {
+        toplam: statsResult.rows[0].toplam,
+        bugun: statsResult.rows[0].bugun
       }
     });
   } catch (error) {
@@ -431,7 +492,7 @@ router.get('/user-kayitlar/:username', authenticateToken, async (req: Request, r
 
     const records = await pool.query(
       `SELECT id, saha_elemani_id, saha_elemani_username, isim, soyisim, notlar, created_at, updated_at,
-              CASE WHEN foto_data IS NOT NULL AND foto_data != '' THEN true ELSE false END as has_photos
+              (foto_data IS NOT NULL) as has_photos
        FROM saha_kayitlari 
        WHERE saha_elemani_username = $1 
        ORDER BY created_at DESC`,

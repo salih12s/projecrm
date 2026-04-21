@@ -9,6 +9,7 @@ import path from 'path';
 import createTables from './createTables';
 import { initLocations } from './initLocations';
 import addNoteNoToAtolyeTable from './addNoteNoToAtolyeTable';
+import addSahaPerformanceIndexes from './addSahaPerformanceIndexes';
 import authRoutes from './routes/auth';
 import islemlerRoutes from './routes/islemler';
 import teknisyenlerRoutes from './routes/teknisyenler';
@@ -148,6 +149,7 @@ async function startServer() {
     await withRetry(() => addNoteNoToAtolyeTable(), 'Migration');
     await withRetry(() => initLocations(), 'Location data');
     await withRetry(() => createKaralisteTable(), 'Karaliste tablosu');
+    await withRetry(() => addSahaPerformanceIndexes(), 'Saha performans indexleri');
     
     server.listen(PORT, () => {
       console.log(`✅ Server ${PORT} portunda çalışıyor`);

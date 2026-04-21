@@ -214,8 +214,8 @@ export const sahaService = {
     return response.data.kayit;
   },
 
-  // Kendi kayıtlarını getir (saha elemanı)
-  getKayitlar: async (params?: { search?: string; startDate?: string; endDate?: string }): Promise<SahaKayit[]> => {
+  // Kendi kayıtlarını getir (saha elemanı) - paginated
+  getKayitlar: async (params?: { search?: string; startDate?: string; endDate?: string; today?: boolean; page?: number; limit?: number }): Promise<{ data: SahaKayit[]; pagination: { page: number; limit: number; total: number; totalPages: number }; stats: { toplam: number; bugun: number } }> => {
     const response = await api.get('/saha/kayitlar', { params });
     return response.data;
   },
@@ -239,7 +239,7 @@ export const sahaService = {
   },
 
   // Tüm saha kayıtlarını getir (admin) - foto_data hariç, paginated
-  getAllKayitlar: async (params?: { search?: string; startDate?: string; endDate?: string; sahaElemaniId?: number; page?: number; limit?: number }): Promise<{ data: SahaKayit[]; pagination: { page: number; limit: number; total: number; totalPages: number } }> => {
+  getAllKayitlar: async (params?: { search?: string; startDate?: string; endDate?: string; sahaElemaniId?: number; today?: boolean; page?: number; limit?: number }): Promise<{ data: SahaKayit[]; pagination: { page: number; limit: number; total: number; totalPages: number }; stats: { toplam: number; bugun: number } }> => {
     const response = await api.get('/saha/all-kayitlar', { params, timeout: 60000 });
     return response.data;
   },
