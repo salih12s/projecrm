@@ -250,6 +250,12 @@ export const sahaService = {
     return response.data.foto_data;
   },
 
+  // Tek kayıdın sadece ilk fotoğrafını getir (liste önizlemesi için)
+  getKayitThumbnail: async (id: number): Promise<string | null> => {
+    const response = await api.get(`/saha/kayit-thumbnail/${id}`, { timeout: 30000 });
+    return response.data.foto_preview;
+  },
+
   // Saha elemanının kayıtlarını getir (admin)
   getUserKayitlar: async (username: string): Promise<SahaKayit[]> => {
     const response = await api.get(`/saha/user-kayitlar/${username}`);

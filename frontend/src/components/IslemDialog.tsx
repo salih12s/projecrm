@@ -449,26 +449,44 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
   const handleChange = (field: keyof IslemUpdateDto) => (
     e: React.ChangeEvent<HTMLInputElement>
   ) => {
-    let value = e.target.value;
+    const input = e.target;
+    const rawValue = input.value;
+    const cursorPos = input.selectionStart ?? rawValue.length;
     
     // Telefon alanları için formatla
     if (field === 'cep_tel' || field === 'sabit_tel' || field === 'yedek_tel') {
-      const cleaned = cleanPhoneNumber(value);
+      const cleaned = cleanPhoneNumber(rawValue);
       // Sadece 11 hane kadar kabul et
       if (cleaned.length <= 11) {
-        value = cleaned;
-        setFormData({ ...formData, [field]: value });
+        // Cursor'dan önceki digit sayısını hesapla
+        const digitsBeforeCursor = rawValue.slice(0, cursorPos).replace(/\D/g, '').length;
+        setFormData({ ...formData, [field]: cleaned });
+        // Yeniden render sonrası cursor'u aynı digit pozisyonuna geri koy
+        const formatted = formatPhoneNumber(cleaned);
+        let newPos = 0;
+        let digitCount = 0;
+        while (newPos < formatted.length && digitCount < digitsBeforeCursor) {
+          if (/\d/.test(formatted[newPos])) digitCount++;
+          newPos++;
+        }
+        requestAnimationFrame(() => {
+          try { input.setSelectionRange(newPos, newPos); } catch { /* noop */ }
+        });
       }
     } else if (field === 'is_durumu') {
       // İş durumu için büyük harf dönüşümü YAPMA (küçük harf kalmalı)
-      setFormData({ ...formData, [field]: value as 'acik' | 'parca_bekliyor' | 'tamamlandi' | 'iptal' });
+      setFormData({ ...formData, [field]: rawValue as 'acik' | 'parca_bekliyor' | 'tamamlandi' | 'iptal' });
     } else if (field === 'yapilan_islem' || field === 'sikayet') {
       // yapilan_islem ve sikayet alanları için büyük harf dönüşümü YAPMA (cursor sorunu olmaması için)
-      setFormData({ ...formData, [field]: value });
+      setFormData({ ...formData, [field]: rawValue });
     } else {
       // Tüm text inputlar için büyük harf dönüşümü
-      value = value.toLocaleUpperCase('tr-TR');
-      setFormData({ ...formData, [field]: value });
+      const upperValue = rawValue.toLocaleUpperCase('tr-TR');
+      setFormData({ ...formData, [field]: upperValue });
+      // Uppercase sonrası cursor sona kaymasın — aynı pozisyonda kalsın
+      requestAnimationFrame(() => {
+        try { input.setSelectionRange(cursorPos, cursorPos); } catch { /* noop */ }
+      });
     }
   };
 

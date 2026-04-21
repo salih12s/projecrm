@@ -7,7 +7,6 @@ import {
   Grid,
   Card,
   CardContent,
-  CardMedia,
   InputAdornment,
   Chip,
   Alert,
@@ -28,6 +27,7 @@ import {
   Dialog,
   DialogContent,
   DialogTitle,
+  Tooltip,
 } from '@mui/material';
 import {
   Search,
@@ -47,6 +47,92 @@ import {
 import { useSnackbar } from '../context/SnackbarContext';
 import { sahaService } from '../services/api';
 import { SahaKayit, SahaElemani } from '../types';
+
+// Lazy-loading thumbnail: yalnızca viewport'a girdiğinde ilk fotoğrafı backend'den çeker.
+// Performansı korumak için IntersectionObserver ve ortak bir cache kullanır.
+interface LazyThumbnailProps {
+  kayitId: number;
+  alt: string;
+  width?: number | string;
+  height?: number | string;
+  borderRadius?: number;
+  objectFit?: 'cover' | 'contain';
+  onClick?: () => void;
+  thumbnailCache: Record<number, string | null>;
+  setThumbnailCache: React.Dispatch<React.SetStateAction<Record<number, string | null>>>;
+}
+
+const LazyThumbnail: React.FC<LazyThumbnailProps> = ({
+  kayitId, alt, width = '100%', height = 180, borderRadius = 0, objectFit = 'cover', onClick,
+  thumbnailCache, setThumbnailCache,
+}) => {
+  const ref = React.useRef<HTMLDivElement>(null);
+  const [visible, setVisible] = React.useState(false);
+  const [loading, setLoading] = React.useState(false);
+  const cached = thumbnailCache[kayitId];
+
+  React.useEffect(() => {
+    if (cached !== undefined) return; // zaten denendi
+    const el = ref.current;
+    if (!el) return;
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          setVisible(true);
+          observer.disconnect();
+        }
+      });
+    }, { rootMargin: '200px' });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [cached]);
+
+  React.useEffect(() => {
+    if (!visible || cached !== undefined || loading) return;
+    setLoading(true);
+    sahaService.getKayitThumbnail(kayitId)
+      .then((data) => {
+        setThumbnailCache((prev) => ({ ...prev, [kayitId]: data || null }));
+      })
+      .catch(() => {
+        setThumbnailCache((prev) => ({ ...prev, [kayitId]: null }));
+      })
+      .finally(() => setLoading(false));
+  }, [visible, cached, kayitId, loading, setThumbnailCache]);
+
+  return (
+    <Box
+      ref={ref}
+      onClick={onClick}
+      sx={{
+        width,
+        height,
+        borderRadius,
+        overflow: 'hidden',
+        cursor: onClick ? 'pointer' : 'default',
+        bgcolor: '#e3f2fd',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        position: 'relative',
+        '&:hover': onClick ? { opacity: 0.9 } : undefined,
+      }}
+    >
+      {cached ? (
+        <img
+          src={cached}
+          alt={alt}
+          style={{ width: '100%', height: '100%', objectFit }}
+          loading="lazy"
+        />
+      ) : loading ? (
+        <CircularProgress size={24} />
+      ) : (
+        <PhotoCamera sx={{ color: '#1976d2', fontSize: typeof height === 'number' && height < 80 ? 24 : 60 }} />
+      )}
+    </Box>
+  );
+};
 
 const SahaKayitlari: React.FC = () => {
   const [kayitlar, setKayitlar] = useState<SahaKayit[]>([]);
@@ -68,6 +154,7 @@ const SahaKayitlari: React.FC = () => {
   const [startPan, setStartPan] = useState({ x: 0, y: 0 });
   const [photoLoading, setPhotoLoading] = useState(false);
   const [photoCache, setPhotoCache] = useState<Record<number, string[]>>({});
+  const [thumbnailCache, setThumbnailCache] = useState<Record<number, string | null>>({});
   const [lastTouchDistance, setLastTouchDistance] = useState<number | null>(null);
   const [lastTouchCenter, setLastTouchCenter] = useState<{ x: number; y: number } | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
@@ -394,7 +481,6 @@ const SahaKayitlari: React.FC = () => {
         <Grid container spacing={2}>
           {kayitlar.map((kayit) => {
             const hasPhotos = (kayit as any).has_photos;
-            const fotoPreview = (kayit as any).foto_preview;
             
             return (
             <Grid item xs={12} sm={6} md={4} lg={3} key={kayit.id}>
@@ -408,14 +494,15 @@ const SahaKayitlari: React.FC = () => {
                   boxShadow: 4,
                 }
               }}>
-                {fotoPreview ? (
-                  <Box sx={{ position: 'relative', cursor: 'pointer' }} onClick={() => handleOpenPhotos(kayit.id)}>
-                    <CardMedia
-                      component="img"
-                      height="180"
-                      image={fotoPreview}
+                {hasPhotos ? (
+                  <Box sx={{ position: 'relative' }}>
+                    <LazyThumbnail
+                      kayitId={kayit.id}
                       alt={`${kayit.isim} ${kayit.soyisim}`}
-                      sx={{ objectFit: 'cover' }}
+                      height={180}
+                      onClick={() => handleOpenPhotos(kayit.id)}
+                      thumbnailCache={thumbnailCache}
+                      setThumbnailCache={setThumbnailCache}
                     />
                     <Box sx={{
                       position: 'absolute',
@@ -429,29 +516,11 @@ const SahaKayitlari: React.FC = () => {
                       justifyContent: 'center',
                       gap: 0.5,
                       py: 0.5,
+                      pointerEvents: 'none',
                     }}>
                       <PhotoCamera sx={{ fontSize: 16 }} />
                       <Typography variant="caption">Fotoğrafları Görüntüle</Typography>
                     </Box>
-                  </Box>
-                ) : hasPhotos ? (
-                  <Box 
-                    sx={{ 
-                      height: 180, 
-                      display: 'flex', 
-                      alignItems: 'center', 
-                      justifyContent: 'center',
-                      bgcolor: '#e3f2fd',
-                      cursor: 'pointer',
-                      position: 'relative',
-                      '&:hover': { bgcolor: '#bbdefb' },
-                    }}
-                    onClick={() => handleOpenPhotos(kayit.id)}
-                  >
-                    <PhotoCamera sx={{ fontSize: 60, color: '#1976d2' }} />
-                    <Typography variant="caption" sx={{ position: 'absolute', bottom: 8, color: '#1976d2', fontWeight: 500 }}>
-                      Fotoğrafları Görüntüle
-                    </Typography>
                   </Box>
                 ) : (
                   <Box
@@ -479,9 +548,11 @@ const SahaKayitlari: React.FC = () => {
                   />
                   
                   {kayit.notlar && (
-                    <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                      {kayit.notlar.length > 80 ? kayit.notlar.substring(0, 80) + '...' : kayit.notlar}
-                    </Typography>
+                    <Tooltip title={kayit.notlar} arrow placement="top">
+                      <Typography variant="body2" color="text.secondary" sx={{ mt: 1, cursor: 'help' }}>
+                        {kayit.notlar.length > 80 ? kayit.notlar.substring(0, 80) + '...' : kayit.notlar}
+                      </Typography>
+                    </Tooltip>
                   )}
                   
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 1 }}>
@@ -518,50 +589,21 @@ const SahaKayitlari: React.FC = () => {
             <TableBody>
               {kayitlar.map((kayit) => {
                 const hasPhotos = (kayit as any).has_photos;
-                const fotoPreview = (kayit as any).foto_preview;
                 
                 return (
                 <TableRow key={kayit.id} hover>
                   <TableCell>
-                    {fotoPreview ? (
-                      <Box 
-                        sx={{ 
-                          width: 50, 
-                          height: 50, 
-                          borderRadius: 1,
-                          overflow: 'hidden',
-                          cursor: 'pointer',
-                          '&:hover': { opacity: 0.8 },
-                        }}
+                    {hasPhotos ? (
+                      <LazyThumbnail
+                        kayitId={kayit.id}
+                        alt={`${kayit.isim} ${kayit.soyisim}`}
+                        width={50}
+                        height={50}
+                        borderRadius={1}
                         onClick={() => handleOpenPhotos(kayit.id)}
-                      >
-                        <img 
-                          src={fotoPreview} 
-                          alt={`${kayit.isim} ${kayit.soyisim}`}
-                          style={{ 
-                            width: '100%', 
-                            height: '100%', 
-                            objectFit: 'cover',
-                          }}
-                        />
-                      </Box>
-                    ) : hasPhotos ? (
-                      <Box 
-                        sx={{ 
-                          width: 50, 
-                          height: 50, 
-                          display: 'flex', 
-                          alignItems: 'center', 
-                          justifyContent: 'center',
-                          bgcolor: '#e3f2fd',
-                          borderRadius: 1,
-                          cursor: 'pointer',
-                          '&:hover': { bgcolor: '#bbdefb' },
-                        }}
-                        onClick={() => handleOpenPhotos(kayit.id)}
-                      >
-                        <PhotoCamera sx={{ color: '#1976d2', fontSize: 24 }} />
-                      </Box>
+                        thumbnailCache={thumbnailCache}
+                        setThumbnailCache={setThumbnailCache}
+                      />
                     ) : (
                       <Box sx={{ 
                         width: 50, 
@@ -587,9 +629,11 @@ const SahaKayitlari: React.FC = () => {
                     />
                   </TableCell>
                   <TableCell sx={{ maxWidth: 200 }}>
-                    <Typography variant="body2" noWrap title={kayit.notlar}>
-                      {kayit.notlar || '-'}
-                    </Typography>
+                    <Tooltip title={kayit.notlar || ''} arrow placement="top" disableHoverListener={!kayit.notlar}>
+                      <Typography variant="body2" noWrap sx={{ cursor: kayit.notlar ? 'help' : 'default' }}>
+                        {kayit.notlar || '-'}
+                      </Typography>
+                    </Tooltip>
                   </TableCell>
                   <TableCell>
                     {new Date(kayit.created_at).toLocaleString('tr-TR', {

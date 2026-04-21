@@ -352,6 +352,39 @@ router.delete('/kayit/:id', authenticateToken, async (req: Request, res: Respons
   }
 });
 
+// Tek Kayıdın Sadece İlk Fotoğrafını Getir (Önizleme - liste için)
+router.get('/kayit-thumbnail/:id', authenticateToken, async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const record = await pool.query(
+      'SELECT foto_data FROM saha_kayitlari WHERE id = $1',
+      [id]
+    );
+
+    if (record.rows.length === 0 || !record.rows[0].foto_data) {
+      res.status(404).json({ message: 'Kayıt veya fotoğraf bulunamadı' });
+      return;
+    }
+
+    // foto_data bir JSON string olarak saklanıyor: ["data:image/...", ...]
+    // Yalnızca ilk fotoğrafı döndür (bandwidth tasarrufu için)
+    try {
+      const parsed = JSON.parse(record.rows[0].foto_data);
+      const firstPhoto = Array.isArray(parsed) && parsed.length > 0 ? parsed[0] : null;
+      if (!firstPhoto) {
+        res.status(404).json({ message: 'Fotoğraf bulunamadı' });
+        return;
+      }
+      res.json({ foto_preview: firstPhoto });
+    } catch {
+      res.status(500).json({ message: 'Fotoğraf verisi okunamadı' });
+    }
+  } catch (error) {
+    console.error('Thumbnail getirme hatası:', error);
+    res.status(500).json({ message: 'Sunucu hatası' });
+  }
+});
+
 // Tek Kayıdın Fotoğraflarını Getir
 router.get('/kayit-photos/:id', authenticateToken, async (req: Request, res: Response): Promise<void> => {
   try {
