@@ -98,6 +98,10 @@ const Dashboard: React.FC = () => {
   const columnFilterTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isFirstColumnFilterRef = useRef(true);
   const adminFiltersActiveRef = useRef(false);
+  // Stale closure'lardan korunmak için aktif filtre değerlerini ref olarak tut
+  const statusFilterRef = useRef<'all' | 'acik' | 'parca_bekliyor' | 'tamamlandi' | 'iptal'>('all');
+  const showTodayOnlyRef = useRef(false);
+  const showYazdirilmamisRef = useRef(false);
   
   // Güvenli rol kontrolü - eğer user yoksa veya role tanımlı değilse en kısıtlı mod
   const isBayi = user?.role === 'bayi';
@@ -174,9 +178,9 @@ const Dashboard: React.FC = () => {
 
   // Sunucu taraflı filtre parametrelerini oluştur
   const getServerFilters = (overrides?: { status?: string; todayOnly?: boolean; yazdirilmamisOnly?: boolean }) => {
-    const s = overrides?.status ?? statusFilter;
-    const t = overrides?.todayOnly ?? showTodayOnly;
-    const y = overrides?.yazdirilmamisOnly ?? showYazdirilmamis;
+    const s = overrides?.status ?? statusFilterRef.current;
+    const t = overrides?.todayOnly ?? showTodayOnlyRef.current;
+    const y = overrides?.yazdirilmamisOnly ?? showYazdirilmamisRef.current;
     const params: any = {};
     if (s && s !== 'all') params.is_durumu = s;
     if (t) params.today = 'true';
@@ -425,15 +429,21 @@ const Dashboard: React.FC = () => {
     setStatusFilter(filter);
     setShowTodayOnly(false);
     setShowYazdirilmamis(false);
+    statusFilterRef.current = filter;
+    showTodayOnlyRef.current = false;
+    showYazdirilmamisRef.current = false;
     loadIslemler(1, false, { status: filter, todayOnly: false, yazdirilmamisOnly: false });
   }, []);
 
   const handleTodayFilter = useCallback(() => {
     const newValue = !showTodayOnly;
     setShowTodayOnly(newValue);
+    showTodayOnlyRef.current = newValue;
     if (newValue) {
       setStatusFilter('all');
       setShowYazdirilmamis(false);
+      statusFilterRef.current = 'all';
+      showYazdirilmamisRef.current = false;
     }
     loadIslemler(1, false, { status: 'all', todayOnly: newValue, yazdirilmamisOnly: false });
   }, [showTodayOnly]);
@@ -441,9 +451,12 @@ const Dashboard: React.FC = () => {
   const handleYazdirilmamisFilter = useCallback(() => {
     const newValue = !showYazdirilmamis;
     setShowYazdirilmamis(newValue);
+    showYazdirilmamisRef.current = newValue;
     if (newValue) {
       setStatusFilter('all');
       setShowTodayOnly(false);
+      statusFilterRef.current = 'all';
+      showTodayOnlyRef.current = false;
     }
     loadIslemler(1, false, { status: 'all', todayOnly: false, yazdirilmamisOnly: newValue });
   }, [showYazdirilmamis]);
