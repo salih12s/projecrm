@@ -121,6 +121,16 @@ if (process.env.NODE_ENV === 'production') {
 
 const PORT = process.env.PORT || 5000;
 
+// Global hata yakalayıcılar - process'in çökmesini engelle (Railway restart selini önler)
+process.on('unhandledRejection', (reason) => {
+  const message = reason instanceof Error ? reason.message : String(reason);
+  console.error('⚠️ Yakalanmamış promise reddi:', message);
+});
+
+process.on('uncaughtException', (err) => {
+  console.error('⚠️ Yakalanmamış istisna:', err.message);
+});
+
 // Retry helper fonksiyonu
 async function withRetry<T>(
   fn: () => Promise<T>,

@@ -1,5 +1,5 @@
 import express, { Request, Response } from 'express';
-import pool from '../db';
+import { query } from '../db';
 import authMiddleware from '../middleware/auth';
 import { IslemCreateDto } from '../types';
 
@@ -8,7 +8,7 @@ const router = express.Router();
 // İstatistikler endpoint - hafif, sadece sayılar döner
 router.get('/stats', authMiddleware, async (_req: Request, res: Response): Promise<void> => {
   try {
-    const result = await pool.query(`
+    const result = await query(`
       SELECT 
         COUNT(*) as total,
         COUNT(*) FILTER (WHERE is_durumu = 'acik') as acik,
@@ -197,12 +197,12 @@ router.get('/', authMiddleware, async (req: Request, res: Response): Promise<voi
       const limitNum = Math.min(500, Math.max(1, parseInt(limitParam as string) || 100));
       const offset = (pageNum - 1) * limitNum;
 
-      const countResult = await pool.query(`SELECT COUNT(*) as total FROM islemler${whereClause}`, params);
+      const countResult = await query(`SELECT COUNT(*) as total FROM islemler${whereClause}`, params);
       const total = parseInt(countResult.rows[0].total);
 
       const dataQuery = `SELECT * FROM islemler${whereClause} ORDER BY full_tarih DESC LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`;
       params.push(limitNum, offset);
-      const result = await pool.query(dataQuery, params);
+      const result = await query(dataQuery, params);
 
       res.json({
         data: result.rows,
@@ -214,7 +214,7 @@ router.get('/', authMiddleware, async (req: Request, res: Response): Promise<voi
         }
       });
     } else {
-      const result = await pool.query(`SELECT * FROM islemler${whereClause} ORDER BY full_tarih DESC`, params);
+      const result = await query(`SELECT * FROM islemler${whereClause} ORDER BY full_tarih DESC`, params);
       res.json(result.rows);
     }
   } catch (error) {
@@ -232,7 +232,7 @@ router.get('/search-by-phone', authMiddleware, async (req: Request, res: Respons
       return;
     }
     const cleanedPhone = (phone as string).replace(/\D/g, '');
-    const result = await pool.query(
+    const result = await query(
       `SELECT * FROM islemler WHERE cep_tel LIKE $1 OR yedek_tel LIKE $1 ORDER BY id DESC LIMIT 50`,
       [`%${cleanedPhone}%`]
     );
@@ -251,7 +251,7 @@ router.get('/search-by-name', authMiddleware, async (req: Request, res: Response
       res.json([]);
       return;
     }
-    const result = await pool.query(
+    const result = await query(
       `SELECT * FROM islemler WHERE ad_soyad ILIKE $1 ORDER BY id DESC LIMIT 200`,
       [`%${name}%`]
     );
@@ -296,7 +296,7 @@ router.post('/', authMiddleware, async (req: Request, res: Response): Promise<vo
     const truncatedYedekTel = (yedek_tel || '').replace(/\D/g, '').slice(0, 20);
     const truncatedIsDurumu = (is_durumu || 'acik').slice(0, 20);
 
-    const result = await pool.query(
+    const result = await query(
       `INSERT INTO islemler (
         ad_soyad, ilce, mahalle, cadde, sokak, kapi_no,
         apartman_site, blok_no, daire_no, sabit_tel, cep_tel, yedek_tel,
@@ -307,7 +307,8 @@ router.post('/', authMiddleware, async (req: Request, res: Response): Promise<vo
         ad_soyad, ilce, mahalle, cadde, sokak, truncatedKapiNo,
         apartman_site, truncatedBlokNo, truncatedDaireNo, truncatedSabitTel, truncatedCepTel, truncatedYedekTel,
         urun, marka, sikayet, teknisyen_ismi, yapilan_islem, tutar, truncatedIsDurumu, req.user?.username
-      ]
+      ],
+      0
     );
 
     // Socket.IO ile tüm kullanıcılara bildir
@@ -328,7 +329,7 @@ router.put('/:id', authMiddleware, async (req: Request, res: Response): Promise<
     const updates: any = req.body;
 
     // Önce mevcut işlemi al
-    const existing = await pool.query(
+    const existing = await query(
       'SELECT * FROM islemler WHERE id = $1',
       [id]
     );
@@ -351,7 +352,7 @@ router.put('/:id', authMiddleware, async (req: Request, res: Response): Promise<
     const truncatedYedekTel = (updatedData.yedek_tel || '').replace(/\D/g, '').slice(0, 20);
     const truncatedIsDurumu = (updatedData.is_durumu || 'acik').slice(0, 20);
 
-    const result = await pool.query(
+    const result = await query(
       `UPDATE islemler SET
         teknisyen_ismi = $1,
         yapilan_islem = $2,
@@ -384,7 +385,8 @@ router.put('/:id', authMiddleware, async (req: Request, res: Response): Promise<
         truncatedSabitTel, truncatedCepTel, truncatedYedekTel, updatedData.urun, 
         updatedData.marka, updatedData.sikayet, truncatedIsDurumu, 
         updatedData.yazdirildi, id
-      ]
+      ],
+      0
     );
 
     // Socket.IO ile tüm kullanıcılara bildir
@@ -403,9 +405,10 @@ router.delete('/:id', authMiddleware, async (req: Request, res: Response): Promi
   try {
     const { id } = req.params;
 
-    const result = await pool.query(
+    const result = await query(
       'DELETE FROM islemler WHERE id = $1 RETURNING *',
-      [id]
+      [id],
+      0
     );
 
     if (result.rows.length === 0) {
@@ -430,13 +433,14 @@ router.patch('/:id/durum', authMiddleware, async (req: Request, res: Response): 
     const { id } = req.params;
     const { is_durumu } = req.body;
 
-    const result = await pool.query(
+    const result = await query(
       `UPDATE islemler SET 
         is_durumu = $1,
         updated_at = CURRENT_TIMESTAMP
       WHERE id = $2
       RETURNING *`,
-      [is_durumu, id]
+      [is_durumu, id],
+      0
     );
 
     if (result.rows.length === 0) {

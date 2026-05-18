@@ -1,4 +1,4 @@
-import axios, { InternalAxiosRequestConfig } from 'axios';
+import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
 import { Islem, IslemCreateDto, IslemUpdateDto, FilterParams, SahaKayit, SahaKayitCreateDto, SahaKayitUpdateDto, SahaElemani } from '../types';
 
 // Environment variable'dan API URL'i al
@@ -17,6 +17,29 @@ const api = axios.create({
   },
 });
 
+type RetryableAxiosConfig = InternalAxiosRequestConfig & {
+  _retryCount?: number;
+};
+
+const RETRYABLE_GET_STATUS_CODES = new Set([500, 502, 503, 504]);
+
+function sleep(ms: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+function shouldRetryGetRequest(error: AxiosError): boolean {
+  const config = error.config as RetryableAxiosConfig | undefined;
+  const method = config?.method?.toLowerCase();
+  const status = error.response?.status;
+  const retryCount = config?._retryCount || 0;
+
+  if (!config || method !== 'get' || retryCount >= 2) {
+    return false;
+  }
+
+  return !status || RETRYABLE_GET_STATUS_CODES.has(status) || error.code === 'ECONNABORTED';
+}
+
 // Token'ı her istekte ekle
 api.interceptors.request.use((config: InternalAxiosRequestConfig) => {
   const token = localStorage.getItem('token');
@@ -29,13 +52,21 @@ api.interceptors.request.use((config: InternalAxiosRequestConfig) => {
 // Hata yönetimi
 api.interceptors.response.use(
   (response) => response,
-  (error) => {
+  async (error: AxiosError) => {
     if (error.response?.status === 401) {
       // Token geçersiz, kullanıcıyı çıkış yap
       localStorage.removeItem('token');
       localStorage.removeItem('user');
       window.location.href = '/login';
     }
+
+    if (shouldRetryGetRequest(error)) {
+      const config = error.config as RetryableAxiosConfig;
+      config._retryCount = (config._retryCount || 0) + 1;
+      await sleep(500 * config._retryCount);
+      return api(config);
+    }
+
     return Promise.reject(error);
   }
 );

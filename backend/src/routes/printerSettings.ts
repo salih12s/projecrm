@@ -1,8 +1,38 @@
 import { Router, Request, Response } from 'express';
-import pool from '../db';
+import { query } from '../db';
 import authMiddleware from '../middleware/auth';
 
 const router = Router();
+const CACHE_TTL_MS = 5 * 60 * 1000;
+
+type SettingsCacheEntry = {
+  value: unknown;
+  expiresAt: number;
+};
+
+const settingsCache = new Map<string, SettingsCacheEntry>();
+
+function getCachedSettings(marka: string): { hit: boolean; value: unknown } {
+  const cached = settingsCache.get(marka);
+
+  if (!cached) {
+    return { hit: false, value: null };
+  }
+
+  if (cached.expiresAt <= Date.now()) {
+    settingsCache.delete(marka);
+    return { hit: false, value: null };
+  }
+
+  return { hit: true, value: cached.value };
+}
+
+function setCachedSettings(marka: string, value: unknown): void {
+  settingsCache.set(marka, {
+    value,
+    expiresAt: Date.now() + CACHE_TTL_MS,
+  });
+}
 
 // Türkçe karakterleri doğru normalize et (büyük/küçük harf duyarsız)
 // Tüm Latin harflerini ve Türkçe karakterleri standartlaştır
@@ -61,17 +91,25 @@ router.get('/:marka', authMiddleware, async (req: Request, res: Response): Promi
     const { marka } = req.params;
     const masterBrand = getMasterBrand(marka);
     console.log('📥 Yazıcı ayarları isteniyor:', marka, '→ Master:', masterBrand);
+
+    const cached = getCachedSettings(masterBrand);
+    if (cached.hit) {
+      res.json(cached.value);
+      return;
+    }
     
-    const result = await pool.query(
+    const result = await query(
       'SELECT config FROM printer_settings WHERE marka = $1',
       [masterBrand]
     );
 
     if (result.rows.length > 0) {
       console.log('✅ Bulundu: Yazıcı ayarları yüklendi (' + (Array.isArray(result.rows[0].config) ? result.rows[0].config.length + ' alan' : 'config mevcut') + ')');
+      setCachedSettings(masterBrand, result.rows[0].config);
       res.json(result.rows[0].config);
     } else {
       console.log('⚠️ Bulunamadı');
+      setCachedSettings(masterBrand, null);
       res.json(null);
     }
   } catch (error) {
@@ -89,16 +127,18 @@ router.post('/:marka', authMiddleware, async (req: Request, res: Response): Prom
 
     console.log('📝 Yazıcı ayarları kaydediliyor:', marka, '→ Master:', masterBrand);
 
-    const result = await pool.query(
+    const result = await query(
       `INSERT INTO printer_settings (marka, config, updated_at)
        VALUES ($1, $2, CURRENT_TIMESTAMP)
        ON CONFLICT (marka) 
        DO UPDATE SET config = $2, updated_at = CURRENT_TIMESTAMP
        RETURNING *`,
-      [masterBrand, JSON.stringify(config)]
+      [masterBrand, JSON.stringify(config)],
+      0
     );
 
     console.log('✅ Kaydedildi (master brand):', masterBrand);
+    setCachedSettings(masterBrand, config);
     res.json(result.rows[0]);
   } catch (error) {
     console.error('❌ Yazıcı ayarları kaydetme hatası:', error);
@@ -111,7 +151,8 @@ router.delete('/:marka', authMiddleware, async (req: Request, res: Response): Pr
   try {
     const { marka } = req.params;
     const masterBrand = getMasterBrand(marka);
-    await pool.query('DELETE FROM printer_settings WHERE marka = $1', [masterBrand]);
+    await query('DELETE FROM printer_settings WHERE marka = $1', [masterBrand], 0);
+    settingsCache.delete(masterBrand);
     res.json({ message: 'Yazıcı ayarları silindi' });
   } catch (error) {
     console.error('Yazıcı ayarları silme hatası:', error);
