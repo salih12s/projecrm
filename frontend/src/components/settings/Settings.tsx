@@ -20,7 +20,14 @@ import {
 } from '@mui/material';
 import { Edit, Add, Delete } from '@mui/icons-material';
 import { Teknisyen, Marka, Bayi, Montaj, Aksesuar, Urun } from '../../types';
-import { api } from '../../services/api';
+import {
+  teknisyenService,
+  markaService,
+  bayiService,
+  urunService,
+  montajService,
+  aksesuarService,
+} from '../../services/api';
 import { useSnackbar } from '../../context/SnackbarContext';
 import { useAuth } from '../../context/AuthContext';
 
@@ -49,23 +56,21 @@ const Settings: React.FC = () => {
   const fetchData = async () => {
     try {
       if (tabValue === 0) {
-        const response = await api.get('/teknisyenler');
-        setTeknisyenler(response.data);
+        setTeknisyenler(await teknisyenService.getAll());
       } else if (tabValue === 1) {
-        const response = await api.get('/markalar');
-        setMarkalar(response.data);
+        setMarkalar(await markaService.getAll());
       } else if (tabValue === 2) {
-        const response = await api.get('/bayiler');
-        setBayiler(response.data);
+        setBayiler(await bayiService.getAll());
       } else if (tabValue === 3) {
-        const response = await api.get('/urunler');
-        setUrunler(response.data);
+        setUrunler(await urunService.getAll());
       } else if (tabValue === 4) {
         // Montaj ve Aksesuarlar - iki tablo yan yana
-        const montajResponse = await api.get('/montajlar');
-        const aksesuarResponse = await api.get('/aksesuarlar');
-        setMontajlar(montajResponse.data);
-        setAksesuarlar(aksesuarResponse.data);
+        const [montajData, aksesuarData] = await Promise.all([
+          montajService.getAll(),
+          aksesuarService.getAll(),
+        ]);
+        setMontajlar(montajData);
+        setAksesuarlar(aksesuarData);
       }
     } catch (err) {
       showSnackbar('Veri yüklenirken hata oluştu', 'error');
@@ -95,23 +100,30 @@ const Settings: React.FC = () => {
     }
 
     try {
-      let endpoint = '';
-      if (tabValue === 0) endpoint = '/teknisyenler';
-      else if (tabValue === 1) endpoint = '/markalar';
-      else if (tabValue === 2) endpoint = '/bayiler';
-      else if (tabValue === 3) endpoint = '/urunler';
+      // Aktif tab'a göre uygun servisi seç
+      let service: { create: (d: { isim: string }) => Promise<unknown>; update: (id: number, d: { isim: string }) => Promise<unknown> } | null = null;
+      if (tabValue === 0) service = teknisyenService;
+      else if (tabValue === 1) service = markaService;
+      else if (tabValue === 2) service = bayiService;
+      else if (tabValue === 3) service = urunService;
       else if (tabValue === 4) {
-        endpoint = editType === 'aksesuar' ? '/aksesuarlar' : '/montajlar';
+        service = editType === 'aksesuar' ? aksesuarService : montajService;
       }
-      
+
+      if (!service) {
+        setError('Geçersiz sekme');
+        return;
+      }
+
+      const payload = { isim: inputValue.trim() };
       if (editMode && currentId) {
-        await api.put(`${endpoint}/${currentId}`, { isim: inputValue.trim() });
+        await service.update(currentId, payload);
         showSnackbar('Başarıyla güncellendi', 'success');
       } else {
-        await api.post(endpoint, { isim: inputValue.trim() });
+        await service.create(payload);
         showSnackbar('Başarıyla eklendi', 'success');
       }
-      
+
       setDialogOpen(false);
       setEditType(null);
       fetchData();
@@ -128,15 +140,20 @@ const Settings: React.FC = () => {
     }
 
     try {
-      let endpoint = '';
-      if (type === 'teknisyen') endpoint = '/teknisyenler';
-      else if (type === 'marka') endpoint = '/markalar';
-      else if (type === 'bayi') endpoint = '/bayiler';
-      else if (type === 'urun') endpoint = '/urunler';
-      else if (type === 'montaj') endpoint = '/montajlar';
-      else if (type === 'aksesuar') endpoint = '/aksesuarlar';
+      let service: { delete: (id: number) => Promise<void> } | null = null;
+      if (type === 'teknisyen') service = teknisyenService;
+      else if (type === 'marka') service = markaService;
+      else if (type === 'bayi') service = bayiService;
+      else if (type === 'urun') service = urunService;
+      else if (type === 'montaj') service = montajService;
+      else if (type === 'aksesuar') service = aksesuarService;
 
-      await api.delete(`${endpoint}/${id}`);
+      if (!service) {
+        showSnackbar('Geçersiz tür', 'error');
+        return;
+      }
+
+      await service.delete(id);
       showSnackbar('Başarıyla silindi', 'success');
       fetchData();
     } catch (err: any) {

@@ -30,8 +30,16 @@ import {
   Tooltip,
 } from '@mui/material';
 import { Islem, IslemCreateDto, IslemUpdateDto, Teknisyen, Marka, Montaj, Aksesuar, Urun } from '../../types';
-import { islemService, karalisteService } from '../../services/api';
-import { api } from '../../services/api';
+import {
+  islemService,
+  karalisteService,
+  teknisyenService,
+  markaService,
+  montajService,
+  aksesuarService,
+  urunService,
+  locationService,
+} from '../../services/api';
 import { useSnackbar } from '../../context/SnackbarContext';
 
 // Telefon numarasını formatla: 0544 448 88 88
@@ -151,22 +159,22 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
         }
         
         // Cache yoksa veya eskiyse API'den yükle
-        const [teknisyenResponse, markaResponse, montajResponse, aksesuarResponse, urunResponse, ilcelerResponse] = await Promise.all([
-          api.get<Teknisyen[]>('/teknisyenler'),
-          api.get<Marka[]>('/markalar'),
-          api.get<Montaj[]>('/montajlar'),
-          api.get<Aksesuar[]>('/aksesuarlar'),
-          api.get<Urun[]>('/urunler'),
-          api.get<{ ilce_id: number; isim: string }[]>('/ilceler'),
+        const [teknisyenData, markaData, montajData, aksesuarData, urunData, ilcelerData] = await Promise.all([
+          teknisyenService.getAll(),
+          markaService.getAll(),
+          montajService.getAll(),
+          aksesuarService.getAll(),
+          urunService.getAll(),
+          locationService.getIlceler(),
         ]);
         
         const data = {
-          teknisyenler: teknisyenResponse.data,
-          markalar: markaResponse.data,
-          montajlar: montajResponse.data,
-          aksesuarlar: aksesuarResponse.data,
-          urunler: urunResponse.data,
-          ilceler: ilcelerResponse.data,
+          teknisyenler: teknisyenData,
+          markalar: markaData,
+          montajlar: montajData,
+          aksesuarlar: aksesuarData,
+          urunler: urunData,
+          ilceler: ilcelerData,
         };
         
         setTeknisyenler(data.teknisyenler);
@@ -193,8 +201,8 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
     const loadMahalleler = async () => {
       if (selectedIlceId) {
         try {
-          const response = await api.get<{ mahalle_id: number; isim: string }[]>(`/ilceler/${selectedIlceId}/mahalleler`);
-          setMahalleler(response.data);
+          const data = await locationService.getMahalleler(selectedIlceId);
+          setMahalleler(data);
         } catch (error) {
           console.error('Mahalleler yüklenirken hata:', error);
         }
@@ -599,8 +607,8 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
         if (ilce) {
           setSelectedIlceId(ilce.ilce_id);
           // Mahalleleri yükle ve tamamlanmasını bekle
-          const response = await api.get<{ mahalle_id: number; isim: string }[]>(`/ilceler/${ilce.ilce_id}/mahalleler`);
-          setMahalleler(response.data);
+          const data = await locationService.getMahalleler(ilce.ilce_id);
+          setMahalleler(data);
         }
         
         // ✅ SADECE MÜŞTERİ BİLGİLERİNİ GETİR (tamamlama bilgileri BOŞ)
@@ -998,8 +1006,8 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
         if (ilce) {
           setSelectedIlceId(ilce.ilce_id);
           // Mahalle listesini API'den yükle
-          api.get(`/ilceler/${ilce.ilce_id}/mahalleler`)
-            .then(response => setMahalleler(response.data))
+          locationService.getMahalleler(ilce.ilce_id)
+            .then(setMahalleler)
             .catch(err => console.error('Mahalle yükleme hatası:', err));
         }
       }

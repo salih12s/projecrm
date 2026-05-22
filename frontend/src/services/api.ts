@@ -79,8 +79,22 @@ export { api };
 //   - ./admin.service.ts
 //   - ./saha.service.ts
 //   - ./karaliste.service.ts
+//   - ./marka.service.ts
+//   - ./teknisyen.service.ts
+//   - ./montaj.service.ts
+//   - ./aksesuar.service.ts
+//   - ./urun.service.ts
+//   - ./bayi.service.ts
+//   - ./location.service.ts
 export { authService } from './auth.service';
 export { islemService } from './islem.service';
 export { adminService } from './admin.service';
 export { sahaService } from './saha.service';
 export { karalisteService } from './karaliste.service';
+export { markaService } from './marka.service';
+export { teknisyenService } from './teknisyen.service';
+export { montajService } from './montaj.service';
+export { aksesuarService } from './aksesuar.service';
+export { urunService } from './urun.service';
+export { bayiService } from './bayi.service';
+export { locationService } from './location.service';

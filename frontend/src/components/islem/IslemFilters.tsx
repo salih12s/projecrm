@@ -9,7 +9,12 @@ import {
 } from '@mui/material';
 import debounce from 'lodash.debounce';
 import { Islem, Montaj, Aksesuar, Teknisyen, Marka } from '../../types';
-import { api } from '../../services/api';
+import {
+  montajService,
+  aksesuarService,
+  teknisyenService,
+  markaService,
+} from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 
 interface IslemFiltersProps {
@@ -82,16 +87,16 @@ const IslemFilters: React.FC<IslemFiltersProps> = ({
 
   const loadMontajVeAksesuar = async () => {
     try {
-      const [montajResponse, aksesuarResponse, teknisyenResponse, markaResponse] = await Promise.all([
-        api.get<Montaj[]>('/montajlar'),
-        api.get<Aksesuar[]>('/aksesuarlar'),
-        api.get<Teknisyen[]>('/teknisyenler'),
-        api.get<Marka[]>('/markalar'),
+      const [montajData, aksesuarData, teknisyenData, markaData] = await Promise.all([
+        montajService.getAll(),
+        aksesuarService.getAll(),
+        teknisyenService.getAll(),
+        markaService.getAll(),
       ]);
-      setMontajlar(montajResponse.data);
-      setAksesuarlar(aksesuarResponse.data);
-      setTeknisyenler(teknisyenResponse.data);
-      setMarkaListesi(markaResponse.data);
+      setMontajlar(montajData);
+      setAksesuarlar(aksesuarData);
+      setTeknisyenler(teknisyenData);
+      setMarkaListesi(markaData);
     } catch (error) {
       console.error('Filtre seçenekleri yükleme hatası:', error);
     }
