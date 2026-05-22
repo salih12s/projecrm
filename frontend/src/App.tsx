@@ -3,9 +3,9 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { ThemeProvider, createTheme, CssBaseline } from '@mui/material';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { SnackbarProvider } from './context/SnackbarContext';
-import Login from './components/Login';
-import Dashboard from './components/Dashboard';
-import Settings from './components/Settings';
+import Login from './components/auth/Login';
+import Dashboard from './components/dashboard/Dashboard';
+import Settings from './components/settings/Settings';
 
 const theme = createTheme({
   palette: {
