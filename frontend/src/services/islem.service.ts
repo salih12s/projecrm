@@ -1,0 +1,46 @@
+import { api } from './api';
+import { Islem, IslemCreateDto, IslemUpdateDto, FilterParams } from '../types';
+
+// İşlem servisleri
+export const islemService = {
+  getAll: async (filters?: FilterParams & { page?: number; limit?: number; today?: string; yazdirilmamis?: string }): Promise<Islem[] | { data: Islem[]; pagination: { page: number; limit: number; total: number; totalPages: number } }> => {
+    const response = await api.get('/islemler', { params: filters });
+    return response.data;
+  },
+
+  getStats: async (): Promise<{ total: string; acik: string; parca_bekliyor: string; tamamlandi: string; iptal: string; bugun: string; yazdirilmamis: string }> => {
+    const response = await api.get('/islemler/stats');
+    return response.data;
+  },
+
+  // Telefon numarasına göre arama (duplicate kontrolü için)
+  searchByPhone: async (phone: string): Promise<Islem[]> => {
+    const response = await api.get('/islemler/search-by-phone', { params: { phone } });
+    return response.data;
+  },
+
+  // İsme göre müşteri geçmişi arama
+  searchByName: async (name: string): Promise<Islem[]> => {
+    const response = await api.get('/islemler/search-by-name', { params: { name } });
+    return response.data;
+  },
+
+  create: async (data: IslemCreateDto): Promise<Islem> => {
+    const response = await api.post('/islemler', data);
+    return response.data;
+  },
+
+  update: async (id: number, data: IslemUpdateDto): Promise<Islem> => {
+    const response = await api.put(`/islemler/${id}`, data);
+    return response.data;
+  },
+
+  delete: async (id: number): Promise<void> => {
+    await api.delete(`/islemler/${id}`);
+  },
+
+  updateDurum: async (id: number, is_durumu: 'acik' | 'tamamlandi'): Promise<Islem> => {
+    const response = await api.patch(`/islemler/${id}/durum`, { is_durumu });
+    return response.data;
+  },
+};
