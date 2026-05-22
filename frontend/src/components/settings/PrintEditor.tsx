@@ -21,7 +21,7 @@ import SaveIcon from '@mui/icons-material/Save';
 import DeleteIcon from '@mui/icons-material/Delete';
 import { Islem } from '../../types';
 import { useAuth } from '../../context/AuthContext';
-import { api } from '../../services/api';
+import { printerSettingsService } from '../../services/api';
 
 interface PrintEditorProps {
   open: boolean;
@@ -196,12 +196,12 @@ const PrintEditor: React.FC<PrintEditorProps> = ({ open, onClose, islem }) => {
       const marka = getStorageKey();
       console.log('📥 Yükleniyor:', marka);
       try {
-        const response = await api.get(`/printer-settings/${marka}`);
-        console.log('📥 API Cevabı:', response.data);
+        const data = await printerSettingsService.get(marka);
+        console.log('📥 API Cevabı:', data);
         
-        if (response.data && response.data.length > 0) {
+        if (data && data.length > 0) {
           // Veritabanından kaydedilen DÜZENİ (layout) getirdik
-          const savedLayout = response.data;
+          const savedLayout = data;
           console.log('✅ Kaydedilmiş düzen bulundu:', savedLayout);
           
           // Şu andaki verileri al (getDefaultFields() yanında da veri doldurulmakta)
@@ -363,8 +363,8 @@ const PrintEditor: React.FC<PrintEditorProps> = ({ open, onClose, islem }) => {
       
       console.log('📝 Kaydedilecek düzen:', { marka, layoutConfig });
       
-      const response = await api.post(`/printer-settings/${marka}`, layoutConfig);
-      console.log('✅ Kaydedildi, sunucu cevabı:', response.data);
+      const responseData = await printerSettingsService.save(marka, layoutConfig);
+      console.log('✅ Kaydedildi, sunucu cevabı:', responseData);
       
       setSnackbar({
         open: true,
@@ -397,7 +397,7 @@ const PrintEditor: React.FC<PrintEditorProps> = ({ open, onClose, islem }) => {
     const marka = getStorageKey();
     
     try {
-      await api.delete(`/printer-settings/${marka}`);
+      await printerSettingsService.delete(marka);
       setSnackbar({
         open: true,
         message: 'Varsayılan ayarlara sıfırlandı! Tüm bilgisayarlarda geçerli olacak.',

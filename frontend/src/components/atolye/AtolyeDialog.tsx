@@ -13,7 +13,7 @@ import {
   useTheme,
 } from '@mui/material';
 import { Atolye, AtolyeCreateDto, AtolyeUpdateDto, Bayi, Marka } from '../../types';
-import { api } from '../../services/api';
+import { atolyeService, bayiService, markaService } from '../../services/api';
 import { useSnackbar } from '../../context/SnackbarContext';
 
 interface AtolyeDialogProps {
@@ -72,8 +72,8 @@ const AtolyeDialog: React.FC<AtolyeDialogProps> = ({ open, onClose, atolyeId }) 
 
   const fetchNextSiraNo = async () => {
     try {
-      const response = await api.get('/atolye/next-id');
-      setNextSiraNo(response.data.nextId);
+      const data = await atolyeService.getNextId();
+      setNextSiraNo(data.nextId);
     } catch (error) {
       console.error('Sıra numarası alınamadı:', error);
     }
@@ -81,8 +81,7 @@ const AtolyeDialog: React.FC<AtolyeDialogProps> = ({ open, onClose, atolyeId }) 
 
   const fetchBayiler = async () => {
     try {
-      const response = await api.get('/bayiler');
-      setBayiler(response.data);
+      setBayiler(await bayiService.getAll());
     } catch (error) {
       showSnackbar('Bayiler yüklenirken hata oluştu', 'error');
     }
@@ -90,8 +89,7 @@ const AtolyeDialog: React.FC<AtolyeDialogProps> = ({ open, onClose, atolyeId }) 
 
   const fetchMarkalar = async () => {
     try {
-      const response = await api.get('/markalar');
-      setMarkalar(response.data);
+      setMarkalar(await markaService.getAll());
     } catch (error) {
       showSnackbar('Markalar yüklenirken hata oluştu', 'error');
     }
@@ -100,8 +98,7 @@ const AtolyeDialog: React.FC<AtolyeDialogProps> = ({ open, onClose, atolyeId }) 
   const fetchAtolyeData = async () => {
     if (!atolyeId) return;
     try {
-      const response = await api.get(`/atolye/${atolyeId}`);
-      const data: Atolye = response.data;
+      const data: Atolye = await atolyeService.getById(atolyeId);
       
       console.log('=== FRONTEND fetchAtolyeData ===');
       console.log('Backend\'den gelen kayit_tarihi:', data.kayit_tarihi);
@@ -267,7 +264,7 @@ const AtolyeDialog: React.FC<AtolyeDialogProps> = ({ open, onClose, atolyeId }) 
           kayit_tarihi: kayitTarihiWithTime,
           ucret: formData.ucret || undefined,
         };
-        await api.put(`/atolye/${atolyeId}`, updateDto);
+        await atolyeService.update(atolyeId!, updateDto);
         showSnackbar('Kayıt başarıyla güncellendi', 'success');
       } else {
         console.log('=== FRONTEND handleSubmit POST ===');
@@ -292,7 +289,7 @@ const AtolyeDialog: React.FC<AtolyeDialogProps> = ({ open, onClose, atolyeId }) 
         
         console.log('Backend\'e gönderilen createDto.kayit_tarihi:', createDto.kayit_tarihi);
         
-        await api.post('/atolye', createDto);
+        await atolyeService.create(createDto);
         showSnackbar('Kayıt başarıyla oluşturuldu', 'success');
       }
       onClose(true);

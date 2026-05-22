@@ -27,7 +27,7 @@ import {
 } from '@mui/material';
 import { Edit, Delete, Add } from '@mui/icons-material';
 import { Atolye } from '../../types';
-import { api } from '../../services/api';
+import { atolyeService } from '../../services/api';
 import { useSnackbar } from '../../context/SnackbarContext';
 import { useAuth } from '../../context/AuthContext';
 import AtolyeDialog from './AtolyeDialog.tsx';
@@ -192,12 +192,12 @@ const AtolyeTakip: React.FC = () => {
 
   const fetchStatusCounts = useCallback(async () => {
     try {
-      const response = await api.get('/atolye/status-counts');
+      const data = await atolyeService.getStatusCounts();
       setStatusCounts({
-        total: parseInt(response.data.total) || 0, beklemede: parseInt(response.data.beklemede) || 0,
-        teslim_edildi: parseInt(response.data.teslim_edildi) || 0, siparis_verildi: parseInt(response.data.siparis_verildi) || 0,
-        yapildi: parseInt(response.data.yapildi) || 0, fabrika_gitti: parseInt(response.data.fabrika_gitti) || 0,
-        odeme_bekliyor: parseInt(response.data.odeme_bekliyor) || 0
+        total: parseInt(String(data.total)) || 0, beklemede: parseInt(String(data.beklemede)) || 0,
+        teslim_edildi: parseInt(String(data.teslim_edildi)) || 0, siparis_verildi: parseInt(String(data.siparis_verildi)) || 0,
+        yapildi: parseInt(String(data.yapildi)) || 0, fabrika_gitti: parseInt(String(data.fabrika_gitti)) || 0,
+        odeme_bekliyor: parseInt(String(data.odeme_bekliyor)) || 0
       });
     } catch (error) { console.error('Status counts alınamadı:', error); }
   }, []);
@@ -272,8 +272,7 @@ const AtolyeTakip: React.FC = () => {
     setLoading(true);
     try {
       // HER ZAMAN tüm veriyi çek - filtreler client-side uygulanacak
-      const response = await api.get('/atolye?all=true');
-      const allData = response.data;
+      const allData = await atolyeService.getAll();
       const sortedAllData = allData.sort((a: Atolye, b: Atolye) => b.id - a.id);
       if (isBayi) {
         const bayiData = sortedAllData.filter((item: Atolye) => item.bayi_adi === bayiIsim);
@@ -463,7 +462,7 @@ const AtolyeTakip: React.FC = () => {
     if (!window.confirm('Bu kaydı silmek istediğinize emin misiniz?')) return;
 
     try {
-      await api.delete(`/atolye/${id}`);
+      await atolyeService.delete(id);
       showSnackbar('Kayıt başarıyla silindi', 'success');
       fetchAtolyeList();
     } catch (error) {

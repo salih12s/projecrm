@@ -86,6 +86,8 @@ export { api };
 //   - ./urun.service.ts
 //   - ./bayi.service.ts
 //   - ./location.service.ts
+//   - ./atolye.service.ts
+//   - ./printerSettings.service.ts
 export { authService } from './auth.service';
 export { islemService } from './islem.service';
 export { adminService } from './admin.service';
@@ -98,3 +100,5 @@ export { aksesuarService } from './aksesuar.service';
 export { urunService } from './urun.service';
 export { bayiService } from './bayi.service';
 export { locationService } from './location.service';
+export { atolyeService } from './atolye.service';
+export { printerSettingsService } from './printerSettings.service';
