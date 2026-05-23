@@ -2,6 +2,7 @@ import express, { Request, Response } from 'express';
 import pool from '../db';
 import auth from '../middleware/auth';
 import { Atolye, AtolyeCreateDto, AtolyeUpdateDto } from '../types';
+import { SOCKET_EVENTS } from '../constants/socketEvents';
 
 const router = express.Router();
 
@@ -171,7 +172,7 @@ router.post('/', auth, async (req: Request, res: Response) => {
     // Socket.IO ile tüm bağlı kullanıcılara bildir
     const io = (req as any).app.get('io');
     if (io) {
-      io.emit('yeni-atolye', newRecord);
+      io.emit(SOCKET_EVENTS.YENI_ATOLYE, newRecord);
     }
 
     return res.status(201).json(newRecord);
@@ -280,7 +281,7 @@ router.put('/:id', auth, async (req: Request, res: Response) => {
     // Socket.IO ile tüm bağlı kullanıcılara bildir
     const io = (req as any).app.get('io');
     if (io) {
-      io.emit('atolye-guncellendi', updatedRecord);
+      io.emit(SOCKET_EVENTS.ATOLYE_GUNCELLENDI, updatedRecord);
     }
 
     return res.json(updatedRecord);
@@ -310,7 +311,7 @@ router.delete('/:id', auth, async (req: Request, res: Response) => {
     // Socket.IO ile tüm bağlı kullanıcılara bildir
     const io = (req as any).app.get('io');
     if (io) {
-      io.emit('atolye-silindi', parseInt(id));
+      io.emit(SOCKET_EVENTS.ATOLYE_SILINDI, parseInt(id));
     }
 
     return res.json({ message: 'Kayıt başarıyla silindi' });
