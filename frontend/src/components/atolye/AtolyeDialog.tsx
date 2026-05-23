@@ -101,15 +101,9 @@ const AtolyeDialog: React.FC<AtolyeDialogProps> = ({ open, onClose, atolyeId }) 
     if (!atolyeId) return;
     try {
       const data: Atolye = await atolyeService.getById(atolyeId);
-      
-      console.log('=== FRONTEND fetchAtolyeData ===');
-      console.log('Backend\'den gelen kayit_tarihi:', data.kayit_tarihi);
-      console.log('Backend\'den gelen yapilma_tarihi:', data.yapilma_tarihi);
-      console.log('Typeof:', typeof data.kayit_tarihi);
-      
+
       const processedDate = data.kayit_tarihi ? String(data.kayit_tarihi).substring(0, 10) : new Date().toISOString().substring(0, 10);
-      console.log('Substring sonrası:', processedDate);
-      
+
       // Yapılma tarihini timezone farkı olmadan işle
       let processedYapilmaTarihi: string | undefined = undefined;
       if (data.yapilma_tarihi) {
@@ -119,7 +113,6 @@ const AtolyeDialog: React.FC<AtolyeDialogProps> = ({ open, onClose, atolyeId }) 
         const month = String(yapilmaDate.getMonth() + 1).padStart(2, '0');
         const day = String(yapilmaDate.getDate()).padStart(2, '0');
         processedYapilmaTarihi = `${year}-${month}-${day}`;
-        console.log('Yapılma tarihi local:', processedYapilmaTarihi);
       } else {
         // Eğer yoksa bugünün tarihini kullan
         const today = new Date();
@@ -127,11 +120,8 @@ const AtolyeDialog: React.FC<AtolyeDialogProps> = ({ open, onClose, atolyeId }) 
         const month = String(today.getMonth() + 1).padStart(2, '0');
         const day = String(today.getDate()).padStart(2, '0');
         processedYapilmaTarihi = `${year}-${month}-${day}`;
-        console.log('Bugünün tarihi:', processedYapilmaTarihi);
       }
-      console.log('Final processedYapilmaTarihi:', processedYapilmaTarihi);
-      console.log('================================');
-      
+
       setBayiInputValue(data.bayi_adi || '');
       setMarkaInputValue(data.marka || '');
       setFormData({
@@ -253,14 +243,9 @@ const AtolyeDialog: React.FC<AtolyeDialogProps> = ({ open, onClose, atolyeId }) 
 
     try {
       if (isEdit) {
-        console.log('=== FRONTEND handleSubmit PUT ===');
-        console.log('formData.kayit_tarihi:', formData.kayit_tarihi);
-        
         // Tarihe 12:00:00 ekleyerek timezone kaymasını önle
         const kayitTarihiWithTime = formData.kayit_tarihi ? `${formData.kayit_tarihi}T12:00:00` : undefined;
-        console.log('Timezone korumalı tarih:', kayitTarihiWithTime);
-        console.log('=================================');
-        
+
         const updateDto: AtolyeUpdateDto = {
           ...formData,
           kayit_tarihi: kayitTarihiWithTime,
@@ -269,14 +254,9 @@ const AtolyeDialog: React.FC<AtolyeDialogProps> = ({ open, onClose, atolyeId }) 
         await atolyeService.update(atolyeId!, updateDto);
         showSnackbar('Kayıt başarıyla güncellendi', 'success');
       } else {
-        console.log('=== FRONTEND handleSubmit POST ===');
-        console.log('formData.kayit_tarihi:', formData.kayit_tarihi);
-        
         // Tarihe 12:00:00 ekleyerek timezone kaymasını önle
         const kayitTarihiWithTime = formData.kayit_tarihi ? `${formData.kayit_tarihi}T12:00:00` : undefined;
-        console.log('Timezone korumalı tarih:', kayitTarihiWithTime);
-        console.log('==================================');
-        
+
         const createDto: AtolyeCreateDto = {
           bayi_adi: formData.bayi_adi,
           musteri_ad_soyad: formData.musteri_ad_soyad,
@@ -288,9 +268,7 @@ const AtolyeDialog: React.FC<AtolyeDialogProps> = ({ open, onClose, atolyeId }) 
           ozel_not: formData.ozel_not,
           kayit_tarihi: kayitTarihiWithTime,
         };
-        
-        console.log('Backend\'e gönderilen createDto.kayit_tarihi:', createDto.kayit_tarihi);
-        
+
         await atolyeService.create(createDto);
         showSnackbar('Kayıt başarıyla oluşturuldu', 'success');
       }
