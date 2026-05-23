@@ -2,44 +2,12 @@ import React, { useState, useEffect, useCallback, useMemo, useRef, lazy, Suspens
 import {
   Box,
   Container,
-  Typography,
   Button,
-  AppBar,
-  Toolbar,
-  IconButton,
-  Menu,
-  MenuItem,
-  Avatar,
-  Divider,
-  Tabs,
-  Tab,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogContentText,
-  DialogActions,
-  Drawer,
-  List,
-  ListItem,
-  ListItemIcon,
-  ListItemText,
-  useMediaQuery,
-  useTheme,
   CircularProgress,
 } from '@mui/material';
-import { 
-  Logout as LogoutIcon, 
-  Add as AddIcon, 
-  Download as DownloadIcon, 
-  AccountCircle, 
-  Settings as SettingsIcon,
-  Home,
-  Build,
-  History,
-  Menu as MenuIcon,
-  AdminPanelSettings,
-  Close as CloseIcon,
-  Engineering,
+import {
+  Add as AddIcon,
+  Download as DownloadIcon,
 } from '@mui/icons-material';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
@@ -49,8 +17,7 @@ import { useIslemSocket } from '../../hooks/useIslemSocket';
 import IslemTable from '../islem/IslemTable.tsx';
 import IslemFilters from '../islem/IslemFilters.tsx';
 import IslemDialog from '../islem/IslemDialog.tsx';
-// ⚡ PERFORMANS: Büyük componentleri lazy loading ile yükle
-// Bu sayede initial bundle size küçülür, sayfa daha hızlı açılır
+// ⚡ PERFORMANS: Büyük componentleri lazy loading ile yükle.
 const Settings = lazy(() => import('../settings/Settings'));
 const MusteriGecmisi = lazy(() => import('../musteri/MusteriGecmisi.tsx'));
 const AtolyeTakip = lazy(() => import('../atolye/AtolyeTakip.tsx'));
@@ -61,55 +28,78 @@ import { exportToExcel } from '../../utils/excel.ts';
 import Loading from '../common/Loading';
 import ErrorMessage from '../common/ErrorMessage';
 import { useSnackbar } from '../../context/SnackbarContext';
+import { useTheme, useMediaQuery } from '@mui/material';
+import DashboardAppBar from './DashboardAppBar';
+import DashboardDrawer from './DashboardDrawer';
+import DashboardTabs from './DashboardTabs';
+import DashboardStatsBar, { StatusFilter } from './DashboardStatsBar';
+import OnHoldCards from './OnHoldCards';
+import TamamlaConfirmDialog from './TamamlaConfirmDialog';
 
+/**
+ * Dashboard (Part 3 / P3.E2 sonrası).
+ *
+ * Sayfa-iskeleti + tüm iş mantığı (state, refs, server-fetch, socket,
+ * filter handler'ları, dialog handler'ları, on-hold yönetimi) burada
+ * kalır. JSX katmanları DashboardAppBar / DashboardDrawer / DashboardTabs
+ * / DashboardStatsBar / OnHoldCards / TamamlaConfirmDialog alt
+ * bileşenlerine devredildi.
+ */
 const Dashboard: React.FC = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const { showSnackbar } = useSnackbar();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+
+  // --- Veri ---
   const [islemler, setIslemler] = useState<Islem[]>([]);
   const [filteredIslemler, setFilteredIslemler] = useState<Islem[]>([]);
-  const [tableFilteredIslemler, setTableFilteredIslemler] = useState<Islem[]>([]); // IslemTable'dan gelen filtrelenmiş liste
+  const [tableFilteredIslemler, setTableFilteredIslemler] = useState<Islem[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [totalRecords, setTotalRecords] = useState(0);
   const PAGE_SIZE = 100;
+
+  // --- Dialog / form ---
   const [openDialog, setOpenDialog] = useState(false);
   const [selectedIslem, setSelectedIslem] = useState<Islem | null>(null);
-  const [cloneFromRecord, setCloneFromRecord] = useState<Islem | null>(null); // Çift tıklama ile klonlama
+  const [cloneFromRecord, setCloneFromRecord] = useState<Islem | null>(null);
   const [openTamamlaModal, setOpenTamamlaModal] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+
+  // --- UI / nav ---
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
-  const [statusFilter, setStatusFilter] = useState<'all' | 'acik' | 'parca_bekliyor' | 'tamamlandi' | 'iptal'>('all');
-  const [showTodayOnly, setShowTodayOnly] = useState(false); // Bugün alınan işler
-  const [showYazdirilmamis, setShowYazdirilmamis] = useState(false); // Yazdırılmamış işler filtresi
-  // Bayi için tab değeri her zaman 0 (tek tab var)
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
+  const [showTodayOnly, setShowTodayOnly] = useState(false);
+  const [showYazdirilmamis, setShowYazdirilmamis] = useState(false);
   const [activeTab, setActiveTab] = useState(0);
   const [confirmDialog, setConfirmDialog] = useState<{ open: boolean; islem: Islem | null }>({ open: false, islem: null });
-  const [onHoldFormData, setOnHoldFormData] = useState<any[]>([]); // Beklemedeki formlar (array)
-  const [activeHoldIndex, setActiveHoldIndex] = useState<number | null>(null); // Hangi hold form aktif
-  const [shouldRestoreForm, setShouldRestoreForm] = useState(false); // Beklemeden dönülüyor mu?
+
+  // --- Hold form ---
+  const [onHoldFormData, setOnHoldFormData] = useState<any[]>([]);
+  const [activeHoldIndex, setActiveHoldIndex] = useState<number | null>(null);
+  const [shouldRestoreForm, setShouldRestoreForm] = useState(false);
+
+  // --- Server stats / refs ---
   const [serverStats, setServerStats] = useState<any>(null);
   const columnFiltersRef = useRef<Record<string, string>>({});
   const columnFilterTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isFirstColumnFilterRef = useRef(true);
   const adminFiltersActiveRef = useRef(false);
   // Stale closure'lardan korunmak için aktif filtre değerlerini ref olarak tut
-  const statusFilterRef = useRef<'all' | 'acik' | 'parca_bekliyor' | 'tamamlandi' | 'iptal'>('all');
+  const statusFilterRef = useRef<StatusFilter>('all');
   const showTodayOnlyRef = useRef(false);
   const showYazdirilmamisRef = useRef(false);
-  
+
   // Güvenli rol kontrolü - eğer user yoksa veya role tanımlı değilse en kısıtlı mod
   const isBayi = user?.role === 'bayi';
   const isAdmin = user?.role === 'admin';
   const isSaha = user?.role === 'saha';
 
   // Socket.IO işlem gerçek-zamanlı güncellemeleri ortak hook ile.
-  // Event isimleri, SOCKET_URL, reconnect ayarları legacy ile aynı.
   useIslemSocket({
     onYeniIslem: (islem) => {
       if (islem && islem.id) {
@@ -120,9 +110,7 @@ const Dashboard: React.FC = () => {
     },
     onIslemGuncellendi: (updatedIslem) => {
       if (updatedIslem && updatedIslem.id) {
-        setIslemler((prev) =>
-          prev.map((islem) => (islem.id === updatedIslem.id ? updatedIslem : islem))
-        );
+        setIslemler((prev) => prev.map((islem) => (islem.id === updatedIslem.id ? updatedIslem : islem)));
         loadStats();
         showSnackbar('İşlem güncellendi!', 'info');
       }
@@ -136,9 +124,7 @@ const Dashboard: React.FC = () => {
     },
     onIslemDurumDegisti: (updatedIslem) => {
       if (updatedIslem && updatedIslem.id) {
-        setIslemler((prev) =>
-          prev.map((islem) => (islem.id === updatedIslem.id ? updatedIslem : islem))
-        );
+        setIslemler((prev) => prev.map((islem) => (islem.id === updatedIslem.id ? updatedIslem : islem)));
         loadStats();
         showSnackbar('İş durumu güncellendi!', 'success');
       }
@@ -159,7 +145,7 @@ const Dashboard: React.FC = () => {
     if (s && s !== 'all') params.is_durumu = s;
     if (t) params.today = 'true';
     if (y) params.yazdirilmamis = 'true';
-    
+
     // Kolon filtrelerini ekle (IslemTable'dan gelen)
     const cf = columnFiltersRef.current;
     for (const [key, value] of Object.entries(cf)) {
@@ -168,17 +154,25 @@ const Dashboard: React.FC = () => {
       else if (key === 'durum' || key === 'sira' || key === 'tarih') continue; // client-side kalacak
       else params[key] = value;
     }
-    
+
     return params;
   };
 
-  const loadIslemler = async (page = 1, append = false, overrides?: { status?: string; todayOnly?: boolean; yazdirilmamisOnly?: boolean }, silent = false) => {
+  const loadIslemler = async (
+    page = 1,
+    append = false,
+    overrides?: { status?: string; todayOnly?: boolean; yazdirilmamisOnly?: boolean },
+    silent = false
+  ) => {
     try {
-      if (!silent) { if (page === 1) setLoading(true); else setLoadingMore(true); }
+      if (!silent) {
+        if (page === 1) setLoading(true);
+        else setLoadingMore(true);
+      }
       setError(null);
-      
+
       const hasAdminActiveFilters = adminFiltersActiveRef.current;
-      
+
       if (hasAdminActiveFilters) {
         // Filtre aktifken tüm veriyi çek (pagination yok)
         const filters = getServerFilters(overrides);
@@ -192,14 +186,14 @@ const Dashboard: React.FC = () => {
       } else {
         // Normal sayfalanmış yükleme
         const filters = { ...getServerFilters(overrides), page, limit: PAGE_SIZE };
-        const response = await islemService.getAll(filters) as { data: Islem[]; pagination: { page: number; limit: number; total: number; totalPages: number } };
+        const response = (await islemService.getAll(filters)) as {
+          data: Islem[];
+          pagination: { page: number; limit: number; total: number; totalPages: number };
+        };
         const newData = response.data.sort((a, b) => b.id - a.id);
-      
-        if (append) {
-          setIslemler(prev => [...prev, ...newData]);
-        } else {
-          setIslemler(newData);
-        }
+
+        if (append) setIslemler((prev) => [...prev, ...newData]);
+        else setIslemler(newData);
         setCurrentPage(response.pagination.page);
         setTotalRecords(response.pagination.total);
         setHasMore(response.pagination.page < response.pagination.totalPages);
@@ -223,31 +217,25 @@ const Dashboard: React.FC = () => {
   };
 
   const handleLoadMore = () => {
-    if (!loadingMore && hasMore) {
-      loadIslemler(currentPage + 1, true);
-    }
+    if (!loadingMore && hasMore) loadIslemler(currentPage + 1, true);
   };
 
   // IslemTable kolon filtreleri değiştiğinde sunucudan yeniden çek
   const handleColumnFiltersChange = useCallback((filters: Record<string, string>) => {
-    // İlk mount'ta gelen boş filtreleri yoksay
-    const hasAnyFilter = Object.values(filters).some(v => v);
-    const hadAnyFilter = Object.values(columnFiltersRef.current).some(v => v);
-    
+    const hasAnyFilter = Object.values(filters).some((v) => v);
+    const hadAnyFilter = Object.values(columnFiltersRef.current).some((v) => v);
+
     columnFiltersRef.current = filters;
-    
+
     // İlk çağrıyı (mount) atla
     if (isFirstColumnFilterRef.current) {
       isFirstColumnFilterRef.current = false;
       return;
     }
-    
     // Filtre yoksa ve önceden de yoksa, tekrar çekme
     if (!hasAnyFilter && !hadAnyFilter) return;
-    
-    // Önceki timer'ı iptal et
+
     if (columnFilterTimerRef.current) clearTimeout(columnFilterTimerRef.current);
-    
     columnFilterTimerRef.current = setTimeout(() => {
       loadIslemler(1, false, undefined, true);
     }, 400);
@@ -257,10 +245,7 @@ const Dashboard: React.FC = () => {
   const handleAdminFiltersActiveChange = useCallback((active: boolean) => {
     const wasActive = adminFiltersActiveRef.current;
     adminFiltersActiveRef.current = active;
-    // Sadece geçişlerde veriyi yeniden yükle (aktif→pasif veya pasif→aktif)
-    if (active !== wasActive) {
-      loadIslemler(1, false, undefined, true); // silent=true, loading spinner gösterme
-    }
+    if (active !== wasActive) loadIslemler(1, false, undefined, true);
   }, []);
 
   const handleLogout = () => {
@@ -270,16 +255,15 @@ const Dashboard: React.FC = () => {
 
   const handleOpenDialog = (islem?: Islem) => {
     setSelectedIslem(islem || null);
-    setCloneFromRecord(null); // Klonlama modunu sıfırla
+    setCloneFromRecord(null);
     setOpenDialog(true);
-    setShouldRestoreForm(false); // Yeni işlem açılıyor, restore yapma
-    // Bekleme verilerini temizleme - kart sol altta kalacak
+    setShouldRestoreForm(false);
   };
 
   // Çift tıklama ile klonlama
   const handleCloneRecord = (islem: Islem) => {
     setCloneFromRecord(islem);
-    setSelectedIslem(null); // Düzenleme modu değil
+    setSelectedIslem(null);
     setOpenDialog(true);
     setShouldRestoreForm(false);
   };
@@ -287,76 +271,62 @@ const Dashboard: React.FC = () => {
   const handleCloseDialog = () => {
     setOpenDialog(false);
     setSelectedIslem(null);
-    setCloneFromRecord(null); // Klonlama modunu sıfırla
-    setOpenTamamlaModal(false); // Tamamlama modalını kapat
-    
+    setCloneFromRecord(null);
+    setOpenTamamlaModal(false);
+
     // Eğer beklemeye alınmış bir form açıldıysa ve iptal ediliyorsa, kartı da sil
     if (shouldRestoreForm && activeHoldIndex !== null) {
       clearOnHoldData(activeHoldIndex);
     }
-    
-    setShouldRestoreForm(false); // Restore bayrağını sıfırla
+    setShouldRestoreForm(false);
   };
 
   // Bekleme durumu değiştiğinde
   const handleHoldChange = (isOnHold: boolean, formData?: any, holdIndex?: number) => {
     if (isOnHold) {
-      // Beklemeye alındığında form verilerini array'e ekle
       console.log('Beklemeye alınan form verileri:', formData);
-      setOnHoldFormData(prev => [...prev, formData]); // Array'e ekle
-      setOpenDialog(false); // Dialog'u kapat
-      setSelectedIslem(null); // Seçili işlemi temizle
-      setShouldRestoreForm(false); // Restore bayrağını sıfırla
+      setOnHoldFormData((prev) => [...prev, formData]);
+      setOpenDialog(false);
+      setSelectedIslem(null);
+      setShouldRestoreForm(false);
     } else {
-      // Beklemeden çıkıyorsa (karta tıklandı)
       if (holdIndex !== undefined && holdIndex !== null) {
         const selectedHoldData = onHoldFormData[holdIndex];
         console.log('Beklemeden çıkılan form verileri:', selectedHoldData);
-        setActiveHoldIndex(holdIndex); // Hangi hold aktif
-        setShouldRestoreForm(true); // Restore yapılacak
-        setOpenDialog(true); // Dialog'u aç
+        setActiveHoldIndex(holdIndex);
+        setShouldRestoreForm(true);
+        setOpenDialog(true);
       }
     }
   };
 
-  // Bekleyen formu tamamen temizle (form kaydedildiğinde veya iptal edildiğinde)
+  // Bekleyen formu tamamen temizle
   const clearOnHoldData = (holdIndex?: number) => {
     if (holdIndex !== undefined && holdIndex !== null) {
-      // Belirli bir hold'u sil
-      setOnHoldFormData(prev => prev.filter((_, i) => i !== holdIndex));
+      setOnHoldFormData((prev) => prev.filter((_, i) => i !== holdIndex));
     } else {
-      // Aktif olan hold'u sil
       if (activeHoldIndex !== null) {
-        setOnHoldFormData(prev => prev.filter((_, i) => i !== activeHoldIndex));
+        setOnHoldFormData((prev) => prev.filter((_, i) => i !== activeHoldIndex));
         setActiveHoldIndex(null);
       }
     }
     setShouldRestoreForm(false);
   };
 
-  // ⚡ PERFORMANS: Socket.IO zaten real-time güncelleme yapıyor, 
-  // gereksiz loadIslemler() çağrısını kaldırdık
+  // ⚡ PERFORMANS: Socket.IO zaten real-time güncelleme yapıyor.
   const handleSaveIslem = async () => {
     handleCloseDialog();
-    // Sadece beklemedeki form kaydedildiyse temizle
-    if (shouldRestoreForm) {
-      clearOnHoldData();
-    }
-    // Socket.IO 'yeni-islem' veya 'islem-guncellendi' eventi ile otomatik güncellenecek
+    if (shouldRestoreForm) clearOnHoldData();
   };
 
   const handleToggleDurum = async (islem: Islem) => {
-    // Her durumda tamamlama modalını aç (admin isterse durumu değiştirebilir)
     setSelectedIslem(islem);
-    setOpenTamamlaModal(true); // Tamamlama modalını aktif et
+    setOpenTamamlaModal(true);
     setOpenDialog(true);
-    // Dialog içinde tamamlama modalı otomatik açılacak
-    // Admin isterse iş durumunu "açık" yapabilir, isterse "tamamlandı" bırakabilir
   };
 
   const handleConfirmTamamla = async () => {
     if (!confirmDialog.islem) return;
-    
     try {
       await islemService.updateDurum(confirmDialog.islem.id, 'tamamlandi');
       showSnackbar('İş durumu tamamlandı olarak güncellendi!', 'success');
@@ -368,38 +338,29 @@ const Dashboard: React.FC = () => {
   };
 
   const handleDelete = async (islem: Islem) => {
-    if (!window.confirm(`"${islem.ad_soyad}" müşterisine ait işlemi silmek istediğinize emin misiniz?`)) {
-      return;
-    }
-    
+    if (!window.confirm(`"${islem.ad_soyad}" müşterisine ait işlemi silmek istediğinize emin misiniz?`)) return;
     try {
       await islemService.delete(islem.id);
       showSnackbar('İşlem başarıyla silindi!', 'success');
-      // ⚡ PERFORMANS: Socket.IO 'islem-silindi' eventi ile otomatik güncellenecek
-      // loadIslemler() çağrısına gerek yok
     } catch (error) {
       console.error('İşlem silinirken hata:', error);
       showSnackbar('İşlem silinirken hata oluştu!', 'error');
     }
   };
 
-  const handleCancelTamamla = () => {
-    setConfirmDialog({ open: false, islem: null });
-  };
+  const handleCancelTamamla = () => setConfirmDialog({ open: false, islem: null });
 
   const handleExport = () => {
-    // IslemTable'dan gelen filtrelenmiş listeyi kullan (kolon filtreleri dahil)
     const listToExport = tableFilteredIslemler.length > 0 ? tableFilteredIslemler : filteredIslemler;
     exportToExcel(listToExport);
     showSnackbar(`${listToExport.length} kayıt Excel'e aktarıldı!`, 'success');
   };
-  
-  // ⚡ PERFORMANS: useCallback ile fonksiyonu cache'le, her render'da yeni fonksiyon oluşturma
+
   const handleTableFilterChange = useCallback((filtered: Islem[]) => {
     setTableFilteredIslemler(filtered);
   }, []);
 
-  const handleStatusFilterClick = useCallback((filter: 'all' | 'acik' | 'parca_bekliyor' | 'tamamlandi' | 'iptal') => {
+  const handleStatusFilterClick = useCallback((filter: StatusFilter) => {
     setStatusFilter(filter);
     setShowTodayOnly(false);
     setShowYazdirilmamis(false);
@@ -440,47 +401,21 @@ const Dashboard: React.FC = () => {
     setShowYazdirilmamis(false);
   };
 
-  const handleMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
-    setAnchorEl(event.currentTarget);
-  };
-
-  const handleMenuClose = () => {
-    setAnchorEl(null);
-  };
-
-  const handleLogoutFromMenu = () => {
-    handleMenuClose();
-    handleLogout();
-  };
-
-  const handleDrawerToggle = () => {
-    setMobileDrawerOpen(!mobileDrawerOpen);
-  };
-
+  const handleDrawerToggle = () => setMobileDrawerOpen((v) => !v);
   const handleDrawerNavigation = (tabIndex: number) => {
     setActiveTab(tabIndex);
     setMobileDrawerOpen(false);
   };
 
-  // Kullanıcı rolüne göre menü öğeleri
-  const menuItems = [
-    { label: 'Ana Sayfa', icon: <Home />, index: 0 },
-    { label: 'Müşteri Geçmişi', icon: <History />, index: 1 },
-    { label: 'Atölye Takip', icon: <Build />, index: 2 },
-    ...(isAdmin ? [
-      { label: 'Tanımlamalar', icon: <SettingsIcon />, index: 3 },
-      { label: 'Yönetim', icon: <AdminPanelSettings />, index: 4 },
-      { label: 'Saha', icon: <Engineering />, index: 5 }
-    ] : [])
-  ];
-
-  // ⚡ PERFORMANS: İşlem istatistiklerini sunucudan al - tüm veritabanını kapsar
+  // ⚡ PERFORMANS: İşlem istatistiklerini sunucudan al
   const stats = useMemo(() => {
     if (serverStats) {
-      const toplamTutar = isAdmin ? islemler.reduce((sum, i) => {
-        const tutar = typeof i.tutar === 'number' ? i.tutar : parseFloat(String(i.tutar || 0));
-        return sum + (isNaN(tutar) ? 0 : tutar);
-      }, 0) : 0;
+      const toplamTutar = isAdmin
+        ? islemler.reduce((sum, i) => {
+            const tutar = typeof i.tutar === 'number' ? i.tutar : parseFloat(String(i.tutar || 0));
+            return sum + (isNaN(tutar) ? 0 : tutar);
+          }, 0)
+        : 0;
 
       return {
         acikCount: parseInt(serverStats.acik) || 0,
@@ -490,7 +425,7 @@ const Dashboard: React.FC = () => {
         totalCount: parseInt(serverStats.total) || 0,
         bugunCount: parseInt(serverStats.bugun) || 0,
         yazdirilmamisCount: parseInt(serverStats.yazdirilmamis) || 0,
-        toplamTutar
+        toplamTutar,
       };
     }
     return {
@@ -501,530 +436,178 @@ const Dashboard: React.FC = () => {
       totalCount: 0,
       bugunCount: 0,
       yazdirilmamisCount: 0,
-      toplamTutar: 0
+      toplamTutar: 0,
     };
   }, [serverStats, islemler, isAdmin]);
 
   return (
     <Box sx={{ flexGrow: 1 }}>
-      <AppBar position="static" sx={{ bgcolor: '#2C3E82' }}>
-        <Toolbar sx={{ minHeight: '48px !important', px: 2 }}>
-          {/* Mobilde hamburger menu (sadece admin için, saha ve bayi hariç) */}
-          {isMobile && !isBayi && !isSaha && (
-            <IconButton
-              color="inherit"
-              edge="start"
-              onClick={handleDrawerToggle}
-              sx={{ mr: 1 }}
-            >
-              <MenuIcon />
-            </IconButton>
-          )}
-          {isSaha ? (
-            <>
-              <Engineering sx={{ mr: 1, fontSize: '1.5rem' }} />
-              <Typography variant="h6" component="div" sx={{ fontWeight: 600, fontSize: { xs: '0.95rem', sm: '1.1rem' } }}>
-                Saha Paneli
-              </Typography>
-            </>
-          ) : (
-            <>
-              <Build sx={{ mr: 1, fontSize: '1.5rem' }} />
-              <Typography variant="h6" component="div" sx={{ fontWeight: 600, fontSize: { xs: '0.95rem', sm: '1.1rem' } }}>
-                Teknik Servis - Ana Sayfa
-              </Typography>
-            </>
-          )}
-          
-          {/* Toplam Tutar - Header'da büyük ve belirgin */}
-          {isAdmin && !isBayi && !isSaha && (
-            <Typography 
-              variant="h6" 
-              sx={{ 
-                ml: 2,
-                fontWeight: 700, 
-                fontSize: { xs: '0.85rem', sm: '1rem' },
-                color: '#fff',
-                bgcolor: 'rgba(255, 255, 255, 0.2)',
-                px: 2,
-                py: 0.5,
-                borderRadius: 1,
-                border: '2px solid rgba(255, 255, 255, 0.5)'
-              }}
-            >
-             TOPLAM TUTAR: {stats.toplamTutar.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ₺
-            </Typography>
-          )}
-          
-          <Box sx={{ flexGrow: 1 }} />
-          
-          <Typography variant="body2" sx={{ mr: 2, display: { xs: 'none', sm: 'block' } }}>
-            {new Date().toLocaleDateString('tr-TR', { day: '2-digit', month: '2-digit', year: 'numeric' })}
-          </Typography>
-          <IconButton
-            color="inherit"
-            onClick={handleMenuOpen}
-            sx={{ p: 0.5 }}
-          >
-            <Avatar sx={{ width: 32, height: 32, bgcolor: 'rgba(255,255,255,0.2)' }}>
-              <AccountCircle />
-            </Avatar>
-          </IconButton>
-          <Menu
-            anchorEl={anchorEl}
-            open={Boolean(anchorEl)}
-            onClose={handleMenuClose}
-            transformOrigin={{ horizontal: 'right', vertical: 'top' }}
-            anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
-          >
-            <MenuItem disabled>
-              <AccountCircle sx={{ mr: 1 }} />
-              {user?.username}
-            </MenuItem>
-            <Divider />
-            <MenuItem onClick={handleLogoutFromMenu}>
-              <LogoutIcon sx={{ mr: 1 }} />
-              Çıkış Yap
-            </MenuItem>
-          </Menu>
-        </Toolbar>
-      </AppBar>
+      <DashboardAppBar
+        isMobile={isMobile}
+        isAdmin={isAdmin}
+        isBayi={isBayi}
+        isSaha={isSaha}
+        username={user?.username}
+        toplamTutar={stats.toplamTutar}
+        onDrawerToggle={handleDrawerToggle}
+        onLogout={handleLogout}
+      />
 
       {/* Mobile Drawer - Sadece Admin için (Bayi ve Saha hariç) */}
       {!isBayi && !isSaha && (
-        <Drawer
-          anchor="left"
+        <DashboardDrawer
           open={mobileDrawerOpen}
           onClose={handleDrawerToggle}
-          sx={{
-            '& .MuiDrawer-paper': {
-              width: 240,
-            },
-          }}
-        >
-          <List>
-            {menuItems.map((item) => (
-              <ListItem
-                button
-                key={item.index}
-                selected={activeTab === item.index}
-                onClick={() => handleDrawerNavigation(item.index)}
-                sx={{
-                  '&.Mui-selected': {
-                    bgcolor: 'rgba(44, 62, 130, 0.1)',
-                  },
-                }}
-              >
-                <ListItemIcon sx={{ color: activeTab === item.index ? '#2C3E82' : 'inherit' }}>
-                  {item.icon}
-                </ListItemIcon>
-                <ListItemText primary={item.label} />
-              </ListItem>
-            ))}
-          </List>
-        </Drawer>
+          activeTab={activeTab}
+          isAdmin={isAdmin}
+          onNavigate={handleDrawerNavigation}
+        />
       )}
 
-      {/* Navigation Tabs - Masaüstünde göster, mobilde gizle, Saha için gizle */}
-      <Box sx={{ bgcolor: 'background.paper', borderBottom: 1, borderColor: 'divider', display: { xs: 'none', sm: isSaha ? 'none' : 'block' } }}>
-        {isBayi ? (
-          <Tabs 
-            value={0}
-            sx={{
-              minHeight: '42px',
-              '& .MuiTab-root': {
-                minHeight: '42px',
-                py: 1,
-                px: 3,
-                fontSize: '0.85rem',
-                textTransform: 'none',
-              }
-            }}
-          >
-            <Tab 
-              value={0}
-              icon={<Build sx={{ fontSize: '1.1rem' }} />} 
-              iconPosition="start" 
-              label="Atölye Takip" 
-            />
-          </Tabs>
-        ) : (
-          <Tabs 
-            value={activeTab} 
-            onChange={(_, newValue) => setActiveTab(newValue)}
-            sx={{
-              minHeight: '42px',
-              '& .MuiTab-root': {
-                minHeight: '42px',
-                py: 1,
-                px: 3,
-                fontSize: '0.85rem',
-                textTransform: 'none',
-              }
-            }}
-          >
-            <Tab 
-              value={0}
-              icon={<Home sx={{ fontSize: '1.1rem' }} />} 
-              iconPosition="start" 
-              label="Ana Sayfa" 
-            />
-            <Tab 
-              value={1}
-              icon={<History sx={{ fontSize: '1.1rem' }} />} 
-              iconPosition="start" 
-              label="Müşteri Geçmişi" 
-            />
-            <Tab 
-              value={2}
-              icon={<Build sx={{ fontSize: '1.1rem' }} />} 
-              iconPosition="start" 
-              label="Atölye Takip" 
-            />
-            {isAdmin && (
-              <Tab 
-                value={3}
-                icon={<SettingsIcon sx={{ fontSize: '1.1rem' }} />} 
-                iconPosition="start" 
-                label="Tanımlamalar" 
-              />
-            )}
-            {isAdmin && (
-              <Tab 
-                value={4}
-                icon={<AdminPanelSettings sx={{ fontSize: '1.1rem' }} />} 
-                iconPosition="start" 
-                label="Yönetim" 
-              />
-            )}
-            {isAdmin && (
-              <Tab 
-                value={5}
-                icon={<Engineering sx={{ fontSize: '1.1rem' }} />} 
-                iconPosition="start" 
-                label="Saha" 
-              />
-            )}
-            {/* Normal kullanıcı (user) için Saha tab'ı */}
-            {!isAdmin && !isBayi && !isSaha && (
-              <Tab 
-                value={5}
-                icon={<Engineering sx={{ fontSize: '1.1rem' }} />} 
-                iconPosition="start" 
-                label="Saha" 
-              />
-            )}
-          </Tabs>
-        )}
-      </Box>
+      <DashboardTabs
+        activeTab={activeTab}
+        onChange={setActiveTab}
+        isBayi={isBayi}
+        isSaha={isSaha}
+        isAdmin={isAdmin}
+      />
 
       <Container maxWidth="xl" sx={{ mt: { xs: 2, sm: 4 }, mb: { xs: 2, sm: 4 }, px: { xs: 1, sm: 2 } }}>
         {isSaha ? (
-          // Saha elemanı sadece SahaPanel görür
           <Suspense fallback={<Loading message="Yükleniyor..." />}>
             <SahaPanel />
           </Suspense>
         ) : isBayi ? (
-          // Bayi sadece Atölye Takip görür
           <AtolyeTakip />
         ) : (
           <>
-            {/* Admin için tab kontrolü */}
             {activeTab === 0 ? (
               // Ana Sayfa Tab
               error ? (
                 <ErrorMessage message={error} onRetry={loadIslemler} />
               ) : loading ? (
-            <Loading message="İşlemler yükleniyor..." />
-          ) : (
-            <>
-              {/* Tablo Başlığı ve Filtreler */}
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2, gap: 2, flexWrap: 'wrap' }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.4, flexWrap: 'nowrap', overflowX: 'auto' }}>
-                  <Typography variant="h6" sx={{ fontWeight: 600, fontSize: '0.9rem', mr: 0.5 }}>
-                    İşlemler
-                  </Typography>
-                  
-                  {/* İstatistik Butonları */}
-                  <Button
-                    variant={statusFilter === 'all' ? 'contained' : 'outlined'}
-                    size="small"
-                    onClick={() => handleStatusFilterClick('all')}
-                    sx={{
-                      fontSize: '0.6rem',
-                      py: 0.25,
-                      px: 0.6,
-                      minWidth: 'auto',
-                      bgcolor: statusFilter === 'all' ? '#0D3282' : 'transparent',
-                      color: statusFilter === 'all' ? '#fff' : '#0D3282',
-                      borderColor: '#0D3282',
-                      '&:hover': {
-                        bgcolor: statusFilter === 'all' ? '#0a2461' : 'rgba(13, 50, 130, 0.04)',
-                      }
-                    }}
-                  >
-                    Toplam: {stats.totalCount}
-                  </Button>
-                  
-                  <Button
-                    variant={statusFilter === 'acik' ? 'contained' : 'outlined'}
-                    size="small"
-                    onClick={() => handleStatusFilterClick('acik')}
-                    sx={{
-                      fontSize: '0.6rem',
-                      py: 0.25,
-                      px: 0.6,
-                      minWidth: 'auto',
-                      bgcolor: statusFilter === 'acik' ? '#ed6c02' : 'transparent',
-                      color: statusFilter === 'acik' ? '#fff' : '#ed6c02',
-                      borderColor: '#ed6c02',
-                      '&:hover': {
-                        bgcolor: statusFilter === 'acik' ? '#e65100' : 'rgba(237, 108, 2, 0.04)',
-                      }
-                    }}
-                  >
-                    Açık: {stats.acikCount}
-                  </Button>
-                  
-                  <Button
-                    variant={statusFilter === 'parca_bekliyor' ? 'contained' : 'outlined'}
-                    size="small"
-                    onClick={() => handleStatusFilterClick('parca_bekliyor')}
-                    sx={{
-                      fontSize: '0.6rem',
-                      py: 0.25,
-                      px: 0.6,
-                      minWidth: 'auto',
-                      bgcolor: statusFilter === 'parca_bekliyor' ? '#1976d2' : 'transparent',
-                      color: statusFilter === 'parca_bekliyor' ? '#fff' : '#1976d2',
-                      borderColor: '#1976d2',
-                      '&:hover': {
-                        bgcolor: statusFilter === 'parca_bekliyor' ? '#1565c0' : 'rgba(25, 118, 210, 0.04)',
-                      }
-                    }}
-                  >
-                    Parça Bekliyor: {stats.parcaBekleCount}
-                  </Button>
-                  
-                  <Button
-                    variant={statusFilter === 'tamamlandi' ? 'contained' : 'outlined'}
-                    size="small"
-                    onClick={() => handleStatusFilterClick('tamamlandi')}
-                    sx={{
-                      fontSize: '0.6rem',
-                      py: 0.25,
-                      px: 0.6,
-                      minWidth: 'auto',
-                      bgcolor: statusFilter === 'tamamlandi' ? '#2e7d32' : 'transparent',
-                      color: statusFilter === 'tamamlandi' ? '#fff' : '#2e7d32',
-                      borderColor: '#2e7d32',
-                      '&:hover': {
-                        bgcolor: statusFilter === 'tamamlandi' ? '#1b5e20' : 'rgba(46, 125, 50, 0.04)',
-                      }
-                    }}
-                  >
-                    Tamamlanan: {stats.tamamlandiCount}
-                  </Button>
+                <Loading message="İşlemler yükleniyor..." />
+              ) : (
+                <>
+                  {/* Tablo Başlığı ve Filtreler */}
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2, gap: 2, flexWrap: 'wrap' }}>
+                    <DashboardStatsBar
+                      stats={stats}
+                      statusFilter={statusFilter}
+                      showTodayOnly={showTodayOnly}
+                      showYazdirilmamis={showYazdirilmamis}
+                      onStatusFilterClick={handleStatusFilterClick}
+                      onTodayFilter={handleTodayFilter}
+                      onYazdirilmamisFilter={handleYazdirilmamisFilter}
+                      onClearDateFilters={handleClearDateFilters}
+                    />
 
-                  <Button
-                    variant={statusFilter === 'iptal' ? 'contained' : 'outlined'}
-                    size="small"
-                    onClick={() => handleStatusFilterClick('iptal')}
-                    sx={{
-                      fontSize: '0.6rem',
-                      py: 0.25,
-                      px: 0.6,
-                      minWidth: 'auto',
-                      bgcolor: statusFilter === 'iptal' ? '#d32f2f' : 'transparent',
-                      color: statusFilter === 'iptal' ? '#fff' : '#d32f2f',
-                      borderColor: '#d32f2f',
-                      '&:hover': {
-                        bgcolor: statusFilter === 'iptal' ? '#c62828' : 'rgba(211, 47, 47, 0.04)',
-                      }
-                    }}
-                  >
-                    İptal: {stats.iptalCount}
-                  </Button>
+                    {/* Filtreler - Sağ taraf */}
+                    <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'wrap' }}>
+                      <IslemFilters
+                        islemler={islemler}
+                        onFilterChange={setFilteredIslemler}
+                        statusFilter={statusFilter}
+                        dateFilter=""
+                        showTodayOnly={showTodayOnly}
+                        showYazdirilmamis={showYazdirilmamis}
+                        onAdminFiltersActive={handleAdminFiltersActiveChange}
+                      />
 
-                  {/* Yazdırılmamış İşler Filtresi */}
-                  <Button
-                    variant={showYazdirilmamis ? 'contained' : 'outlined'}
-                    size="small"
-                    onClick={handleYazdirilmamisFilter}
-                    sx={{
-                      fontSize: '0.6rem',
-                      py: 0.25,
-                      px: 0.6,
-                      minWidth: 'auto',
-                      bgcolor: showYazdirilmamis ? '#9c27b0' : 'transparent',
-                      color: showYazdirilmamis ? '#fff' : '#9c27b0',
-                      borderColor: '#9c27b0',
-                      '&:hover': {
-                        bgcolor: showYazdirilmamis ? '#7b1fa2' : 'rgba(156, 39, 176, 0.04)',
-                      }
-                    }}
-                  >
-                    Yazdırılmamış iş: {stats.yazdirilmamisCount}
-                  </Button>
-                  
-                  {/* Bugün Alınan İşler - Daha küçük */}
-                  <Button
-                    variant={showTodayOnly ? 'contained' : 'outlined'}
-                    size="small"
-                    onClick={handleTodayFilter}
-                    sx={{
-                      fontSize: '0.6rem',
-                      py: 0.25,
-                      px: 0.6,
-                      minWidth: 'auto',
-                      color: showTodayOnly ? '#fff' : '#2C3E82',
-                      borderColor: '#2C3E82',
-                      bgcolor: showTodayOnly ? '#2C3E82' : 'transparent',
-                      '&:hover': {
-                        borderColor: '#1a2850',
-                        bgcolor: showTodayOnly ? '#1a2850' : 'rgba(44, 62, 130, 0.04)',
-                      }
-                    }}
-                  >
-                    Bugün alınan iş: {stats.bugunCount}
-                  </Button>
-                  
-                  {showTodayOnly && (
-                    <Button
-                      variant="text"
-                      size="small"
-                      onClick={handleClearDateFilters}
-                      sx={{ 
-                        fontSize: '0.65rem', 
-                        py: 0.3, 
-                        px: 0.5, 
-                        minWidth: 'auto',
-                        color: '#2C3E82',
-                      }}
-                    >
-                      ✕
-                    </Button>
-                  )}
-                </Box>
-
-                {/* Filtreler - Sağ taraf */}
-                <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'wrap' }}>
-                  <IslemFilters
-                    islemler={islemler}
-                    onFilterChange={setFilteredIslemler}
-                    statusFilter={statusFilter}
-                    dateFilter=""
-                    showTodayOnly={showTodayOnly}
-                    showYazdirilmamis={showYazdirilmamis}
-                    onAdminFiltersActive={handleAdminFiltersActiveChange}
-                  />
-                  
-                  <Button
-                    variant="outlined"
-                    startIcon={<DownloadIcon sx={{ fontSize: '1rem' }} />}
-                    onClick={handleExport}
-                    size="small"
-                    sx={{
-                      fontSize: '0.65rem',
-                      py: 0.4,
-                      px: 0.8,
-                      color: '#0D3282',
-                      borderColor: '#0D3282',
-                      '&:hover': {
-                        borderColor: '#0a2461',
-                        bgcolor: 'rgba(13, 50, 130, 0.04)',
-                      }
-                    }}
-                  >
-                    Excel İndir
-                  </Button>
-                  <Button
-                      variant="contained"
-                      startIcon={<AddIcon sx={{ fontSize: '1rem' }} />}
-                      onClick={() => handleOpenDialog()}
-                      size="small"
-                      sx={{ 
-                        fontSize: '0.65rem',
-                        py: 0.4,
-                        px: 0.8,
-                        boxShadow: 2,
-                        '&:hover': {
-                          boxShadow: 4,
-                        }
-                      }}
-                    >
-                      Yeni İşlem
-                    </Button>
+                      <Button
+                        variant="outlined"
+                        startIcon={<DownloadIcon sx={{ fontSize: '1rem' }} />}
+                        onClick={handleExport}
+                        size="small"
+                        sx={{
+                          fontSize: '0.65rem',
+                          py: 0.4,
+                          px: 0.8,
+                          color: '#0D3282',
+                          borderColor: '#0D3282',
+                          '&:hover': { borderColor: '#0a2461', bgcolor: 'rgba(13, 50, 130, 0.04)' },
+                        }}
+                      >
+                        Excel İndir
+                      </Button>
+                      <Button
+                        variant="contained"
+                        startIcon={<AddIcon sx={{ fontSize: '1rem' }} />}
+                        onClick={() => handleOpenDialog()}
+                        size="small"
+                        sx={{
+                          fontSize: '0.65rem',
+                          py: 0.4,
+                          px: 0.8,
+                          boxShadow: 2,
+                          '&:hover': { boxShadow: 4 },
+                        }}
+                      >
+                        Yeni İşlem
+                      </Button>
+                    </Box>
                   </Box>
-                </Box>
 
-              <IslemTable
-              islemler={filteredIslemler}
-              loading={loading}
-              onEdit={handleOpenDialog}
-              onClone={handleCloneRecord}
-              onToggleDurum={handleToggleDurum}
-              onDelete={handleDelete}
-              isAdminMode={isAdmin}
-              isBayi={isBayi}
-              onFilteredChange={handleTableFilterChange}
-              onColumnFiltersChange={handleColumnFiltersChange}
-            />
+                  <IslemTable
+                    islemler={filteredIslemler}
+                    loading={loading}
+                    onEdit={handleOpenDialog}
+                    onClone={handleCloneRecord}
+                    onToggleDurum={handleToggleDurum}
+                    onDelete={handleDelete}
+                    isAdminMode={isAdmin}
+                    isBayi={isBayi}
+                    onFilteredChange={handleTableFilterChange}
+                    onColumnFiltersChange={handleColumnFiltersChange}
+                  />
 
-            {/* Daha Fazla Yükle Butonu */}
-            {hasMore && !loading && (
-              <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2, mb: 2 }}>
-                <Button
-                  variant="outlined"
-                  onClick={handleLoadMore}
-                  disabled={loadingMore}
-                  sx={{
-                    px: 4,
-                    py: 1,
-                    borderColor: '#0D3282',
-                    color: '#0D3282',
-                    '&:hover': { bgcolor: 'rgba(13, 50, 130, 0.04)' },
-                  }}
-                >
-                  {loadingMore ? (
-                    <CircularProgress size={20} sx={{ mr: 1 }} />
-                  ) : null}
-                  {loadingMore ? 'Yükleniyor...' : `Daha Fazla Yükle (${islemler.length} / ${totalRecords})`}
-                </Button>
-              </Box>
+                  {/* Daha Fazla Yükle Butonu */}
+                  {hasMore && !loading && (
+                    <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2, mb: 2 }}>
+                      <Button
+                        variant="outlined"
+                        onClick={handleLoadMore}
+                        disabled={loadingMore}
+                        sx={{
+                          px: 4,
+                          py: 1,
+                          borderColor: '#0D3282',
+                          color: '#0D3282',
+                          '&:hover': { bgcolor: 'rgba(13, 50, 130, 0.04)' },
+                        }}
+                      >
+                        {loadingMore ? <CircularProgress size={20} sx={{ mr: 1 }} /> : null}
+                        {loadingMore ? 'Yükleniyor...' : `Daha Fazla Yükle (${islemler.length} / ${totalRecords})`}
+                      </Button>
+                    </Box>
+                  )}
+                </>
+              )
+            ) : activeTab === 1 ? (
+              <Suspense fallback={<Loading />}>
+                <MusteriGecmisi />
+              </Suspense>
+            ) : activeTab === 2 ? (
+              <Suspense fallback={<Loading />}>
+                <AtolyeTakip />
+              </Suspense>
+            ) : activeTab === 3 ? (
+              <Suspense fallback={<Loading />}>
+                <Settings />
+              </Suspense>
+            ) : activeTab === 4 && isAdmin ? (
+              <Suspense fallback={<Loading />}>
+                <AdminPanel />
+              </Suspense>
+            ) : activeTab === 5 ? (
+              <Suspense fallback={<Loading />}>
+                <SahaKayitlari />
+              </Suspense>
+            ) : (
+              <Suspense fallback={<Loading />}>
+                <Settings />
+              </Suspense>
             )}
-          </>
-        )) : activeTab === 1 ? (
-          // Müşteri Geçmişi Tab - Lazy loaded
-          <Suspense fallback={<Loading />}>
-            <MusteriGecmisi />
-          </Suspense>
-        ) : activeTab === 2 ? (
-          // Atölye Takip Tab - Lazy loaded
-          <Suspense fallback={<Loading />}>
-            <AtolyeTakip />
-          </Suspense>
-        ) : activeTab === 3 ? (
-          // Tanımlamalar Tab - Lazy loaded
-          <Suspense fallback={<Loading />}>
-            <Settings />
-          </Suspense>
-        ) : activeTab === 4 && isAdmin ? (
-          // Kullanıcı Yönetimi (Sadece Admin) - Lazy loaded
-          <Suspense fallback={<Loading />}>
-            <AdminPanel />
-          </Suspense>
-        ) : activeTab === 5 ? (
-          // Saha Kayıtları (Admin ve Normal Kullanıcı) - Lazy loaded
-          <Suspense fallback={<Loading />}>
-            <SahaKayitlari />
-          </Suspense>
-        ) : (
-          // Fallback
-          <Suspense fallback={<Loading />}>
-            <Settings />
-          </Suspense>
-        )}
           </>
         )}
 
@@ -1039,121 +622,18 @@ const Dashboard: React.FC = () => {
           cloneFromRecord={cloneFromRecord || undefined}
         />
 
-        {/* Tamamlama Onay Dialog */}
-        <Dialog
+        <TamamlaConfirmDialog
           open={confirmDialog.open}
-          onClose={handleCancelTamamla}
-          maxWidth="sm"
-          fullWidth
-        >
-          <DialogTitle sx={{ bgcolor: 'warning.light', color: 'warning.contrastText' }}>
-            İşlemi Tamamla
-          </DialogTitle>
-          <DialogContent sx={{ mt: 2 }}>
-            <DialogContentText>
-              Bu işlemi <strong>tamamlandı</strong> olarak işaretlemek istediğinizden emin misiniz?
-              <br /><br />
-              <strong>Uyarı:</strong> İşlem tamamlandı olarak işaretlendikten sonra düzenlenemeyecektir.
-            </DialogContentText>
-          </DialogContent>
-          <DialogActions sx={{ px: 3, pb: 2 }}>
-            <Button onClick={handleCancelTamamla} variant="outlined">
-              İptal
-            </Button>
-            <Button onClick={handleConfirmTamamla} variant="contained" color="success" autoFocus>
-              Tamamla
-            </Button>
-          </DialogActions>
-        </Dialog>
+          onCancel={handleCancelTamamla}
+          onConfirm={handleConfirmTamamla}
+        />
 
-        {/* Beklemedeki Formlar - Sol Alt Köşede Yan Yana Kartlar */}
-        {onHoldFormData.length > 0 && !openDialog && (
-          <Box
-            sx={{
-              position: 'fixed',
-              bottom: 16,
-              left: 16,
-              display: 'flex',
-              gap: 2,
-              flexWrap: 'wrap',
-              maxWidth: '50vw',
-              zIndex: 1300,
-            }}
-          >
-            {onHoldFormData.map((holdData, index) => (
-              <Box
-                key={index}
-                sx={{
-                  bgcolor: 'warning.light',
-                  border: '2px solid',
-                  borderColor: 'warning.main',
-                  borderRadius: 2,
-                  boxShadow: 3,
-                  transition: 'all 0.2s',
-                  minWidth: 200,
-                  maxWidth: 250,
-                  position: 'relative',
-                }}
-              >
-                {/* Kapatma Butonu */}
-                <IconButton
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    e.preventDefault();
-                    clearOnHoldData(index);
-                  }}
-                  size="small"
-                  sx={{
-                    position: 'absolute',
-                    top: 4,
-                    right: 4,
-                    bgcolor: 'warning.main',
-                    color: 'white',
-                    width: 20,
-                    height: 20,
-                    zIndex: 1,
-                    '&:hover': {
-                      bgcolor: 'warning.dark',
-                    }
-                  }}
-                >
-                  <CloseIcon sx={{ fontSize: 14 }} />
-                </IconButton>
-
-                {/* Kart İçeriği - Tıklanabilir */}
-                <Box
-                  onClick={(e) => {
-                    // Kapatma butonuna tıklandıysa işlem yapma
-                    if ((e.target as HTMLElement).closest('button')) {
-                      return;
-                    }
-                    handleHoldChange(false, undefined, index);
-                  }}
-                  sx={{
-                    p: 1.5,
-                    cursor: 'pointer',
-                    '&:hover': {
-                      transform: 'scale(1.05)',
-                    }
-                  }}
-                >
-                  <Typography variant="subtitle2" sx={{ fontWeight: 'bold', color: 'warning.dark', mb: 0.5 }}>
-                    📋 Bekleyen Form {onHoldFormData.length > 1 && `(${index + 1})`}
-                  </Typography>
-                  <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block' }}>
-                    {holdData.ad_soyad || 'İsimsiz'} - {holdData.cep_tel || 'Telefon yok'}
-                  </Typography>
-                  <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mt: 0.5 }}>
-                    {holdData.urun || 'Ürün belirtilmemiş'} {holdData.marka ? `- ${holdData.marka}` : ''}
-                  </Typography>
-                  <Typography variant="caption" sx={{ fontStyle: 'italic', color: 'warning.dark', mt: 1, display: 'block' }}>
-                    Tıklayarak devam edin
-                  </Typography>
-                </Box>
-              </Box>
-            ))}
-          </Box>
-        )}
+        <OnHoldCards
+          onHoldFormData={onHoldFormData}
+          openDialog={openDialog}
+          onResume={(idx) => handleHoldChange(false, undefined, idx)}
+          onClear={(idx) => clearOnHoldData(idx)}
+        />
       </Container>
     </Box>
   );
