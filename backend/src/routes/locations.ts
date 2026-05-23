@@ -1,5 +1,5 @@
-import { Router } from 'express';
-import pool from '../db';
+﻿import { Router } from 'express';
+import { query } from '../db';
 
 const router = Router();
 
@@ -12,7 +12,7 @@ router.get('/', async (_req, res) => {
       'ETag': 'ilceler-v1',
     });
     
-    const result = await pool.query('SELECT * FROM ilceler ORDER BY isim ASC');
+    const result = await query('SELECT * FROM ilceler ORDER BY isim ASC');
     res.json(result.rows);
   } catch (error) {
     console.error('İlçeler getirilirken hata:', error);
@@ -24,7 +24,7 @@ router.get('/', async (_req, res) => {
 router.get('/:ilceId/mahalleler', async (req, res) => {
   try {
     const { ilceId } = req.params;
-    const result = await pool.query(
+    const result = await query(
       'SELECT * FROM mahalleler WHERE ilce_id = $1 ORDER BY isim ASC',
       [ilceId]
     );

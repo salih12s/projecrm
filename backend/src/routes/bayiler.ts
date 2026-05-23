@@ -1,5 +1,5 @@
-import express, { Request, Response } from 'express';
-import pool from '../db';
+﻿import express, { Request, Response } from 'express';
+import { query } from '../db';
 import auth from '../middleware/auth';
 import { Bayi } from '../types';
 
@@ -8,7 +8,7 @@ const router = express.Router();
 // GET all bayiler
 router.get('/', auth, async (_req: Request, res: Response) => {
   try {
-    const result = await pool.query<Bayi>(
+    const result = await query<Bayi>(
       'SELECT * FROM bayiler ORDER BY isim ASC'
     );
     res.json(result.rows);
@@ -30,7 +30,7 @@ router.post('/', auth, async (req: Request, res: Response) => {
     const username = isim.trim();
     const password = '123456'; // Varsayılan şifre
 
-    const result = await pool.query<Bayi>(
+    const result = await query<Bayi>(
       'INSERT INTO bayiler (isim, username, password) VALUES ($1, $2, $3) RETURNING *',
       [username, username, password]
     );
@@ -57,7 +57,7 @@ router.put('/:id', auth, async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Bayi ismi gereklidir' });
     }
 
-    const result = await pool.query<Bayi>(
+    const result = await query<Bayi>(
       'UPDATE bayiler SET isim = $1 WHERE id = $2 RETURNING *',
       [isim.trim(), id]
     );
@@ -83,7 +83,7 @@ router.delete('/:id', auth, async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
 
-    const result = await pool.query(
+    const result = await query(
       'DELETE FROM bayiler WHERE id = $1 RETURNING *',
       [id]
     );
