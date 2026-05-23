@@ -1,11 +1,17 @@
-import React from 'react';
+import React, { Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { ThemeProvider, createTheme, CssBaseline } from '@mui/material';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { SnackbarProvider } from './context/SnackbarContext';
 import Login from './components/auth/Login';
-import Dashboard from './components/dashboard/Dashboard';
-import Settings from './components/settings/Settings';
+import Loading from './components/common/Loading';
+import ErrorBoundary from './components/common/ErrorBoundary';
+
+// Part 3 / P3.F2: Dashboard ve Settings lazy yüklenir. İlk paint'te
+// Login için gerekli olmayan ağır kodu indirmemek için. Suspense
+// fallback olarak ortak Loading bileşeni kullanılır.
+const Dashboard = React.lazy(() => import('./components/dashboard/Dashboard'));
+const Settings = React.lazy(() => import('./components/settings/Settings'));
 
 const theme = createTheme({
   palette: {
@@ -42,25 +48,29 @@ const App: React.FC = () => {
               v7_relativeSplatPath: true,
             }}
           >
-            <Routes>
-              <Route path="/login" element={<Login />} />
-              <Route
-                path="/"
-                element={
-                  <PrivateRoute>
-                    <Dashboard />
-                  </PrivateRoute>
-                }
-              />
-              <Route
-                path="/settings"
-                element={
-                  <PrivateRoute>
-                    <Settings />
-                  </PrivateRoute>
-                }
-              />
-            </Routes>
+            <ErrorBoundary>
+              <Suspense fallback={<Loading />}>
+                <Routes>
+                  <Route path="/login" element={<Login />} />
+                  <Route
+                    path="/"
+                    element={
+                      <PrivateRoute>
+                        <Dashboard />
+                      </PrivateRoute>
+                    }
+                  />
+                  <Route
+                    path="/settings"
+                    element={
+                      <PrivateRoute>
+                        <Settings />
+                      </PrivateRoute>
+                    }
+                  />
+                </Routes>
+              </Suspense>
+            </ErrorBoundary>
           </BrowserRouter>
         </AuthProvider>
       </SnackbarProvider>
