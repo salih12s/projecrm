@@ -9,6 +9,9 @@ export default defineConfig({
     port: 5173,
   },
   build: {
+    // Her build'de eski asset'leri temizle (Phase 1 hijyen düzeltmesi).
+    // Vite default'u zaten true ama explicit yazıyoruz; dist/ artığı asset birikmesin.
+    emptyOutDir: true,
     // .htaccess dosyasını dist'e kopyala
     rollupOptions: {
       output: {

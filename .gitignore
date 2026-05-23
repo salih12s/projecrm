@@ -11,6 +11,11 @@ build/
 .env
 .env.local
 .env.*.local
+# Not: backend/.env.production, frontend/.env.production şu an tracked.
+# Yeni ortam dosyaları repoya girmesin diye aşağıdaki kalıpları da ignore'a alıyoruz.
+# (Tracked olanlar için ayrı bir untrack adımı kullanıcı onayıyla yapılacak.)
+.env.development
+.env.production
 
 # IDE
 .vscode/
@@ -39,3 +44,12 @@ coverage
 .cache
 temp
 tmp
+
+# Refactor / audit artifacts (Phase 1 — Repo Hijyeni)
+backups/
+reports/
+docs/baseline-outputs/
+*.dump
+
+# Build / release archives (history'de tracked olanlar dokunulmadı)
+*.zip
