@@ -12,11 +12,6 @@ import {
   TableRow,
   IconButton,
   Chip,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  TextField,
   Tooltip,
   Alert,
   Collapse,
@@ -37,6 +32,8 @@ import { adminService } from '../../services/admin.service';
 import { sahaService } from '../../services/saha.service';
 import { useSnackbar } from '../../context/SnackbarContext';
 import { SahaElemani, SahaKayit } from '../../types';
+import CreateUserDialog from './dialog/CreateUserDialog';
+import CreateSahaElemaniDialog from './dialog/CreateSahaElemaniDialog';
 
 interface User {
   id: number;
@@ -733,75 +730,28 @@ const AdminPanel: React.FC = () => {
       )}
 
       {/* Kullanıcı Oluşturma Dialog */}
-      <Dialog open={openCreateDialog} onClose={() => setOpenCreateDialog(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>Yeni Kullanıcı Oluştur</DialogTitle>
-        <DialogContent>
-          <TextField
-            autoFocus
-            margin="dense"
-            label="Kullanıcı Adı"
-            type="text"
-            fullWidth
-            value={newUsername}
-            onChange={(e) => setNewUsername(e.target.value)}
-            sx={{ mb: 2 }}
-          />
-          <TextField
-            margin="dense"
-            label="Şifre"
-            type="password"
-            fullWidth
-            value={newPassword}
-            onChange={(e) => setNewPassword(e.target.value)}
-          />
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setOpenCreateDialog(false)}>İptal</Button>
-          <Button onClick={handleCreateUser} variant="contained">
-            Oluştur
-          </Button>
-        </DialogActions>
-      </Dialog>
+      <CreateUserDialog
+        open={openCreateDialog}
+        username={newUsername}
+        password={newPassword}
+        onUsernameChange={setNewUsername}
+        onPasswordChange={setNewPassword}
+        onClose={() => setOpenCreateDialog(false)}
+        onSubmit={handleCreateUser}
+      />
 
       {/* Saha Elemanı Oluşturma Dialog */}
-      <Dialog open={openSahaDialog} onClose={() => setOpenSahaDialog(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>Yeni Saha Elemanı Oluştur</DialogTitle>
-        <DialogContent>
-          <TextField
-            autoFocus
-            margin="dense"
-            label="Kullanıcı Adı"
-            type="text"
-            fullWidth
-            value={newSahaUsername}
-            onChange={(e) => setNewSahaUsername(e.target.value)}
-            sx={{ mb: 2 }}
-          />
-          <TextField
-            margin="dense"
-            label="Ad Soyad (Opsiyonel)"
-            type="text"
-            fullWidth
-            value={newSahaAdSoyad}
-            onChange={(e) => setNewSahaAdSoyad(e.target.value)}
-            sx={{ mb: 2 }}
-          />
-          <TextField
-            margin="dense"
-            label="Şifre"
-            type="password"
-            fullWidth
-            value={newSahaPassword}
-            onChange={(e) => setNewSahaPassword(e.target.value)}
-          />
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setOpenSahaDialog(false)}>İptal</Button>
-          <Button onClick={handleCreateSahaElemani} variant="contained" sx={{ bgcolor: '#0D3282' }}>
-            Oluştur
-          </Button>
-        </DialogActions>
-      </Dialog>
+      <CreateSahaElemaniDialog
+        open={openSahaDialog}
+        username={newSahaUsername}
+        adSoyad={newSahaAdSoyad}
+        password={newSahaPassword}
+        onUsernameChange={setNewSahaUsername}
+        onAdSoyadChange={setNewSahaAdSoyad}
+        onPasswordChange={setNewSahaPassword}
+        onClose={() => setOpenSahaDialog(false)}
+        onSubmit={handleCreateSahaElemani}
+      />
     </Box>
   );
 };
