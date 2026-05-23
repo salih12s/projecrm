@@ -91,9 +91,22 @@ riski nedeniyle sadece hazırlandı, entegrasyon ertelendi).
 - `IslemTable` light split: `DebouncedFilterInput`, `IslemTableLoadingState`,
   `formatPhoneNumber` ayrı dosyalara çıkarıldı. Davranış birebir aynı.
 
+## Bu turda yapılan (Phase 11-12)
+
+- **`usePagination`** eklendi. `{ page, pageSize, total, totalPages, setPage, setPageSize, resetPage }` döner. `setPage` 1'e clamp'lenir; `setPageSize` sayfayı sıfırlamaz (her component'in kendi davranışı korunsun diye). **Hiçbir component'e entegre edilmedi.**
+- **`useColumnFilters`** eklendi. `{ filters, setFilter, clearFilter, clearAll, hasActiveFilters, getFilter }` döner; `setFilter(key, '')` key'i map'ten siler. **Hiçbir component'e entegre edilmedi** — `IslemTable` internal `filters` state'i + `Dashboard.columnFiltersRef` debounce koreografisi yüksek risk olarak değerlendirildi.
+
+### `usePagination`
+Sayfa & sayfa boyutu state'i için generic yardımcı (server-side ya da
+client-side pagination'la uyumlu). Şu an hiçbir componentte entegre değil.
+
+### `useColumnFilters`
+Tablo kolonlarına göre `Record<string, string>` filtre state'i. `IslemTable`
+çağrı şablonuyla (`onColumnFiltersChange(filters)`) uyumlu API; entegrasyon
+ertelendi.
+
 ## İleride Eklenmesi Planlanan Hook'lar (güncel sıra)
 
-- **`usePagination`** — `IslemTable`, `SahaKayitlari`, `AtolyeTakip` paylaşılan page/pageSize/total state'i.
-- **`useColumnFilters`** — `IslemTable` kolon-bazlı filtre state'i.
-- **`useIslemTableState`** — `IslemTable` sort/filter/page/selection state'i (yukarıdaki ikisinin üzerine).
+- **`useIslemTableState`** — `IslemTable` sort/filter/page/selection state'i (`usePagination` + `useColumnFilters`'ın üzerine).
 - **`useIslemForm`** — `IslemDialog` form state + validation + karaliste check logic'i (IslemDialog yüksek risk azaldıktan sonra).
+- **`useIslemSocket` generic varyant** — Atolye/Dashboard socket hook'larındaki ortak `reconnection*` + `transports` config'ini tek bir base hook'a taşımak.

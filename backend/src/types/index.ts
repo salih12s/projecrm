@@ -78,6 +78,16 @@ export interface IslemUpdateDto {
 export interface AuthPayload {
   id: number;
   username: string;
+  /**
+   * JWT'de eklenen rol bilgisi (`'user'` / `'bayi'` / future: `'admin'`,
+   * `'saha'`). Optional — eski tokenlar bu alanı taşımayabilir.
+   */
+  role?: string;
+  /**
+   * Bayi token'larında doldurulan bayi ismi. Sadece `role === 'bayi'`
+   * olduğunda set edilir.
+   */
+  bayiIsim?: string;
 }
 
 export interface Teknisyen {
