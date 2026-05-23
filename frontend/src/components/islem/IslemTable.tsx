@@ -47,6 +47,7 @@ import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea
 import { Islem } from '../../types';
 import PrintEditor from '../settings/PrintEditor';
 import { islemService, karalisteService } from '../../services/api';
+import { STORAGE_KEYS } from '../../constants/storageKeys';
 
 interface IslemTableProps {
   islemler: Islem[];
@@ -399,7 +400,7 @@ const IslemTable: React.FC<IslemTableProps> = ({
 
   // Sütun sırasını localStorage'dan yükle
   const [columnOrder, setColumnOrder] = useState<string[]>(() => {
-    const saved = localStorage.getItem('islemTableColumnOrder');
+    const saved = localStorage.getItem(STORAGE_KEYS.ISLEM_TABLE_COLUMN_ORDER);
     const defaultOrder = [
       'tarih', 'ad_soyad', 'ilce', 'mahalle', 'apartman_site', 'blok_no', 'daire_no', 
       'cep_tel', 'yedek_tel', 'cadde', 'sokak', 'kapi_no',
@@ -410,7 +411,7 @@ const IslemTable: React.FC<IslemTableProps> = ({
       const parsedOrder = JSON.parse(saved);
       // Eğer kaydedilen sütun sayısı varsayılan sütun sayısından farklıysa, varsayılanı kullan
       if (parsedOrder.length !== defaultOrder.length) {
-        localStorage.removeItem('islemTableColumnOrder');
+        localStorage.removeItem(STORAGE_KEYS.ISLEM_TABLE_COLUMN_ORDER);
         return defaultOrder;
       }
       return parsedOrder;
@@ -420,7 +421,7 @@ const IslemTable: React.FC<IslemTableProps> = ({
 
   // Sütun genişliklerini localStorage'dan yükle
   const [columnWidths, setColumnWidths] = useState<Record<string, number>>(() => {
-    const saved = localStorage.getItem('islemTableColumnWidths');
+    const saved = localStorage.getItem(STORAGE_KEYS.ISLEM_TABLE_COLUMN_WIDTHS);
     const defaultWidths: Record<string, number> = {
       sira: 35,
       tarih: 90,
@@ -479,7 +480,7 @@ const IslemTable: React.FC<IslemTableProps> = ({
     const handleMouseUp = () => {
       if (resizing) {
         // Save to localStorage
-        localStorage.setItem('islemTableColumnWidths', JSON.stringify(columnWidths));
+        localStorage.setItem(STORAGE_KEYS.ISLEM_TABLE_COLUMN_WIDTHS, JSON.stringify(columnWidths));
         setResizing(null);
       }
     };
@@ -931,7 +932,7 @@ const IslemTable: React.FC<IslemTableProps> = ({
 
   // Sütun sırasını kaydet
   useEffect(() => {
-    localStorage.setItem('islemTableColumnOrder', JSON.stringify(columnOrder));
+    localStorage.setItem(STORAGE_KEYS.ISLEM_TABLE_COLUMN_ORDER, JSON.stringify(columnOrder));
   }, [columnOrder]);
 
   // Sütun sürükle-bırak işlemi

@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { io, type Socket } from 'socket.io-client';
 import type { Islem } from '../types';
+import { SOCKET_EVENTS } from '../constants/socketEvents';
 
 export interface UseIslemSocketHandlers {
   onYeniIslem: (islem: Islem) => void;
@@ -62,19 +63,19 @@ export function useIslemSocket(handlers: UseIslemSocketHandlers): void {
       if (onDisconnect) onDisconnect();
     });
 
-    socket.on('yeni-islem', (islem: Islem) => {
+    socket.on(SOCKET_EVENTS.YENI_ISLEM, (islem: Islem) => {
       handlersRef.current.onYeniIslem(islem);
     });
 
-    socket.on('islem-guncellendi', (updatedIslem: Islem) => {
+    socket.on(SOCKET_EVENTS.ISLEM_GUNCELLENDI, (updatedIslem: Islem) => {
       handlersRef.current.onIslemGuncellendi(updatedIslem);
     });
 
-    socket.on('islem-silindi', (id: number) => {
+    socket.on(SOCKET_EVENTS.ISLEM_SILINDI, (id: number) => {
       handlersRef.current.onIslemSilindi(id);
     });
 
-    socket.on('islem-durum-degisti', (updatedIslem: Islem) => {
+    socket.on(SOCKET_EVENTS.ISLEM_DURUM_DEGISTI, (updatedIslem: Islem) => {
       handlersRef.current.onIslemDurumDegisti(updatedIslem);
     });
 

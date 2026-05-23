@@ -32,46 +32,18 @@ import { useSnackbar } from '../../context/SnackbarContext';
 import { useAuth } from '../../context/AuthContext';
 import AtolyeDialog from './AtolyeDialog.tsx';
 import { useAtolyeSocket } from '../../hooks/useAtolyeSocket';
+import {
+  getAtolyeStatusColor as getStatusColor,
+  getAtolyeStatusLabel as getStatusLabel,
+  getAtolyeRowBackgroundColor as getRowBackgroundColor,
+} from '../../constants/atolyeStatus';
 // Phase 13 cleanup: shared debounce hook yerine artık burada local kopya tutmuyoruz.
 // Aynı imza (value: T, delay: number) → T olduğu için davranış birebir aynı.
 import { useDebouncedValue } from '../../hooks/useDebouncedValue';
 
-// Static helper functions
-const getStatusColor = (status: string): "default" | "primary" | "secondary" | "error" | "info" | "success" | "warning" => {
-  switch (status) {
-    case 'teslim_edildi': return 'info';
-    case 'beklemede': return 'warning';
-    case 'siparis_verildi': return 'secondary';
-    case 'yapildi': return 'success';
-    case 'fabrika_gitti': return 'default';
-    case 'odeme_bekliyor': return 'error';
-    default: return 'default';
-  }
-};
+// Static helper functions — atölye durum sabitleri için
+// `constants/atolyeStatus.ts` modülüne taşındı; burada import alias'ları kullanılıyor.
 
-const getStatusLabel = (status: string): string => {
-  switch (status) {
-    case 'teslim_edildi': return 'Teslim Edildi';
-    case 'beklemede': return 'Beklemede';
-    case 'siparis_verildi': return 'Sipariş Verildi';
-    case 'yapildi': return 'Yapıldı';
-    case 'fabrika_gitti': return 'Fabrika Gitti';
-    case 'odeme_bekliyor': return 'Ödeme Bekliyor';
-    default: return status;
-  }
-};
-
-const getRowBackgroundColor = (status: string): string => {
-  switch (status) {
-    case 'teslim_edildi': return '#b3e5fc';
-    case 'beklemede': return '#ffe0b2';
-    case 'siparis_verildi': return '#e1bee7';
-    case 'yapildi': return '#dcedc8';
-    case 'fabrika_gitti': return '#e0e0e0';
-    case 'odeme_bekliyor': return '#ffcdd2';
-    default: return 'transparent';
-  }
-};
 
 const formatDate = (dateString: string | undefined | null): string => {
   if (!dateString) return '';

@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { io, type Socket } from 'socket.io-client';
 import type { Atolye } from '../types';
+import { SOCKET_EVENTS } from '../constants/socketEvents';
 
 export interface UseAtolyeSocketHandlers {
   onYeniAtolye: (atolye: Atolye) => void;
@@ -60,15 +61,15 @@ export function useAtolyeSocket(handlers: UseAtolyeSocketHandlers): void {
 
     if (onDisconnect) socket.on('disconnect', onDisconnect);
 
-    socket.on('yeni-atolye', (atolye: Atolye) => {
+    socket.on(SOCKET_EVENTS.YENI_ATOLYE, (atolye: Atolye) => {
       onYeniAtolye(atolye);
     });
 
-    socket.on('atolye-guncellendi', (updatedAtolyeRecord: Atolye) => {
+    socket.on(SOCKET_EVENTS.ATOLYE_GUNCELLENDI, (updatedAtolyeRecord: Atolye) => {
       onAtolyeGuncellendi(updatedAtolyeRecord);
     });
 
-    socket.on('atolye-silindi', (deletedId: number) => {
+    socket.on(SOCKET_EVENTS.ATOLYE_SILINDI, (deletedId: number) => {
       onAtolyeSilindi(deletedId);
     });
 
