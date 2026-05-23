@@ -53,3 +53,7 @@ docs/baseline-outputs/
 
 # Build / release archives (history'de tracked olanlar dokunulmadı)
 *.zip
+
+# Lint output
+.lint-report.json
+

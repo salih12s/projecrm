@@ -1,0 +1,20 @@
+# Build artifacts
+**/dist/**
+**/build/**
+**/node_modules/**
+**/coverage/**
+
+# Generated / vendored
+**/*.min.js
+**/*.min.css
+**/*.d.ts
+frontend/public/**
+
+# Lock files (npm handles formatting)
+package-lock.json
+
+# Refactor history (markdown raporları olduğu gibi kalsın)
+docs/refactor/**
+
+# SQL files (Prettier SQL desteği yok)
+**/*.sql
