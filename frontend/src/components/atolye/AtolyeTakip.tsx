@@ -40,6 +40,7 @@ import {
 // Phase 13 cleanup: shared debounce hook yerine artık burada local kopya tutmuyoruz.
 // Aynı imza (value: T, delay: number) → T olduğu için davranış birebir aynı.
 import { useDebouncedValue } from '../../hooks/useDebouncedValue';
+import { formatPhone } from '../../utils/format';
 
 // Static helper functions — atölye durum sabitleri için
 // `constants/atolyeStatus.ts` modülüne taşındı; burada import alias'ları kullanılıyor.
@@ -54,14 +55,10 @@ const formatDate = (dateString: string | undefined | null): string => {
   } catch { return ''; }
 };
 
-const formatPhoneNumber = (phone: string | null | undefined): string => {
-  if (!phone) return '-';
-  const cleaned = phone.replace(/\D/g, '');
-  if (cleaned.length === 11) {
-    return `${cleaned.slice(0, 4)} ${cleaned.slice(4, 7)} ${cleaned.slice(7, 9)} ${cleaned.slice(9)}`;
-  }
-  return phone;
-};
+// AtolyeTakip "-" fallback'ini koruyan ince adaptör (Part 3 / P3.G2).
+// Davranış birebir aynı: 11 hane → biçimli, diğer → input, boş → '-'.
+const formatPhoneNumber = (phone: string | null | undefined): string =>
+  formatPhone(phone, '-');
 
 // Memoized Table Row
 interface AtolyeRowProps {

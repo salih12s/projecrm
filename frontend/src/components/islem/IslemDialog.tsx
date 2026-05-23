@@ -35,16 +35,7 @@ import { karalisteService } from '../../services/karaliste.service';
 import { locationService } from '../../services/location.service';
 import { useSnackbar } from '../../context/SnackbarContext';
 import { useReferenceData } from '../../hooks/useReferenceData';
-
-// Telefon numarasını formatla: 0544 448 88 88
-const formatPhoneNumber = (phone: string | undefined): string => {
-  if (!phone) return '';
-  const cleaned = phone.replace(/\D/g, '');
-  if (cleaned.length === 11) {
-    return `${cleaned.slice(0, 4)} ${cleaned.slice(4, 7)} ${cleaned.slice(7, 9)} ${cleaned.slice(9)}`;
-  }
-  return phone;
-};
+import { formatPhone as formatPhoneNumber } from '../../utils/format';
 
 // Formatlı telefonu temizle (sadece rakamlar)
 const cleanPhoneNumber = (phone: string): string => {
