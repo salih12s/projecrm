@@ -9,13 +9,8 @@ import {
   Paper,
   IconButton,
   Chip,
-  CircularProgress,
   Box,
   Tooltip,
-  TextField,
-  Dialog,
-  DialogTitle,
-  DialogContent,
   Typography,
   Card,
   CardContent,
@@ -25,13 +20,14 @@ import {
   useTheme,
   Divider,
   Button,
-  DialogActions,
 } from '@mui/material';
 
 // ⚡ Kendi state'ini yöneten debounced input - parent'ı her tuşta render etmez
 import DebouncedFilterInput from './table/DebouncedFilterInput';
 import IslemTableLoadingState from './table/IslemTableLoadingState';
 import { formatPhoneNumber } from './table/islemTableUtils';
+import CustomerHistoryDialog from './table/CustomerHistoryDialog';
+import KaralisteConfirmDialog from './table/KaralisteConfirmDialog';
 import {
   Edit,
   CheckCircle,
@@ -41,7 +37,6 @@ import {
   DragIndicator,
   History,
   Delete,
-  Block,
 } from '@mui/icons-material';
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
 import { Islem } from '../../types';
@@ -1147,96 +1142,18 @@ const IslemTable: React.FC<IslemTableProps> = ({
         )}
 
         {/* Müşteri Geçmişi Dialog - Mobil için */}
-        <Dialog 
-          open={historyDialogOpen} 
+        <CustomerHistoryDialog
+          open={historyDialogOpen}
           onClose={handleCloseHistoryDialog}
-          maxWidth="sm"
-          fullWidth
-          fullScreen={isMobile}
-        >
-          <DialogTitle>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <Typography variant="subtitle1">Müşteri Geçmişi: {selectedCustomerName}</Typography>
-              <Button
-                variant="contained"
-                color="error"
-                size="small"
-                startIcon={<Block />}
-                onClick={() => setKaralisteDialogOpen(true)}
-                sx={{ textTransform: 'none', fontSize: '0.7rem', ml: 1 }}
-              >
-                Karaliste
-              </Button>
-            </Box>
-          </DialogTitle>
-          <DialogContent>
-            {historyLoading ? (
-              <Box display="flex" justifyContent="center" p={4}>
-                <CircularProgress />
-              </Box>
-            ) : customerHistory.length === 0 ? (
-              <Typography variant="body2" color="text.secondary" sx={{ py: 2 }}>
-                Bu müşteri için kayıt bulunamadı.
-              </Typography>
-            ) : (
-              <>
-                {/* Filtreleme Alanı - Mobil */}
-                <Box sx={{ mb: 2, display: 'flex', flexDirection: 'column', gap: 1 }}>
-                  <TextField
-                    size="small"
-                    placeholder="Ara... (Tarih, Ürün, Marka, Şikayet, vb.)"
-                    value={historyFilters.sikayet}
-                    onChange={(e) => handleHistoryFilterChange('sikayet', e.target.value)}
-                    fullWidth
-                    sx={{ '& .MuiInputBase-input': { fontSize: '0.85rem' } }}
-                  />
-                </Box>
-                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                  {filteredHistory.map((record) => {
-                    // ID bazlı sabit sıra
-                    const siraNo = record.id;
-                    
-                    return (
-                    <Card key={record.id} variant="outlined">
-                    <CardContent sx={{ p: 1.5, '&:last-child': { pb: 1.5 } }}>
-                      <Typography variant="caption" color="primary" sx={{ fontWeight: 600 }}>
-                        Sıra #{siraNo} - {record.full_tarih ? new Date(record.full_tarih).toLocaleDateString('tr-TR') : '-'}
-                      </Typography>
-                      <Typography variant="body2" sx={{ fontSize: '0.75rem', mt: 0.5 }}>
-                        <strong>Ürün:</strong> {record.urun} - {record.marka}
-                      </Typography>
-                      <Typography variant="body2" sx={{ fontSize: '0.75rem' }}>
-                        <strong>Şikayet:</strong> {record.sikayet}
-                      </Typography>
-                      {record.yapilan_islem && (
-                        <Typography variant="body2" sx={{ fontSize: '0.75rem' }}>
-                          <strong>Yapılan İşlem:</strong> {record.yapilan_islem}
-                        </Typography>
-                      )}
-                      <Chip 
-                        label={
-                          record.is_durumu === 'acik' ? 'Açık' :
-                          record.is_durumu === 'parca_bekliyor' ? 'Parça Bekliyor' :
-                          record.is_durumu === 'iptal' ? 'İptal' :
-                          'Tamamlandı'
-                        }
-                        size="small"
-                        color={
-                          record.is_durumu === 'acik' ? 'warning' :
-                          record.is_durumu === 'iptal' ? 'error' :
-                          'success'
-                        }
-                        sx={{ mt: 0.5 }}
-                      />
-                    </CardContent>
-                  </Card>
-                  );
-                })}
-                </Box>
-              </>
-            )}
-          </DialogContent>
-        </Dialog>
+          customerName={selectedCustomerName}
+          customerHistory={customerHistory}
+          filteredHistory={filteredHistory}
+          loading={historyLoading}
+          filters={historyFilters}
+          onFilterChange={(f, v) => handleHistoryFilterChange(f, v)}
+          onOpenKaraliste={() => setKaralisteDialogOpen(true)}
+          isMobile
+        />
 
         {/* Print Editor Dialog */}
         {selectedIslemForPrint && (
@@ -1480,293 +1397,27 @@ const IslemTable: React.FC<IslemTableProps> = ({
     )}
 
     {/* Müşteri Geçmişi Dialog */}
-    <Dialog 
-      open={historyDialogOpen} 
+    <CustomerHistoryDialog
+      open={historyDialogOpen}
       onClose={handleCloseHistoryDialog}
-      maxWidth="xl"
-      fullWidth
-    >
-      <DialogTitle>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Typography variant="h6">
-            Müşteri Geçmişi: {selectedCustomerName}
-          </Typography>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-            <Button
-              variant="contained"
-              color="error"
-              size="small"
-              startIcon={<Block />}
-              onClick={() => setKaralisteDialogOpen(true)}
-              sx={{ textTransform: 'none', fontSize: '0.75rem' }}
-            >
-              Karalisteye Ekle
-            </Button>
-            <Typography variant="body2" color="text.secondary">
-              Toplam {customerHistory.length} kayıt
-            </Typography>
-          </Box>
-        </Box>
-      </DialogTitle>
-      <DialogContent>
-        {historyLoading ? (
-          <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
-            <CircularProgress />
-          </Box>
-        ) : customerHistory.length === 0 ? (
-          <Typography variant="body1" color="text.secondary" sx={{ p: 2, textAlign: 'center' }}>
-            Bu müşteri için kayıt bulunamadı.
-          </Typography>
-        ) : (
-          <TableContainer component={Paper} elevation={0}>
-            <Table size="small" sx={{ 
-              '& .MuiTableCell-root': { 
-                py: 0.5, 
-                px: 1, 
-                fontSize: '0.75rem',
-                borderRight: '2px solid #e0e0e0',
-                borderBottom: '2px solid #e0e0e0',
-                '&:last-child': {
-                  borderRight: 'none'
-                }
-              } 
-            }}>
-              <TableHead>
-                <TableRow sx={{ bgcolor: 'primary.main' }}>
-                  <TableCell sx={{ color: 'white', fontWeight: 600, fontSize: '0.7rem' }}>Sıra</TableCell>
-                  <TableCell sx={{ color: 'white', fontWeight: 600, fontSize: '0.7rem' }}>Tarih</TableCell>
-                  <TableCell sx={{ color: 'white', fontWeight: 600, fontSize: '0.7rem' }}>İlçe</TableCell>
-                  <TableCell sx={{ color: 'white', fontWeight: 600, fontSize: '0.7rem' }}>Mahalle</TableCell>
-                  <TableCell sx={{ color: 'white', fontWeight: 600, fontSize: '0.7rem' }}>Cadde</TableCell>
-                  <TableCell sx={{ color: 'white', fontWeight: 600, fontSize: '0.7rem' }}>Sokak</TableCell>
-                  <TableCell sx={{ color: 'white', fontWeight: 600, fontSize: '0.7rem' }}>Kapı No</TableCell>
-                  <TableCell sx={{ color: 'white', fontWeight: 600, fontSize: '0.7rem' }}>Cep Tel</TableCell>
-                  <TableCell sx={{ color: 'white', fontWeight: 600, fontSize: '0.7rem' }}>Ürün</TableCell>
-                  <TableCell sx={{ color: 'white', fontWeight: 600, fontSize: '0.7rem' }}>Marka</TableCell>
-                  <TableCell sx={{ color: 'white', fontWeight: 600, fontSize: '0.7rem' }}>Şikayet</TableCell>
-                  <TableCell sx={{ color: 'white', fontWeight: 600, fontSize: '0.7rem' }}>Yapılan İşlem</TableCell>
-                  <TableCell sx={{ color: 'white', fontWeight: 600, fontSize: '0.7rem' }}>Teknisyen</TableCell>
-                  <TableCell sx={{ color: 'white', fontWeight: 600, fontSize: '0.7rem' }}>Tutar</TableCell>
-                  <TableCell sx={{ color: 'white', fontWeight: 600, fontSize: '0.7rem' }}>Durum</TableCell>
-                </TableRow>
-                {/* Filter Row */}
-                <TableRow sx={{ bgcolor: '#f5f5f5' }}>
-                  <TableCell sx={{ py: 0.2, px: 0.5 }}>
-                    <TextField
-                      size="small"
-                      placeholder="Sıra"
-                      value={historyFilters.sira}
-                      onChange={(e) => handleHistoryFilterChange('sira', e.target.value)}
-                      sx={{ '& .MuiInputBase-input': { fontSize: '0.65rem', py: 0.3, px: 0.3 }, width: '50px' }}
-                    />
-                  </TableCell>
-                  <TableCell sx={{ py: 0.2, px: 0.5 }}>
-                    <TextField
-                      size="small"
-                      placeholder="Tarih"
-                      value={historyFilters.tarih}
-                      onChange={(e) => handleHistoryFilterChange('tarih', e.target.value)}
-                      sx={{ '& .MuiInputBase-input': { fontSize: '0.65rem', py: 0.3, px: 0.3 }, minWidth: '80px' }}
-                    />
-                  </TableCell>
-                  <TableCell sx={{ py: 0.2, px: 0.5 }}>
-                    <TextField
-                      size="small"
-                      placeholder="İlçe"
-                      value={historyFilters.ilce}
-                      onChange={(e) => handleHistoryFilterChange('ilce', e.target.value)}
-                      sx={{ '& .MuiInputBase-input': { fontSize: '0.65rem', py: 0.3, px: 0.3 }, minWidth: '80px' }}
-                    />
-                  </TableCell>
-                  <TableCell sx={{ py: 0.2, px: 0.5 }}>
-                    <TextField
-                      size="small"
-                      placeholder="Mahalle"
-                      value={historyFilters.mahalle}
-                      onChange={(e) => handleHistoryFilterChange('mahalle', e.target.value)}
-                      sx={{ '& .MuiInputBase-input': { fontSize: '0.65rem', py: 0.3, px: 0.3 }, minWidth: '80px' }}
-                    />
-                  </TableCell>
-                  <TableCell sx={{ py: 0.2, px: 0.5 }}>
-                    <TextField
-                      size="small"
-                      placeholder="Cadde"
-                      value={historyFilters.cadde}
-                      onChange={(e) => handleHistoryFilterChange('cadde', e.target.value)}
-                      sx={{ '& .MuiInputBase-input': { fontSize: '0.65rem', py: 0.3, px: 0.3 }, minWidth: '80px' }}
-                    />
-                  </TableCell>
-                  <TableCell sx={{ py: 0.2, px: 0.5 }}>
-                    <TextField
-                      size="small"
-                      placeholder="Sokak"
-                      value={historyFilters.sokak}
-                      onChange={(e) => handleHistoryFilterChange('sokak', e.target.value)}
-                      sx={{ '& .MuiInputBase-input': { fontSize: '0.65rem', py: 0.3, px: 0.3 }, minWidth: '80px' }}
-                    />
-                  </TableCell>
-                  <TableCell sx={{ py: 0.2, px: 0.5 }}>
-                    <TextField
-                      size="small"
-                      placeholder="Kapı"
-                      value={historyFilters.kapi_no}
-                      onChange={(e) => handleHistoryFilterChange('kapi_no', e.target.value)}
-                      sx={{ '& .MuiInputBase-input': { fontSize: '0.65rem', py: 0.3, px: 0.3 }, width: '50px' }}
-                    />
-                  </TableCell>
-                  <TableCell sx={{ py: 0.2, px: 0.5 }}>
-                    <TextField
-                      size="small"
-                      placeholder="Cep Tel"
-                      value={historyFilters.cep_tel}
-                      onChange={(e) => handleHistoryFilterChange('cep_tel', e.target.value)}
-                      sx={{ '& .MuiInputBase-input': { fontSize: '0.65rem', py: 0.3, px: 0.3 }, minWidth: '90px' }}
-                    />
-                  </TableCell>
-                  <TableCell sx={{ py: 0.2, px: 0.5 }}>
-                    <TextField
-                      size="small"
-                      placeholder="Ürün"
-                      value={historyFilters.urun}
-                      onChange={(e) => handleHistoryFilterChange('urun', e.target.value)}
-                      sx={{ '& .MuiInputBase-input': { fontSize: '0.65rem', py: 0.3, px: 0.3 }, minWidth: '80px' }}
-                    />
-                  </TableCell>
-                  <TableCell sx={{ py: 0.2, px: 0.5 }}>
-                    <TextField
-                      size="small"
-                      placeholder="Marka"
-                      value={historyFilters.marka}
-                      onChange={(e) => handleHistoryFilterChange('marka', e.target.value)}
-                      sx={{ '& .MuiInputBase-input': { fontSize: '0.65rem', py: 0.3, px: 0.3 }, minWidth: '80px' }}
-                    />
-                  </TableCell>
-                  <TableCell sx={{ py: 0.2, px: 0.5 }}>
-                    <TextField
-                      size="small"
-                      placeholder="Şikayet"
-                      value={historyFilters.sikayet}
-                      onChange={(e) => handleHistoryFilterChange('sikayet', e.target.value)}
-                      sx={{ '& .MuiInputBase-input': { fontSize: '0.65rem', py: 0.3, px: 0.3 }, minWidth: '100px' }}
-                    />
-                  </TableCell>
-                  <TableCell sx={{ py: 0.2, px: 0.5 }}>
-                    <TextField
-                      size="small"
-                      placeholder="Yapılan"
-                      value={historyFilters.yapilan_islem}
-                      onChange={(e) => handleHistoryFilterChange('yapilan_islem', e.target.value)}
-                      sx={{ '& .MuiInputBase-input': { fontSize: '0.65rem', py: 0.3, px: 0.3 }, minWidth: '100px' }}
-                    />
-                  </TableCell>
-                  <TableCell sx={{ py: 0.2, px: 0.5 }}>
-                    <TextField
-                      size="small"
-                      placeholder="Teknisyen"
-                      value={historyFilters.teknisyen}
-                      onChange={(e) => handleHistoryFilterChange('teknisyen', e.target.value)}
-                      sx={{ '& .MuiInputBase-input': { fontSize: '0.65rem', py: 0.3, px: 0.3 }, minWidth: '80px' }}
-                    />
-                  </TableCell>
-                  <TableCell sx={{ py: 0.2, px: 0.5 }}>
-                    <TextField
-                      size="small"
-                      placeholder="Tutar"
-                      value={historyFilters.tutar}
-                      onChange={(e) => handleHistoryFilterChange('tutar', e.target.value)}
-                      sx={{ '& .MuiInputBase-input': { fontSize: '0.65rem', py: 0.3, px: 0.3 }, width: '60px' }}
-                    />
-                  </TableCell>
-                  <TableCell sx={{ py: 0.2, px: 0.5 }}>
-                    <TextField
-                      size="small"
-                      placeholder="Durum"
-                      value={historyFilters.durum}
-                      onChange={(e) => handleHistoryFilterChange('durum', e.target.value)}
-                      sx={{ '& .MuiInputBase-input': { fontSize: '0.65rem', py: 0.3, px: 0.3 }, minWidth: '80px' }}
-                    />
-                  </TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {filteredHistory.map((islem) => {
-                  // Sabit ID bazlı sıra - silince kaymasın
-                  const siraNo = islem.id;
-                  
-                  return (
-                  <TableRow key={islem.id} hover>
-                    <TableCell>{siraNo}</TableCell>
-                    <TableCell>
-                      {islem.full_tarih ? new Date(islem.full_tarih).toLocaleDateString('tr-TR') : '-'}
-                    </TableCell>
-                    <TableCell>{islem.ilce || '-'}</TableCell>
-                    <TableCell>{islem.mahalle || '-'}</TableCell>
-                    <TableCell>{islem.cadde || '-'}</TableCell>
-                    <TableCell>{islem.sokak || '-'}</TableCell>
-                    <TableCell>{islem.kapi_no || '-'}</TableCell>
-                    <TableCell>{formatPhoneNumber(islem.cep_tel)}</TableCell>
-                    <TableCell>{islem.urun || '-'}</TableCell>
-                    <TableCell>{islem.marka || '-'}</TableCell>
-                    <TableCell sx={{ maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      <Tooltip title={islem.sikayet || '-'} placement="top">
-                        <span>{islem.sikayet || '-'}</span>
-                      </Tooltip>
-                    </TableCell>
-                    <TableCell sx={{ maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      <Tooltip title={islem.yapilan_islem || '-'} placement="top">
-                        <span>{islem.yapilan_islem || '-'}</span>
-                      </Tooltip>
-                    </TableCell>
-                    <TableCell>{islem.teknisyen_ismi || '-'}</TableCell>
-                    <TableCell>
-                      {islem.tutar ? `${Number(islem.tutar).toLocaleString('tr-TR')} ₺` : '-'}
-                    </TableCell>
-                    <TableCell>
-                      <Chip 
-                        label={
-                          islem.is_durumu === 'acik' ? 'Açık' : 
-                          islem.is_durumu === 'parca_bekliyor' ? 'Parça Bekliyor' : 
-                          islem.is_durumu === 'iptal' ? 'İptal' :
-                          'Tamamlandı'
-                        }
-                        color={
-                          islem.is_durumu === 'acik' ? 'warning' : 
-                          islem.is_durumu === 'parca_bekliyor' ? 'info' : 
-                          islem.is_durumu === 'iptal' ? 'error' :
-                          'success'
-                        }
-                        size="small"
-                        sx={{ fontSize: '0.65rem', height: '20px' }}
-                      />
-                    </TableCell>
-                  </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          </TableContainer>
-        )}
-      </DialogContent>
-    </Dialog>
+      customerName={selectedCustomerName}
+      customerHistory={customerHistory}
+      filteredHistory={filteredHistory}
+      loading={historyLoading}
+      filters={historyFilters}
+      onFilterChange={(f, v) => handleHistoryFilterChange(f, v)}
+      onOpenKaraliste={() => setKaralisteDialogOpen(true)}
+      isMobile={false}
+    />
 
     {/* Karaliste Onay Dialog */}
-    <Dialog open={karalisteDialogOpen} onClose={() => setKaralisteDialogOpen(false)} maxWidth="xs" fullWidth>
-      <DialogTitle sx={{ color: 'error.main' }}>⚠️ Karalisteye Ekle</DialogTitle>
-      <DialogContent>
-        <Typography>
-          <strong>{selectedCustomerName}</strong> isimli müşteriyi karalisteye eklemek istediğinize emin misiniz?
-        </Typography>
-        <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-          Bu müşterinin telefon numarası ve adresi ile yeni kayıt oluşturulduğunda uyarı verilecektir.
-        </Typography>
-      </DialogContent>
-      <DialogActions>
-        <Button onClick={() => setKaralisteDialogOpen(false)} disabled={karalisteLoading}>İptal</Button>
-        <Button onClick={handleAddToKaraliste} variant="contained" color="error" disabled={karalisteLoading}>
-          {karalisteLoading ? 'Ekleniyor...' : 'Karalisteye Ekle'}
-        </Button>
-      </DialogActions>
-    </Dialog>
+    <KaralisteConfirmDialog
+      open={karalisteDialogOpen}
+      onClose={() => setKaralisteDialogOpen(false)}
+      customerName={selectedCustomerName}
+      loading={karalisteLoading}
+      onConfirm={handleAddToKaraliste}
+    />
 
     {/* Yazdırma Düzenleyici */}
     {selectedIslemForPrint && (
