@@ -25,8 +25,6 @@ import {
   IconButton,
   Collapse,
   Dialog,
-  DialogContent,
-  DialogTitle,
   Tooltip,
 } from '@mui/material';
 import {
@@ -37,16 +35,12 @@ import {
   Refresh,
   ExpandMore,
   ExpandLess,
-  Close,
-  ZoomIn,
-  ZoomOut,
-  Fullscreen,
-  FullscreenExit,
   PhotoCamera,
 } from '@mui/icons-material';
 import { useSnackbar } from '../../context/SnackbarContext';
 import { sahaService } from '../../services/saha.service';
 import { SahaKayit, SahaElemani } from '../../types';
+import ImagePreviewDialog from './ImagePreviewDialog';
 
 // Lazy-loading thumbnail: yalnızca viewport'a girdiğinde ilk fotoğrafı backend'den çeker.
 // Performansı korumak için IntersectionObserver ve ortak bir cache kullanır.
@@ -145,25 +139,15 @@ const SahaKayitlari: React.FC = () => {
   const [showFilters, setShowFilters] = useState(true);
   const [viewMode, setViewMode] = useState<'cards' | 'table'>('cards');
   const [selectedImages, setSelectedImages] = useState<string[]>([]);
-  const [currentImageIndex, setCurrentImageIndex] = useState(0);
-  const [zoomLevel, setZoomLevel] = useState(1);
-  const [isFullscreen, setIsFullscreen] = useState(false);
-  const [transformOrigin, setTransformOrigin] = useState({ x: 50, y: 50 });
-  const [isPanning, setIsPanning] = useState(false);
-  const [panPosition, setPanPosition] = useState({ x: 0, y: 0 });
-  const [startPan, setStartPan] = useState({ x: 0, y: 0 });
   const [photoLoading, setPhotoLoading] = useState(false);
   const [photoCache, setPhotoCache] = useState<Record<number, string[]>>({});
   const [thumbnailCache, setThumbnailCache] = useState<Record<number, string | null>>({});
-  const [lastTouchDistance, setLastTouchDistance] = useState<number | null>(null);
-  const [lastTouchCenter, setLastTouchCenter] = useState<{ x: number; y: number } | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalRecords, setTotalRecords] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
   const [todayFilter, setTodayFilter] = useState(false);
   const [globalStats, setGlobalStats] = useState<{ toplam: number; bugun: number }>({ toplam: 0, bugun: 0 });
   const pageSize = 50;
-  const imageContainerRef = React.useRef<HTMLDivElement>(null);
   
   const { showSnackbar } = useSnackbar();
 
@@ -197,7 +181,6 @@ const SahaKayitlari: React.FC = () => {
     // Cache'de varsa direkt aç
     if (photoCache[kayitId]) {
       setSelectedImages(photoCache[kayitId]);
-      setCurrentImageIndex(0);
       return;
     }
 
@@ -216,7 +199,6 @@ const SahaKayitlari: React.FC = () => {
       // Cache'e kaydet
       setPhotoCache(prev => ({ ...prev, [kayitId]: fotolar }));
       setSelectedImages(fotolar);
-      setCurrentImageIndex(0);
     } catch (error) {
       console.error('Fotoğraflar yüklenirken hata:', error);
       showSnackbar('Fotoğraflar yüklenirken hata oluştu!', 'error');
@@ -688,266 +670,11 @@ const SahaKayitlari: React.FC = () => {
         </Box>
       </Dialog>
 
-      {/* Image Preview Dialog - Multiple Photos Support with Zoom + Mobile Touch */}
-      <Dialog 
-        open={selectedImages.length > 0} 
-        onClose={() => { setSelectedImages([]); setZoomLevel(1); setIsFullscreen(false); setPanPosition({ x: 0, y: 0 }); setTransformOrigin({ x: 50, y: 50 }); }}
-        maxWidth={isFullscreen ? false : "lg"}
-        fullWidth={!isFullscreen}
-        fullScreen={isFullscreen || window.innerWidth < 600}
-        PaperProps={{
-          sx: (isFullscreen || window.innerWidth < 600) ? { bgcolor: 'rgba(0,0,0,0.95)' } : {}
-        }}
-      >
-        <DialogTitle sx={{ 
-          display: 'flex', 
-          alignItems: 'center', 
-          justifyContent: 'space-between',
-          color: (isFullscreen || window.innerWidth < 600) ? 'white' : 'inherit',
-          p: { xs: 1, sm: 2 },
-        }}>
-          <Typography variant="body1" sx={{ fontSize: { xs: '0.85rem', sm: '1rem' } }}>
-            Fotoğraf {selectedImages.length > 1 ? `(${currentImageIndex + 1}/${selectedImages.length})` : ''}
-          </Typography>
-          <Box sx={{ display: 'flex', gap: { xs: 0, sm: 0.5 } }}>
-            <IconButton
-              size="small"
-              onClick={() => setZoomLevel(prev => Math.max(0.5, prev - 0.25))}
-              disabled={zoomLevel <= 0.5}
-              title="Küçült"
-              sx={{ color: (isFullscreen || window.innerWidth < 600) ? 'white' : 'inherit' }}
-            >
-              <ZoomOut fontSize="small" />
-            </IconButton>
-            <Typography sx={{ display: 'flex', alignItems: 'center', minWidth: 40, justifyContent: 'center', fontSize: '0.8rem' }}>
-              {Math.round(zoomLevel * 100)}%
-            </Typography>
-            <IconButton
-              size="small"
-              onClick={() => setZoomLevel(prev => Math.min(5, prev + 0.25))}
-              disabled={zoomLevel >= 5}
-              title="Büyült"
-              sx={{ color: (isFullscreen || window.innerWidth < 600) ? 'white' : 'inherit' }}
-            >
-              <ZoomIn fontSize="small" />
-            </IconButton>
-            <IconButton
-              size="small"
-              onClick={() => setIsFullscreen(prev => !prev)}
-              title={isFullscreen ? 'Normal Mod' : 'Tam Ekran'}
-              sx={{ color: (isFullscreen || window.innerWidth < 600) ? 'white' : 'inherit', display: { xs: 'none', sm: 'inline-flex' } }}
-            >
-              {isFullscreen ? <FullscreenExit fontSize="small" /> : <Fullscreen fontSize="small" />}
-            </IconButton>
-            <IconButton
-              size="small"
-              onClick={() => { setSelectedImages([]); setZoomLevel(1); setIsFullscreen(false); setPanPosition({ x: 0, y: 0 }); setTransformOrigin({ x: 50, y: 50 }); }}
-              title="Kapat"
-              sx={{ color: (isFullscreen || window.innerWidth < 600) ? 'white' : 'inherit' }}
-            >
-              <Close fontSize="small" />
-            </IconButton>
-          </Box>
-        </DialogTitle>
-        <DialogContent sx={{ overflow: 'hidden', display: 'flex', flexDirection: 'column', alignItems: 'center', p: { xs: 0.5, sm: 1 } }}>
-          {selectedImages.length > 0 && (
-            <Box sx={{ textAlign: 'center', width: '100%' }}>
-              <Box 
-                ref={imageContainerRef}
-                sx={{ 
-                  overflow: 'hidden', 
-                  maxHeight: (isFullscreen || window.innerWidth < 600) ? 'calc(100vh - 180px)' : '70vh',
-                  minHeight: { xs: '50vh', sm: 'auto' },
-                  display: 'flex',
-                  justifyContent: 'center',
-                  alignItems: 'center',
-                  cursor: zoomLevel > 1 ? (isPanning ? 'grabbing' : 'grab') : 'zoom-in',
-                  userSelect: 'none',
-                  position: 'relative',
-                  touchAction: 'none',
-                }}
-                onWheel={(e) => {
-                  e.preventDefault();
-                  const rect = e.currentTarget.getBoundingClientRect();
-                  const x = ((e.clientX - rect.left) / rect.width) * 100;
-                  const y = ((e.clientY - rect.top) / rect.height) * 100;
-                  setTransformOrigin({ x, y });
-                  
-                  if (e.deltaY < 0) {
-                    setZoomLevel(prev => Math.min(5, prev + 0.25));
-                  } else {
-                    setZoomLevel(prev => {
-                      const newZoom = Math.max(1, prev - 0.25);
-                      if (newZoom === 1) {
-                        setPanPosition({ x: 0, y: 0 });
-                        setTransformOrigin({ x: 50, y: 50 });
-                      }
-                      return newZoom;
-                    });
-                  }
-                }}
-                // Mouse events (desktop)
-                onMouseDown={(e) => {
-                  if (zoomLevel > 1) {
-                    setIsPanning(true);
-                    setStartPan({ x: e.clientX - panPosition.x, y: e.clientY - panPosition.y });
-                  }
-                }}
-                onMouseMove={(e) => {
-                  if (isPanning && zoomLevel > 1) {
-                    setPanPosition({
-                      x: e.clientX - startPan.x,
-                      y: e.clientY - startPan.y
-                    });
-                  }
-                }}
-                onMouseUp={() => setIsPanning(false)}
-                onMouseLeave={() => setIsPanning(false)}
-                onClick={(e) => {
-                  if (!isPanning) {
-                    const rect = e.currentTarget.getBoundingClientRect();
-                    const x = ((e.clientX - rect.left) / rect.width) * 100;
-                    const y = ((e.clientY - rect.top) / rect.height) * 100;
-                    
-                    if (zoomLevel === 1) {
-                      setTransformOrigin({ x, y });
-                      setZoomLevel(2);
-                    } else if (zoomLevel >= 2) {
-                      setZoomLevel(1);
-                      setPanPosition({ x: 0, y: 0 });
-                      setTransformOrigin({ x: 50, y: 50 });
-                    }
-                  }
-                }}
-                // Touch events (mobile pinch-to-zoom + pan)
-                onTouchStart={(e) => {
-                  if (e.touches.length === 2) {
-                    e.preventDefault();
-                    const dx = e.touches[0].clientX - e.touches[1].clientX;
-                    const dy = e.touches[0].clientY - e.touches[1].clientY;
-                    setLastTouchDistance(Math.hypot(dx, dy));
-                    setLastTouchCenter({
-                      x: (e.touches[0].clientX + e.touches[1].clientX) / 2,
-                      y: (e.touches[0].clientY + e.touches[1].clientY) / 2,
-                    });
-                  } else if (e.touches.length === 1 && zoomLevel > 1) {
-                    setIsPanning(true);
-                    setStartPan({ x: e.touches[0].clientX - panPosition.x, y: e.touches[0].clientY - panPosition.y });
-                  }
-                }}
-                onTouchMove={(e) => {
-                  if (e.touches.length === 2 && lastTouchDistance !== null) {
-                    e.preventDefault();
-                    const dx = e.touches[0].clientX - e.touches[1].clientX;
-                    const dy = e.touches[0].clientY - e.touches[1].clientY;
-                    const newDist = Math.hypot(dx, dy);
-                    const scale = newDist / lastTouchDistance;
-                    
-                    setZoomLevel(prev => {
-                      const newZoom = Math.min(5, Math.max(1, prev * scale));
-                      if (newZoom === 1) {
-                        setPanPosition({ x: 0, y: 0 });
-                        setTransformOrigin({ x: 50, y: 50 });
-                      }
-                      return newZoom;
-                    });
-                    setLastTouchDistance(newDist);
-
-                    // Pan while pinching
-                    if (lastTouchCenter) {
-                      const cx = (e.touches[0].clientX + e.touches[1].clientX) / 2;
-                      const cy = (e.touches[0].clientY + e.touches[1].clientY) / 2;
-                      setPanPosition(prev => ({
-                        x: prev.x + (cx - lastTouchCenter.x),
-                        y: prev.y + (cy - lastTouchCenter.y),
-                      }));
-                      setLastTouchCenter({ x: cx, y: cy });
-                    }
-                  } else if (e.touches.length === 1 && isPanning && zoomLevel > 1) {
-                    setPanPosition({
-                      x: e.touches[0].clientX - startPan.x,
-                      y: e.touches[0].clientY - startPan.y,
-                    });
-                  }
-                }}
-                onTouchEnd={(e) => {
-                  if (e.touches.length < 2) {
-                    setLastTouchDistance(null);
-                    setLastTouchCenter(null);
-                  }
-                  if (e.touches.length === 0) {
-                    setIsPanning(false);
-                  }
-                }}
-              >
-                <img 
-                  src={selectedImages[currentImageIndex]} 
-                  alt="Preview" 
-                  draggable={false}
-                  style={{ 
-                    transform: `scale(${zoomLevel}) translate(${panPosition.x / zoomLevel}px, ${panPosition.y / zoomLevel}px)`,
-                    transformOrigin: `${transformOrigin.x}% ${transformOrigin.y}%`,
-                    transition: isPanning ? 'none' : 'transform 0.2s ease',
-                    maxWidth: '100%',
-                    maxHeight: (isFullscreen || window.innerWidth < 600) ? 'calc(100vh - 180px)' : '70vh',
-                    objectFit: 'contain',
-                    pointerEvents: 'none',
-                    imageRendering: zoomLevel > 1 ? 'high-quality' as any : 'auto',
-                    WebkitBackfaceVisibility: 'hidden',
-                    filter: zoomLevel > 1.5 ? 'contrast(1.02) saturate(1.02)' : 'none',
-                  }} 
-                />
-              </Box>
-              {selectedImages.length > 1 && (
-                <Box sx={{ display: 'flex', justifyContent: 'center', gap: { xs: 1, sm: 2 }, mt: 1.5 }}>
-                  <Button 
-                    variant="outlined" 
-                    size="small"
-                    sx={{ color: (isFullscreen || window.innerWidth < 600) ? 'white' : 'inherit', borderColor: (isFullscreen || window.innerWidth < 600) ? 'rgba(255,255,255,0.5)' : 'inherit' }}
-                    onClick={() => { setCurrentImageIndex((prev) => (prev - 1 + selectedImages.length) % selectedImages.length); setZoomLevel(1); setPanPosition({ x: 0, y: 0 }); setTransformOrigin({ x: 50, y: 50 }); }}
-                  >
-                    ← Önceki
-                  </Button>
-                  <Button 
-                    variant="outlined" 
-                    size="small"
-                    sx={{ color: (isFullscreen || window.innerWidth < 600) ? 'white' : 'inherit', borderColor: (isFullscreen || window.innerWidth < 600) ? 'rgba(255,255,255,0.5)' : 'inherit' }}
-                    onClick={() => { setCurrentImageIndex((prev) => (prev + 1) % selectedImages.length); setZoomLevel(1); setPanPosition({ x: 0, y: 0 }); setTransformOrigin({ x: 50, y: 50 }); }}
-                  >
-                    Sonraki →
-                  </Button>
-                </Box>
-              )}
-              {/* Thumbnails */}
-              {selectedImages.length > 1 && (
-                <Box sx={{ display: 'flex', gap: 1, justifyContent: 'center', mt: 1.5, flexWrap: 'wrap', pb: 1 }}>
-                  {selectedImages.map((img, idx) => (
-                    <Box 
-                      key={idx}
-                      onClick={() => { setCurrentImageIndex(idx); setZoomLevel(1); setPanPosition({ x: 0, y: 0 }); setTransformOrigin({ x: 50, y: 50 }); }}
-                      sx={{ 
-                        width: { xs: 45, sm: 60 }, 
-                        height: { xs: 45, sm: 60 }, 
-                        cursor: 'pointer',
-                        border: idx === currentImageIndex ? '3px solid #1976d2' : '1px solid rgba(255,255,255,0.3)',
-                        borderRadius: 1,
-                        overflow: 'hidden',
-                        flexShrink: 0,
-                      }}
-                    >
-                      <img 
-                        src={img} 
-                        alt={`Thumb ${idx + 1}`} 
-                        style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
-                      />
-                    </Box>
-                  ))}
-                </Box>
-              )}
-            </Box>
-          )}
-        </DialogContent>
-      </Dialog>
+      {/* Image Preview Dialog */}
+      <ImagePreviewDialog
+        images={selectedImages}
+        onClose={() => setSelectedImages([])}
+      />
     </Box>
   );
 };
