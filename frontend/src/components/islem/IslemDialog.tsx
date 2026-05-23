@@ -36,6 +36,9 @@ import { locationService } from '../../services/location.service';
 import { useSnackbar } from '../../context/SnackbarContext';
 import { useReferenceData } from '../../hooks/useReferenceData';
 import { formatPhone as formatPhoneNumber } from '../../utils/format';
+import DuplicateRecordDialog from './dialog/DuplicateRecordDialog';
+import IslemHistoryViewDialog from './dialog/IslemHistoryViewDialog';
+import KaralisteWarningDialog from './dialog/KaralisteWarningDialog';
 
 // Formatlı telefonu temizle (sadece rakamlar)
 const cleanPhoneNumber = (phone: string): string => {
@@ -2104,291 +2107,31 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
       </Dialog>
 
       {/* Duplicate Kayıt Uyarı Modal */}
-      <Dialog
+      <DuplicateRecordDialog
         open={showDuplicateDialog}
-        onClose={handleCancelDuplicate}
-        maxWidth="sm"
-        fullWidth
-      >
-        <DialogTitle sx={{ bgcolor: 'warning.main', color: 'warning.contrastText', py: 1.5 }}>
-          ⚠️ UYARI - Benzer Kayıt Bulundu
-        </DialogTitle>
-        <DialogContent sx={{ mt: 2 }}>
-          <Alert severity="warning" sx={{ mb: 2 }}>
-            <AlertTitle>Bu müşteri için tamamlanmamış bir kayıt mevcut!</AlertTitle>
-            Aynı telefon numarası, ürün ve marka ile açık/parça bekliyor durumunda bir kayıt bulundu.
-          </Alert>
-          
-          {duplicateRecord && (
-            <Box sx={{ bgcolor: 'grey.100', p: 2, borderRadius: 1 }}>
-              <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-                Mevcut Kayıt Bilgileri:
-              </Typography>
-              <Grid container spacing={1}>
-                <Grid item xs={6}>
-                  <Typography variant="body2">
-                    <strong>Kayıt ID:</strong> #{duplicateRecord.id}
-                  </Typography>
-                </Grid>
-                <Grid item xs={6}>
-                  <Typography variant="body2">
-                    <strong>Durum:</strong>{' '}
-                    <Box component="span" sx={{ 
-                      color: duplicateRecord.is_durumu === 'acik' ? 'warning.main' : 'info.main',
-                      fontWeight: 600 
-                    }}>
-                      {duplicateRecord.is_durumu === 'acik' ? 'Açık' : 'Parça Bekliyor'}
-                    </Box>
-                  </Typography>
-                </Grid>
-                <Grid item xs={6}>
-                  <Typography variant="body2">
-                    <strong>Ürün:</strong> {duplicateRecord.urun}
-                  </Typography>
-                </Grid>
-                <Grid item xs={6}>
-                  <Typography variant="body2">
-                    <strong>Marka:</strong> {duplicateRecord.marka}
-                  </Typography>
-                </Grid>
-                <Grid item xs={12}>
-                  <Typography variant="body2">
-                    <strong>Telefon:</strong> {formatPhoneNumber(duplicateRecord.cep_tel)}
-                  </Typography>
-                </Grid>
-              </Grid>
-            </Box>
-          )}
-
-          <Typography variant="body2" sx={{ mt: 2, color: 'text.secondary' }}>
-            Mevcut kaydın bilgilerini getirmek veya yeni bir kayıt oluşturmak istiyor musunuz?
-          </Typography>
-        </DialogContent>
-        <DialogActions sx={{ px: 2, py: 1.5 }}>
-          <Button onClick={handleCancelDuplicate} variant="outlined" size="small" color="error">
-            İptal Et
-          </Button>
-          <Button 
-            onClick={handleLoadExistingRecord} 
-            variant="contained" 
-            color="primary" 
-            size="small"
-            autoFocus
-          >
-            Bilgileri Getir
-          </Button>
-          <Button 
-            onClick={handleContinueWithDuplicate} 
-            variant="contained" 
-            color="warning" 
-            size="small"
-          >
-            Yeni Kayıt Oluştur
-          </Button>
-        </DialogActions>
-      </Dialog>
+        duplicateRecord={duplicateRecord}
+        onCancel={handleCancelDuplicate}
+        onLoadExisting={handleLoadExistingRecord}
+        onContinue={handleContinueWithDuplicate}
+      />
 
       {/* Müşteri Geçmişi Dialog */}
-      <Dialog 
-        open={historyDialogOpen} 
+      <IslemHistoryViewDialog
+        open={historyDialogOpen}
         onClose={handleCloseHistoryDialog}
-        maxWidth="xl"
-        fullWidth
-      >
-        <DialogTitle>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <Typography variant="h6">
-              Müşteri Geçmişi: {selectedCustomerName}
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              Toplam {customerHistory.length} kayıt
-            </Typography>
-          </Box>
-        </DialogTitle>
-        <DialogContent>
-          {historyLoading ? (
-            <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
-              <CircularProgress />
-            </Box>
-          ) : customerHistory.length === 0 ? (
-            <Typography variant="body1" color="text.secondary" sx={{ p: 2, textAlign: 'center' }}>
-              Bu müşteri için kayıt bulunamadı.
-            </Typography>
-          ) : (
-            <TableContainer component={Paper} elevation={0}>
-              <Table size="small" sx={{ 
-                '& .MuiTableCell-root': { 
-                  py: 0.5, 
-                  px: 1, 
-                  fontSize: '0.75rem',
-                  borderRight: '1px solid #e0e0e0',
-                  borderBottom: '1px solid #e0e0e0',
-                  '&:last-child': {
-                    borderRight: 'none'
-                  }
-                } 
-              }}>
-                <TableHead>
-                  <TableRow sx={{ bgcolor: 'primary.main' }}>
-                    <TableCell sx={{ color: 'white', fontWeight: 600, fontSize: '0.7rem' }}>Sıra</TableCell>
-                    <TableCell sx={{ color: 'white', fontWeight: 600, fontSize: '0.7rem' }}>Tarih</TableCell>
-                    <TableCell sx={{ color: 'white', fontWeight: 600, fontSize: '0.7rem' }}>İlçe</TableCell>
-                    <TableCell sx={{ color: 'white', fontWeight: 600, fontSize: '0.7rem' }}>Mahalle</TableCell>
-                    <TableCell sx={{ color: 'white', fontWeight: 600, fontSize: '0.7rem' }}>Cadde</TableCell>
-                    <TableCell sx={{ color: 'white', fontWeight: 600, fontSize: '0.7rem' }}>Sokak</TableCell>
-                    <TableCell sx={{ color: 'white', fontWeight: 600, fontSize: '0.7rem' }}>Kapı No</TableCell>
-                    <TableCell sx={{ color: 'white', fontWeight: 600, fontSize: '0.7rem' }}>Cep Tel</TableCell>
-                    <TableCell sx={{ color: 'white', fontWeight: 600, fontSize: '0.7rem' }}>Ürün</TableCell>
-                    <TableCell sx={{ color: 'white', fontWeight: 600, fontSize: '0.7rem' }}>Marka</TableCell>
-                    <TableCell sx={{ color: 'white', fontWeight: 600, fontSize: '0.7rem' }}>Şikayet</TableCell>
-                    <TableCell sx={{ color: 'white', fontWeight: 600, fontSize: '0.7rem' }}>Yapılan İşlem</TableCell>
-                    <TableCell sx={{ color: 'white', fontWeight: 600, fontSize: '0.7rem' }}>Teknisyen</TableCell>
-                    <TableCell sx={{ color: 'white', fontWeight: 600, fontSize: '0.7rem' }}>Tutar</TableCell>
-                    <TableCell sx={{ color: 'white', fontWeight: 600, fontSize: '0.7rem' }}>Durum</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {customerHistory.map((record) => (
-                    <TableRow key={record.id} hover>
-                      <TableCell>{record.id}</TableCell>
-                      <TableCell>
-                        {record.full_tarih ? new Date(record.full_tarih).toLocaleDateString('tr-TR') : '-'}
-                      </TableCell>
-                      <TableCell>{record.ilce || '-'}</TableCell>
-                      <TableCell>{record.mahalle || '-'}</TableCell>
-                      <TableCell>{record.cadde || '-'}</TableCell>
-                      <TableCell>{record.sokak || '-'}</TableCell>
-                      <TableCell>{record.kapi_no || '-'}</TableCell>
-                      <TableCell>{formatPhoneNumber(record.cep_tel)}</TableCell>
-                      <TableCell>{record.urun || '-'}</TableCell>
-                      <TableCell>{record.marka || '-'}</TableCell>
-                      <TableCell sx={{ maxWidth: 150, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        <Tooltip title={record.sikayet || '-'} placement="top">
-                          <span>{record.sikayet || '-'}</span>
-                        </Tooltip>
-                      </TableCell>
-                      <TableCell sx={{ maxWidth: 150, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        <Tooltip title={record.yapilan_islem || '-'} placement="top">
-                          <span>{record.yapilan_islem || '-'}</span>
-                        </Tooltip>
-                      </TableCell>
-                      <TableCell>{record.teknisyen_ismi || '-'}</TableCell>
-                      <TableCell>
-                        {record.tutar ? `${Number(record.tutar).toLocaleString('tr-TR')} ₺` : '-'}
-                      </TableCell>
-                      <TableCell>
-                        <Chip 
-                          label={
-                            record.is_durumu === 'acik' ? 'Açık' : 
-                            record.is_durumu === 'parca_bekliyor' ? 'Parça Bekliyor' : 
-                            record.is_durumu === 'iptal' ? 'İptal' :
-                            'Tamamlandı'
-                          }
-                          color={
-                            record.is_durumu === 'acik' ? 'warning' : 
-                            record.is_durumu === 'parca_bekliyor' ? 'info' : 
-                            record.is_durumu === 'iptal' ? 'error' :
-                            'success'
-                          }
-                          size="small"
-                          sx={{ fontSize: '0.65rem', height: '20px' }}
-                        />
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </TableContainer>
-          )}
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleCloseHistoryDialog} variant="outlined">
-            Kapat
-          </Button>
-        </DialogActions>
-      </Dialog>
+        customerName={selectedCustomerName}
+        customerHistory={customerHistory}
+        loading={historyLoading}
+      />
 
       {/* Karaliste Uyarı Dialog */}
-      <Dialog
+      <KaralisteWarningDialog
         open={showKaralisteDialog}
-        onClose={() => {
-          setShowKaralisteDialog(false);
-          setPendingAfterKaraliste(null);
-        }}
-        maxWidth="sm"
-        fullWidth
-      >
-        <DialogTitle sx={{ bgcolor: 'error.main', color: 'error.contrastText', py: 1.5 }}>
-          🚫 UYARI - Karaliste Kaydı
-        </DialogTitle>
-        <DialogContent sx={{ mt: 2 }}>
-          <Alert severity="error" sx={{ mb: 2 }}>
-            <AlertTitle>Bu {karalisteType === 'phone' ? 'telefon numarası' : 'adres'} karalistede kayıtlıdır!</AlertTitle>
-            Bu kişi daha önce karalisteye eklenmiştir. Devam etmek istiyor musunuz?
-          </Alert>
-          
-          {karalisteRecord && (
-            <Box sx={{ bgcolor: 'grey.100', p: 2, borderRadius: 1 }}>
-              <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-                Karaliste Kayıt Bilgileri:
-              </Typography>
-              <Grid container spacing={1}>
-                <Grid item xs={6}>
-                  <Typography variant="body2">
-                    <strong>Ad Soyad:</strong> {karalisteRecord.ad_soyad}
-                  </Typography>
-                </Grid>
-                <Grid item xs={6}>
-                  <Typography variant="body2">
-                    <strong>Telefon:</strong> {karalisteRecord.cep_tel ? formatPhoneNumber(karalisteRecord.cep_tel) : '-'}
-                  </Typography>
-                </Grid>
-                {karalisteRecord.mahalle && (
-                  <Grid item xs={12}>
-                    <Typography variant="body2">
-                      <strong>Adres:</strong> {[karalisteRecord.mahalle, karalisteRecord.cadde, karalisteRecord.sokak, karalisteRecord.kapi_no].filter(Boolean).join(', ')}
-                    </Typography>
-                  </Grid>
-                )}
-                {karalisteRecord.sebep && (
-                  <Grid item xs={12}>
-                    <Typography variant="body2">
-                      <strong>Sebep:</strong> {karalisteRecord.sebep}
-                    </Typography>
-                  </Grid>
-                )}
-              </Grid>
-            </Box>
-          )}
-        </DialogContent>
-        <DialogActions sx={{ px: 2, py: 1.5 }}>
-          <Button 
-            onClick={() => {
-              setShowKaralisteDialog(false);
-              setPendingAfterKaraliste(null);
-            }} 
-            variant="contained" 
-            color="error" 
-            size="small"
-          >
-            Vazgeç
-          </Button>
-          <Button 
-            onClick={() => {
-              setShowKaralisteDialog(false);
-              if (pendingAfterKaraliste) {
-                pendingAfterKaraliste();
-                setPendingAfterKaraliste(null);
-              }
-            }} 
-            variant="contained" 
-            color="warning" 
-            size="small"
-          >
-            Yine de Devam Et
-          </Button>
-        </DialogActions>
-      </Dialog>
+        karalisteType={karalisteType}
+        karalisteRecord={karalisteRecord}
+        onCancel={() => { setShowKaralisteDialog(false); setPendingAfterKaraliste(null); }}
+        onContinue={() => { setShowKaralisteDialog(false); if (pendingAfterKaraliste) { pendingAfterKaraliste(); setPendingAfterKaraliste(null); } }}
+      />
     </>
   );
 };
