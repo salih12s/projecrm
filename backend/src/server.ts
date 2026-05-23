@@ -25,6 +25,7 @@ import locationsRoutes from './routes/locations';
 import printerSettingsRoutes from './routes/printerSettings';
 import sahaRoutes from './routes/saha';
 import karalisteRoutes from './routes/karaliste';
+import { errorHandler } from './middleware/errorHandler';
 
 dotenv.config();
 
@@ -103,6 +104,12 @@ app.use('/api/locations/ilceler', locationsRoutes);
 app.use('/api/printer-settings', printerSettingsRoutes);
 app.use('/api/saha', sahaRoutes);
 app.use('/api/karaliste', karalisteRoutes);
+
+// Global error handler — asyncHandler ile sarılmış route'lardan gelen
+// yakalanmamış promise rejection'larını yakalar. Tüm route mount'larından
+// SONRA, fakat statik dosya servisi/SPA fallback'inden ÖNCE eklenmelidir
+// ki API yanıtlarına müdahale edebilsin. (Part 2 / P2.D4)
+app.use('/api', errorHandler);
 
 // Serve static files from frontend build (production only)
 if (process.env.NODE_ENV === 'production') {
