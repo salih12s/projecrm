@@ -1,6 +1,7 @@
-import express, { Request, Response } from 'express';
+﻿import express, { Request, Response } from 'express';
 import { query } from '../db';
 import authMiddleware from '../middleware/auth';
+import logger from '../utils/logger';
 import { IslemCreateDto } from '../types';
 import { SOCKET_EVENTS } from '../constants/socketEvents';
 
@@ -22,7 +23,7 @@ router.get('/stats', authMiddleware, async (_req: Request, res: Response): Promi
     `);
     res.json(result.rows[0]);
   } catch (error) {
-    console.error('İstatistik hatası:', error);
+    logger.error('İstatistik hatası:', error);
     res.status(500).json({ message: 'Sunucu hatası' });
   }
 });
@@ -219,7 +220,7 @@ router.get('/', authMiddleware, async (req: Request, res: Response): Promise<voi
       res.json(result.rows);
     }
   } catch (error) {
-    console.error('İşlemleri getirme hatası:', error);
+    logger.error('İşlemleri getirme hatası:', error);
     res.status(500).json({ message: 'Sunucu hatası' });
   }
 });
@@ -239,7 +240,7 @@ router.get('/search-by-phone', authMiddleware, async (req: Request, res: Respons
     );
     res.json(result.rows);
   } catch (error) {
-    console.error('Telefon arama hatası:', error);
+    logger.error('Telefon arama hatası:', error);
     res.status(500).json({ message: 'Sunucu hatası' });
   }
 });
@@ -258,7 +259,7 @@ router.get('/search-by-name', authMiddleware, async (req: Request, res: Response
     );
     res.json(result.rows);
   } catch (error) {
-    console.error('İsim arama hatası:', error);
+    logger.error('İsim arama hatası:', error);
     res.status(500).json({ message: 'Sunucu hatası' });
   }
 });
@@ -318,7 +319,7 @@ router.post('/', authMiddleware, async (req: Request, res: Response): Promise<vo
 
     res.status(201).json(result.rows[0]);
   } catch (error) {
-    console.error('İşlem ekleme hatası:', error);
+    logger.error('İşlem ekleme hatası:', error);
     res.status(500).json({ message: 'Sunucu hatası' });
   }
 });
@@ -396,7 +397,7 @@ router.put('/:id', authMiddleware, async (req: Request, res: Response): Promise<
 
     res.json(result.rows[0]);
   } catch (error) {
-    console.error('İşlem güncelleme hatası:', error);
+    logger.error('İşlem güncelleme hatası:', error);
     res.status(500).json({ message: 'Sunucu hatası' });
   }
 });
@@ -423,7 +424,7 @@ router.delete('/:id', authMiddleware, async (req: Request, res: Response): Promi
 
     res.json({ message: 'İşlem silindi', islem: result.rows[0] });
   } catch (error) {
-    console.error('İşlem silme hatası:', error);
+    logger.error('İşlem silme hatası:', error);
     res.status(500).json({ message: 'Sunucu hatası' });
   }
 });
@@ -455,7 +456,7 @@ router.patch('/:id/durum', authMiddleware, async (req: Request, res: Response): 
 
     res.json(result.rows[0]);
   } catch (error) {
-    console.error('İş durumu güncelleme hatası:', error);
+    logger.error('İş durumu güncelleme hatası:', error);
     res.status(500).json({ message: 'Sunucu hatası' });
   }
 });

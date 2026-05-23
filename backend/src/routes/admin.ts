@@ -3,6 +3,7 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { query } from '../db';
 import authenticateToken from '../middleware/auth';
+import logger from '../utils/logger';
 
 const router = express.Router();
 
@@ -47,7 +48,7 @@ router.post('/login', async (req: Request, res: Response): Promise<void> => {
       }
     });
   } catch (error) {
-    console.error('Admin giriş hatası:', error);
+    logger.error('Admin giriş hatası:', error);
     res.status(500).json({ message: 'Sunucu hatası' });
   }
 });
@@ -82,7 +83,7 @@ router.post('/create-user', authenticateToken, async (req: Request, res: Respons
       user: newUser.rows[0]
     });
   } catch (error) {
-    console.error('Kullanıcı oluşturma hatası:', error);
+    logger.error('Kullanıcı oluşturma hatası:', error);
     res.status(500).json({ message: 'Sunucu hatası' });
   }
 });
@@ -105,7 +106,7 @@ router.get('/users', authenticateToken, async (_req: Request, res: Response): Pr
 
     res.json(users.rows);
   } catch (error) {
-    console.error('Kullanıcı listeleme hatası:', error);
+    logger.error('Kullanıcı listeleme hatası:', error);
     res.status(500).json({ message: 'Sunucu hatası' });
   }
 });
@@ -130,7 +131,7 @@ router.patch('/users/:id/toggle', authenticateToken, async (req: Request, res: R
       user: result.rows[0]
     });
   } catch (error) {
-    console.error('Kullanıcı durumu değiştirme hatası:', error);
+    logger.error('Kullanıcı durumu değiştirme hatası:', error);
     res.status(500).json({ message: 'Sunucu hatası' });
   }
 });
@@ -144,7 +145,7 @@ router.delete('/users/:id', authenticateToken, async (req: Request, res: Respons
 
     res.json({ message: 'Kullanıcı başarıyla silindi' });
   } catch (error) {
-    console.error('Kullanıcı silme hatası:', error);
+    logger.error('Kullanıcı silme hatası:', error);
     res.status(500).json({ message: 'Sunucu hatası' });
   }
 });
@@ -176,7 +177,7 @@ router.get('/user-records/:username', authenticateToken, async (req: Request, re
 
     res.json(records.rows);
   } catch (error) {
-    console.error('Kullanıcı kayıtları getirme hatası:', error);
+    logger.error('Kullanıcı kayıtları getirme hatası:', error);
     res.status(500).json({ message: 'Sunucu hatası' });
   }
 });
@@ -212,7 +213,7 @@ router.get('/user-atolye-records/:username', authenticateToken, async (req: Requ
 
     res.json(records.rows);
   } catch (error) {
-    console.error('Kullanıcı atölye kayıtları getirme hatası:', error);
+    logger.error('Kullanıcı atölye kayıtları getirme hatası:', error);
     res.status(500).json({ message: 'Sunucu hatası' });
   }
 });
@@ -242,7 +243,7 @@ router.get('/all-records', authenticateToken, async (req: Request, res: Response
       }
     });
   } catch (error) {
-    console.error('Tüm kayıtları getirme hatası:', error);
+    logger.error('Tüm kayıtları getirme hatası:', error);
     res.status(500).json({ message: 'Sunucu hatası' });
   }
 });

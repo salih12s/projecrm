@@ -1,6 +1,7 @@
 ﻿import express, { Request, Response } from 'express';
 import { query } from '../db';
 import authMiddleware from '../middleware/auth';
+import logger from '../utils/logger';
 
 const router = express.Router();
 
@@ -18,7 +19,7 @@ router.get('/', authMiddleware, async (_req: Request, res: Response): Promise<vo
     );
     res.json(result.rows);
   } catch (error) {
-    console.error('Marka listeleme hatası:', error);
+    logger.error('Marka listeleme hatası:', error);
     res.status(500).json({ message: 'Sunucu hatası' });
   }
 });
@@ -43,7 +44,7 @@ router.post('/', authMiddleware, async (req: Request, res: Response): Promise<vo
     if (error.code === '23505') {
       res.status(400).json({ message: 'Bu marka zaten kayıtlı' });
     } else {
-      console.error('Marka ekleme hatası:', error);
+      logger.error('Marka ekleme hatası:', error);
       res.status(500).json({ message: 'Sunucu hatası' });
     }
   }
@@ -75,7 +76,7 @@ router.put('/:id', authMiddleware, async (req: Request, res: Response): Promise<
     if (error.code === '23505') {
       res.status(400).json({ message: 'Bu marka ismi zaten kullanılıyor' });
     } else {
-      console.error('Marka güncelleme hatası:', error);
+      logger.error('Marka güncelleme hatası:', error);
       res.status(500).json({ message: 'Sunucu hatası' });
     }
   }
@@ -98,7 +99,7 @@ router.delete('/:id', authMiddleware, async (req: Request, res: Response): Promi
 
     res.json({ message: 'Marka başarıyla silindi' });
   } catch (error) {
-    console.error('Marka silme hatası:', error);
+    logger.error('Marka silme hatası:', error);
     res.status(500).json({ message: 'Sunucu hatası' });
   }
 });

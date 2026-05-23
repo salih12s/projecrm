@@ -1,6 +1,7 @@
-import { Router, Request, Response } from 'express';
+﻿import { Router, Request, Response } from 'express';
 import { query } from '../db';
 import authMiddleware from '../middleware/auth';
+import logger from '../utils/logger';
 
 const router = Router();
 const CACHE_TTL_MS = 5 * 60 * 1000;
@@ -113,7 +114,7 @@ router.get('/:marka', authMiddleware, async (req: Request, res: Response): Promi
       res.json(null);
     }
   } catch (error) {
-    console.error('❌ Yazıcı ayarları getirme hatası:', error);
+    logger.error('❌ Yazıcı ayarları getirme hatası:', error);
     res.status(500).json({ message: 'Sunucu hatası' });
   }
 });
@@ -141,7 +142,7 @@ router.post('/:marka', authMiddleware, async (req: Request, res: Response): Prom
     setCachedSettings(masterBrand, config);
     res.json(result.rows[0]);
   } catch (error) {
-    console.error('❌ Yazıcı ayarları kaydetme hatası:', error);
+    logger.error('❌ Yazıcı ayarları kaydetme hatası:', error);
     res.status(500).json({ message: 'Sunucu hatası' });
   }
 });
@@ -155,7 +156,7 @@ router.delete('/:marka', authMiddleware, async (req: Request, res: Response): Pr
     settingsCache.delete(masterBrand);
     res.json({ message: 'Yazıcı ayarları silindi' });
   } catch (error) {
-    console.error('Yazıcı ayarları silme hatası:', error);
+    logger.error('Yazıcı ayarları silme hatası:', error);
     res.status(500).json({ message: 'Sunucu hatası' });
   }
 });

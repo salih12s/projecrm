@@ -2,6 +2,7 @@
 import { query } from '../db';
 import auth from '../middleware/auth';
 import { Aksesuar } from '../types';
+import logger from '../utils/logger';
 
 const router = express.Router();
 
@@ -19,7 +20,7 @@ router.get('/', auth, async (_req: Request, res: Response) => {
     );
     res.json(result.rows);
   } catch (error) {
-    console.error('Error fetching aksesuarlar:', error);
+    logger.error('Error fetching aksesuarlar:', error);
     res.status(500).json({ error: 'Aksesuarlar getirilirken hata oluştu' });
   }
 });
@@ -41,7 +42,7 @@ router.post('/', auth, async (req: Request, res: Response): Promise<void> => {
 
     res.status(201).json(result.rows[0]);
   } catch (error: any) {
-    console.error('Error creating aksesuar:', error);
+    logger.error('Error creating aksesuar:', error);
     
     if (error.code === '23505') {
       res.status(409).json({ error: 'Bu aksesuar zaten mevcut' });
@@ -75,7 +76,7 @@ router.put('/:id', auth, async (req: Request, res: Response): Promise<void> => {
 
     res.json(result.rows[0]);
   } catch (error: any) {
-    console.error('Error updating aksesuar:', error);
+    logger.error('Error updating aksesuar:', error);
     
     if (error.code === '23505') {
       res.status(409).json({ error: 'Bu aksesuar ismi zaten kullanılıyor' });
@@ -103,7 +104,7 @@ router.delete('/:id', auth, async (req: Request, res: Response): Promise<void> =
 
     res.json({ message: 'Aksesuar başarıyla silindi' });
   } catch (error) {
-    console.error('Error deleting aksesuar:', error);
+    logger.error('Error deleting aksesuar:', error);
     res.status(500).json({ error: 'Aksesuar silinirken hata oluştu' });
   }
 });

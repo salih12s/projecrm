@@ -2,6 +2,7 @@
 import { query } from '../db';
 import auth from '../middleware/auth';
 import { Bayi } from '../types';
+import logger from '../utils/logger';
 
 const router = express.Router();
 
@@ -13,7 +14,7 @@ router.get('/', auth, async (_req: Request, res: Response) => {
     );
     res.json(result.rows);
   } catch (error) {
-    console.error('Error fetching bayiler:', error);
+    logger.error('Error fetching bayiler:', error);
     res.status(500).json({ error: 'Bayiler getirilirken hata oluştu' });
   }
 });
@@ -37,7 +38,7 @@ router.post('/', auth, async (req: Request, res: Response) => {
 
     return res.status(201).json(result.rows[0]);
   } catch (error: any) {
-    console.error('Error creating bayi:', error);
+    logger.error('Error creating bayi:', error);
     
     if (error.code === '23505') {
       return res.status(409).json({ error: 'Bu bayi zaten mevcut' });
@@ -68,7 +69,7 @@ router.put('/:id', auth, async (req: Request, res: Response) => {
 
     return res.json(result.rows[0]);
   } catch (error: any) {
-    console.error('Error updating bayi:', error);
+    logger.error('Error updating bayi:', error);
     
     if (error.code === '23505') {
       return res.status(409).json({ error: 'Bu bayi ismi zaten kullanılıyor' });
@@ -94,7 +95,7 @@ router.delete('/:id', auth, async (req: Request, res: Response) => {
 
     return res.json({ message: 'Bayi başarıyla silindi' });
   } catch (error) {
-    console.error('Error deleting bayi:', error);
+    logger.error('Error deleting bayi:', error);
     return res.status(500).json({ error: 'Bayi silinirken hata oluştu' });
   }
 });

@@ -1,6 +1,7 @@
-import express, { Request, Response } from 'express';
+﻿import express, { Request, Response } from 'express';
 import { query } from '../db';
 import authMiddleware from '../middleware/auth';
+import logger from '../utils/logger';
 
 const router = express.Router();
 
@@ -30,7 +31,7 @@ router.post('/', authMiddleware, async (req: Request, res: Response): Promise<vo
 
     res.status(201).json(result.rows[0]);
   } catch (error) {
-    console.error('Karalisteye ekleme hatası:', error);
+    logger.error('Karalisteye ekleme hatası:', error);
     res.status(500).json({ message: 'Sunucu hatası' });
   }
 });
@@ -42,7 +43,7 @@ router.delete('/:id', authMiddleware, async (req: Request, res: Response): Promi
     await query('DELETE FROM karaliste WHERE id = $1', [id]);
     res.json({ message: 'Karalisteden silindi' });
   } catch (error) {
-    console.error('Karalisteden silme hatası:', error);
+    logger.error('Karalisteden silme hatası:', error);
     res.status(500).json({ message: 'Sunucu hatası' });
   }
 });
@@ -71,7 +72,7 @@ router.get('/check-phone', authMiddleware, async (req: Request, res: Response): 
       res.json({ blacklisted: false });
     }
   } catch (error) {
-    console.error('Karaliste kontrol hatası:', error);
+    logger.error('Karaliste kontrol hatası:', error);
     res.status(500).json({ message: 'Sunucu hatası' });
   }
 });
@@ -122,7 +123,7 @@ router.get('/check-address', authMiddleware, async (req: Request, res: Response)
       res.json({ blacklisted: false });
     }
   } catch (error) {
-    console.error('Karaliste adres kontrol hatası:', error);
+    logger.error('Karaliste adres kontrol hatası:', error);
     res.status(500).json({ message: 'Sunucu hatası' });
   }
 });
@@ -133,7 +134,7 @@ router.get('/', authMiddleware, async (_req: Request, res: Response): Promise<vo
     const result = await query('SELECT * FROM karaliste ORDER BY created_at DESC');
     res.json(result.rows);
   } catch (error) {
-    console.error('Karaliste listeleme hatası:', error);
+    logger.error('Karaliste listeleme hatası:', error);
     res.status(500).json({ message: 'Sunucu hatası' });
   }
 });

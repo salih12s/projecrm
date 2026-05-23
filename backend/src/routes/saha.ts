@@ -3,6 +3,7 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { query } from '../db';
 import authenticateToken from '../middleware/auth';
+import logger from '../utils/logger';
 
 const router = express.Router();
 
@@ -56,7 +57,7 @@ router.post('/login', async (req: Request, res: Response): Promise<void> => {
       }
     });
   } catch (error) {
-    console.error('Saha giriş hatası:', error);
+    logger.error('Saha giriş hatası:', error);
     res.status(500).json({ message: 'Sunucu hatası' });
   }
 });
@@ -91,7 +92,7 @@ router.post('/create', authenticateToken, async (req: Request, res: Response): P
       user: newUser.rows[0]
     });
   } catch (error) {
-    console.error('Saha elemanı oluşturma hatası:', error);
+    logger.error('Saha elemanı oluşturma hatası:', error);
     res.status(500).json({ message: 'Sunucu hatası' });
   }
 });
@@ -115,7 +116,7 @@ router.get('/users', authenticateToken, async (_req: Request, res: Response): Pr
 
     res.json(users.rows);
   } catch (error) {
-    console.error('Saha elemanları listeleme hatası:', error);
+    logger.error('Saha elemanları listeleme hatası:', error);
     res.status(500).json({ message: 'Sunucu hatası' });
   }
 });
@@ -140,7 +141,7 @@ router.patch('/users/:id/toggle', authenticateToken, async (req: Request, res: R
       user: result.rows[0]
     });
   } catch (error) {
-    console.error('Saha elemanı durumu değiştirme hatası:', error);
+    logger.error('Saha elemanı durumu değiştirme hatası:', error);
     res.status(500).json({ message: 'Sunucu hatası' });
   }
 });
@@ -154,7 +155,7 @@ router.delete('/users/:id', authenticateToken, async (req: Request, res: Respons
 
     res.json({ message: 'Saha elemanı başarıyla silindi' });
   } catch (error) {
-    console.error('Saha elemanı silme hatası:', error);
+    logger.error('Saha elemanı silme hatası:', error);
     res.status(500).json({ message: 'Sunucu hatası' });
   }
 });
@@ -183,7 +184,7 @@ router.post('/kayit', authenticateToken, async (req: Request, res: Response): Pr
       kayit: newRecord.rows[0]
     });
   } catch (error) {
-    console.error('Kayıt ekleme hatası:', error);
+    logger.error('Kayıt ekleme hatası:', error);
     res.status(500).json({ message: 'Sunucu hatası' });
   }
 });
@@ -276,7 +277,7 @@ router.get('/kayitlar', authenticateToken, async (req: Request, res: Response): 
       }
     });
   } catch (error) {
-    console.error('Kayıtları getirme hatası:', error);
+    logger.error('Kayıtları getirme hatası:', error);
     res.status(500).json({ message: 'Sunucu hatası' });
   }
 });
@@ -299,7 +300,7 @@ router.get('/kayit/:id', authenticateToken, async (req: Request, res: Response):
 
     res.json(record.rows[0]);
   } catch (error) {
-    console.error('Kayıt getirme hatası:', error);
+    logger.error('Kayıt getirme hatası:', error);
     res.status(500).json({ message: 'Sunucu hatası' });
   }
 });
@@ -329,7 +330,7 @@ router.put('/kayit/:id', authenticateToken, async (req: Request, res: Response):
       kayit: result.rows[0]
     });
   } catch (error) {
-    console.error('Kayıt güncelleme hatası:', error);
+    logger.error('Kayıt güncelleme hatası:', error);
     res.status(500).json({ message: 'Sunucu hatası' });
   }
 });
@@ -347,7 +348,7 @@ router.delete('/kayit/:id', authenticateToken, async (req: Request, res: Respons
 
     res.json({ message: 'Kayıt başarıyla silindi' });
   } catch (error) {
-    console.error('Kayıt silme hatası:', error);
+    logger.error('Kayıt silme hatası:', error);
     res.status(500).json({ message: 'Sunucu hatası' });
   }
 });
@@ -380,7 +381,7 @@ router.get('/kayit-thumbnail/:id', authenticateToken, async (req: Request, res: 
       res.status(500).json({ message: 'Fotoğraf verisi okunamadı' });
     }
   } catch (error) {
-    console.error('Thumbnail getirme hatası:', error);
+    logger.error('Thumbnail getirme hatası:', error);
     res.status(500).json({ message: 'Sunucu hatası' });
   }
 });
@@ -401,7 +402,7 @@ router.get('/kayit-photos/:id', authenticateToken, async (req: Request, res: Res
 
     res.json({ foto_data: record.rows[0].foto_data });
   } catch (error) {
-    console.error('Fotoğraf getirme hatası:', error);
+    logger.error('Fotoğraf getirme hatası:', error);
     res.status(500).json({ message: 'Sunucu hatası' });
   }
 });
@@ -513,7 +514,7 @@ router.get('/all-kayitlar', authenticateToken, async (req: Request, res: Respons
       }
     });
   } catch (error) {
-    console.error('Tüm saha kayıtlarını getirme hatası:', error);
+    logger.error('Tüm saha kayıtlarını getirme hatası:', error);
     res.status(500).json({ message: 'Sunucu hatası' });
   }
 });
@@ -534,7 +535,7 @@ router.get('/user-kayitlar/:username', authenticateToken, async (req: Request, r
 
     res.json(records.rows);
   } catch (error) {
-    console.error('Kullanıcı saha kayıtları getirme hatası:', error);
+    logger.error('Kullanıcı saha kayıtları getirme hatası:', error);
     res.status(500).json({ message: 'Sunucu hatası' });
   }
 });

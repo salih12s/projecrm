@@ -2,6 +2,7 @@
 import { query } from '../db';
 import { Urun } from '../types';
 import authenticateToken from '../middleware/auth';
+import logger from '../utils/logger';
 
 const router = Router();
 
@@ -19,7 +20,7 @@ router.get('/', authenticateToken, async (_req, res) => {
     );
     res.json(result.rows);
   } catch (error) {
-    console.error('Ürünler getirme hatası:', error);
+    logger.error('Ürünler getirme hatası:', error);
     res.status(500).json({ error: 'Ürünler getirilemedi' });
   }
 });
@@ -40,7 +41,7 @@ router.post('/', authenticateToken, async (req, res) => {
     
     return res.status(201).json(result.rows[0]);
   } catch (error) {
-    console.error('Ürün ekleme hatası:', error);
+    logger.error('Ürün ekleme hatası:', error);
     return res.status(500).json({ error: 'Ürün eklenemedi' });
   }
 });
@@ -66,7 +67,7 @@ router.put('/:id', authenticateToken, async (req, res) => {
 
     return res.json(result.rows[0]);
   } catch (error) {
-    console.error('Ürün güncelleme hatası:', error);
+    logger.error('Ürün güncelleme hatası:', error);
     return res.status(500).json({ error: 'Ürün güncellenemedi' });
   }
 });
@@ -87,7 +88,7 @@ router.delete('/:id', authenticateToken, async (req, res) => {
 
     return res.json({ message: 'Ürün silindi' });
   } catch (error) {
-    console.error('Ürün silme hatası:', error);
+    logger.error('Ürün silme hatası:', error);
     return res.status(500).json({ error: 'Ürün silinemedi' });
   }
 });

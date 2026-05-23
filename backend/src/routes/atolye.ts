@@ -3,6 +3,7 @@ import { query } from '../db';
 import auth from '../middleware/auth';
 import { Atolye, AtolyeCreateDto, AtolyeUpdateDto } from '../types';
 import { SOCKET_EVENTS } from '../constants/socketEvents';
+import logger from '../utils/logger';
 
 const router = express.Router();
 
@@ -59,7 +60,7 @@ router.get('/', auth, async (req: Request, res: Response) => {
       pagination: { page, limit, totalCount, totalPages, hasNext: page < totalPages, hasPrev: page > 1 }
     });
   } catch (error) {
-    console.error('Error fetching atolye records:', error);
+    logger.error('Error fetching atolye records:', error);
     return res.status(500).json({ error: 'Atölye kayıtları getirilirken hata oluştu' });
   }
 });
@@ -75,7 +76,7 @@ router.get('/next-id', auth, async (_req: Request, res: Response) => {
     cache.nextId = { data: nextId, timestamp: Date.now() };
     return res.json({ nextId });
   } catch (error) {
-    console.error('Error getting next ID:', error);
+    logger.error('Error getting next ID:', error);
     return res.status(500).json({ error: 'Sıra numarası alınamadı' });
   }
 });
@@ -100,7 +101,7 @@ router.get('/status-counts', auth, async (_req: Request, res: Response) => {
     cache.statusCounts = { data: result.rows[0], timestamp: Date.now() };
     return res.json(result.rows[0]);
   } catch (error) {
-    console.error('Error getting status counts:', error);
+    logger.error('Error getting status counts:', error);
     return res.status(500).json({ error: 'Durum sayıları alınamadı' });
   }
 });
@@ -120,7 +121,7 @@ router.get('/:id', auth, async (req: Request, res: Response) => {
 
     return res.json(result.rows[0]);
   } catch (error) {
-    console.error('Error fetching atolye record:', error);
+    logger.error('Error fetching atolye record:', error);
     return res.status(500).json({ error: 'Kayıt getirilirken hata oluştu' });
   }
 });
@@ -177,7 +178,7 @@ router.post('/', auth, async (req: Request, res: Response) => {
 
     return res.status(201).json(newRecord);
   } catch (error) {
-    console.error('Error creating atolye record:', error);
+    logger.error('Error creating atolye record:', error);
     return res.status(500).json({ error: 'Kayıt oluşturulurken hata oluştu' });
   }
 });
@@ -286,7 +287,7 @@ router.put('/:id', auth, async (req: Request, res: Response) => {
 
     return res.json(updatedRecord);
   } catch (error) {
-    console.error('Error updating atolye record:', error);
+    logger.error('Error updating atolye record:', error);
     return res.status(500).json({ error: 'Kayıt güncellenirken hata oluştu' });
   }
 });
@@ -316,7 +317,7 @@ router.delete('/:id', auth, async (req: Request, res: Response) => {
 
     return res.json({ message: 'Kayıt başarıyla silindi' });
   } catch (error) {
-    console.error('Error deleting atolye record:', error);
+    logger.error('Error deleting atolye record:', error);
     return res.status(500).json({ error: 'Kayıt silinirken hata oluştu' });
   }
 });

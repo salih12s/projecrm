@@ -1,5 +1,6 @@
 ﻿import { Router } from 'express';
 import { query } from '../db';
+import logger from '../utils/logger';
 
 const router = Router();
 
@@ -15,7 +16,7 @@ router.get('/', async (_req, res) => {
     const result = await query('SELECT * FROM ilceler ORDER BY isim ASC');
     res.json(result.rows);
   } catch (error) {
-    console.error('İlçeler getirilirken hata:', error);
+    logger.error('İlçeler getirilirken hata:', error);
     res.status(500).json({ message: 'İlçeler getirilirken hata oluştu' });
   }
 });
@@ -30,7 +31,7 @@ router.get('/:ilceId/mahalleler', async (req, res) => {
     );
     res.json(result.rows);
   } catch (error) {
-    console.error('Mahalleler getirilirken hata:', error);
+    logger.error('Mahalleler getirilirken hata:', error);
     res.status(500).json({ message: 'Mahalleler getirilirken hata oluştu' });
   }
 });

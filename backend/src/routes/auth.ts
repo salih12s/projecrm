@@ -2,6 +2,7 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { query } from '../db';
+import logger from '../utils/logger';
 
 const router = express.Router();
 
@@ -35,7 +36,7 @@ router.post('/register', async (req: Request, res: Response): Promise<void> => {
       user: newUser.rows[0]
     });
   } catch (error) {
-    console.error('Kayıt hatası:', error);
+    logger.error('Kayıt hatası:', error);
     res.status(500).json({ message: 'Sunucu hatası' });
   }
 });
@@ -81,7 +82,7 @@ router.post('/login', async (req: Request, res: Response): Promise<void> => {
       }
     });
   } catch (error) {
-    console.error('Giriş hatası:', error);
+    logger.error('Giriş hatası:', error);
     res.status(500).json({ message: 'Sunucu hatası' });
   }
 });
@@ -126,7 +127,7 @@ router.post('/bayi-login', async (req: Request, res: Response): Promise<void> =>
       }
     });
   } catch (error) {
-    console.error('Bayi giriş hatası:', error);
+    logger.error('Bayi giriş hatası:', error);
     res.status(500).json({ message: 'Sunucu hatası' });
   }
 });
@@ -149,7 +150,7 @@ router.post('/verify-system-password', async (req: Request, res: Response): Prom
     
     res.json({ message: 'Sistem şifresi doğrulandı', valid: true });
   } catch (error) {
-    console.error('Sistem şifresi kontrol hatası:', error);
+    logger.error('Sistem şifresi kontrol hatası:', error);
     res.status(500).json({ message: 'Sunucu hatası' });
   }
 });
