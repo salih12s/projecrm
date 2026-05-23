@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useCallback, useMemo, ReactNode } from 'react';
 import { Snackbar, Alert, AlertColor } from '@mui/material';
 
 interface SnackbarContextType {
@@ -12,21 +12,24 @@ export const SnackbarProvider: React.FC<{ children: ReactNode }> = ({ children }
   const [message, setMessage] = useState('');
   const [severity, setSeverity] = useState<AlertColor>('info');
 
-  const showSnackbar = (msg: string, sev: AlertColor = 'info') => {
+  // Stable identity so hook deps (useAtolyeSocket vb.) don't re-mount on every render.
+  const showSnackbar = useCallback((msg: string, sev: AlertColor = 'info') => {
     setMessage(msg);
     setSeverity(sev);
     setOpen(true);
-  };
+  }, []);
 
-  const handleClose = (_event?: React.SyntheticEvent | Event, reason?: string) => {
+  const handleClose = useCallback((_event?: React.SyntheticEvent | Event, reason?: string) => {
     if (reason === 'clickaway') {
       return;
     }
     setOpen(false);
-  };
+  }, []);
+
+  const contextValue = useMemo<SnackbarContextType>(() => ({ showSnackbar }), [showSnackbar]);
 
   return (
-    <SnackbarContext.Provider value={{ showSnackbar }}>
+    <SnackbarContext.Provider value={contextValue}>
       {children}
       <Snackbar
         open={open}

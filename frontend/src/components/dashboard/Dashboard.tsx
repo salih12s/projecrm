@@ -45,7 +45,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { islemService } from '../../services/api';
 import { Islem } from '../../types';
-import { io } from 'socket.io-client';
+import { useIslemSocket } from '../../hooks/useIslemSocket';
 import IslemTable from '../islem/IslemTable.tsx';
 import IslemFilters from '../islem/IslemFilters.tsx';
 import IslemDialog from '../islem/IslemDialog.tsx';
@@ -108,36 +108,17 @@ const Dashboard: React.FC = () => {
   const isAdmin = user?.role === 'admin';
   const isSaha = user?.role === 'saha';
 
-  useEffect(() => {
-    // Socket.IO bağlantısı - Backend Railway'de, frontend Hostinger'da
-    const SOCKET_URL = import.meta.env.MODE === 'production' 
-      ? 'https://projecrm-production.up.railway.app' 
-      : 'http://localhost:5000';
-    
-    const newSocket = io(SOCKET_URL, {
-      reconnection: true,
-      reconnectionDelay: 1000,
-      reconnectionAttempts: 10,
-      transports: ['websocket', 'polling'], // WebSocket önce, polling fallback
-    });
-
-    newSocket.on('connect', () => {
-      console.log('Socket.IO bağlantısı kuruldu');
-    });
-
-    newSocket.on('connect_error', (error) => {
-      console.error('Socket.IO bağlantı hatası:', error);
-    });
-
-    newSocket.on('yeni-islem', (islem: Islem) => {
+  // Socket.IO işlem gerçek-zamanlı güncellemeleri ortak hook ile.
+  // Event isimleri, SOCKET_URL, reconnect ayarları legacy ile aynı.
+  useIslemSocket({
+    onYeniIslem: (islem) => {
       if (islem && islem.id) {
         setIslemler((prev) => [islem, ...prev]);
         loadStats();
         showSnackbar('Yeni işlem eklendi!', 'info');
       }
-    });
-
-    newSocket.on('islem-guncellendi', (updatedIslem: Islem) => {
+    },
+    onIslemGuncellendi: (updatedIslem) => {
       if (updatedIslem && updatedIslem.id) {
         setIslemler((prev) =>
           prev.map((islem) => (islem.id === updatedIslem.id ? updatedIslem : islem))
@@ -145,17 +126,15 @@ const Dashboard: React.FC = () => {
         loadStats();
         showSnackbar('İşlem güncellendi!', 'info');
       }
-    });
-
-    newSocket.on('islem-silindi', (id: number) => {
+    },
+    onIslemSilindi: (id) => {
       if (id) {
         setIslemler((prev) => prev.filter((islem) => islem.id !== id));
         loadStats();
         showSnackbar('İşlem silindi!', 'info');
       }
-    });
-
-    newSocket.on('islem-durum-degisti', (updatedIslem: Islem) => {
+    },
+    onIslemDurumDegisti: (updatedIslem) => {
       if (updatedIslem && updatedIslem.id) {
         setIslemler((prev) =>
           prev.map((islem) => (islem.id === updatedIslem.id ? updatedIslem : islem))
@@ -163,13 +142,8 @@ const Dashboard: React.FC = () => {
         loadStats();
         showSnackbar('İş durumu güncellendi!', 'success');
       }
-    });
-
-    return () => {
-      newSocket.close();
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    },
+  });
 
   useEffect(() => {
     loadIslemler();
