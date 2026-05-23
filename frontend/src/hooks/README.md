@@ -1,14 +1,46 @@
 # frontend/src/hooks
 
-Bu klasör, ileride ortak custom React hook'ları için ayrıldı. **Şu an boş.**
+Bu klasör paylaşılan custom React hook'larını barındırır.
 
-## İleride taşınması/eklenmesi planlanan hook'lar
+## Mevcut Hook'lar
 
-- **`useSocket`** — Şu an `Dashboard.tsx` ve `AtolyeTakip.tsx` içinde **kopyalanmış** Socket.IO bağlantı + listener mantığı var. İkisini tek bir `useSocket(events, deps)` hook'una konsolide edilecek. Hardcoded `SOCKET_URL` 2 yerde duplike → tek noktaya alınacak.
-- **`usePagination`** — `IslemTable.tsx`, `SahaKayitlari.tsx`, `AtolyeTakip.tsx` her biri kendi sayfalama state'ini tutuyor. Standart hale getirilecek (page, pageSize, total, setters).
-- **`useDebouncedValue`** — `IslemFilters.tsx` ve `IslemDialog.tsx` autocomplete'lerinde debounce inline yazılmış (`setTimeout` + `clearTimeout`). 300ms standart debounce hook'u eklenecek.
-- **`useIslemForm`** — `IslemDialog.tsx` (2403 satır) içindeki form state + validation + karaliste check logic'i ayrı hook'a alınacak. Bkz. [frontend-component-split-plan.md](../../../docs/refactor/frontend-component-split-plan.md).
-- **`useIslemTableState`** — `IslemTable.tsx` (1789 satır) içindeki sort/filter/page/selection state'i ayrı hook'a alınacak.
+### `useReferenceData`
+Paylaşılan referans listelerini (`teknisyenler` / `markalar` / `montajlar` /
+`aksesuarlar` / `urunler` / `ilceler`) tek bir noktadan yükler.
 
-## Bu turda
-Hiçbir hook çıkarılmadı. Sadece klasör + bu README oluşturuldu.
+- Endpoint path'leri ilgili `*Service.getAll()` / `locationService.getIlceler()`
+  metodları üzerinden değişmeden çalışır.
+- `keys` opsiyonu ile sadece istenen referanslar yüklenir (gereksiz endpoint çağrısı yok).
+- `enabled` opsiyonu ile koşullu mount desteklenir (admin, dialog open vb).
+- `cache` opsiyonu ile legacy `IslemDialog` 5 dakikalık `localStorage` cache'i
+  (`islemDialogData` + `islemDialogDataTime`) birebir korunur.
+- Snackbar/UI state hook içinde değil — caller'da kalır.
+
+Kullanan componentler:
+- `components/islem/IslemFilters.tsx` (admin filtreleri için)
+- `components/islem/IslemDialog.tsx` (cache'li tam set için)
+
+### `useAtolyeSocket`
+`AtolyeTakip` ekranındaki Socket.IO bağlantısını sarmalar.
+
+- Aynı `SOCKET_URL` mantığı (prod / localhost:5000).
+- Aynı `reconnection`, `reconnectionDelay`, `reconnectionAttempts`, `transports` ayarları.
+- Aynı event isimleri: `yeni-atolye`, `atolye-guncellendi`, `atolye-silindi`,
+  `connect`, `connect_error`.
+- Default `onConnect` / `onError` legacy console log/error metinlerini korur.
+- `onYeniAtolye` / `onAtolyeGuncellendi` / `onAtolyeSilindi` ile caller state'i sürer.
+
+Kullanan componentler:
+- `components/atolye/AtolyeTakip.tsx`
+
+## İleride Eklenmesi Planlanan Hook'lar
+
+- **`usePagination`** — `IslemTable`, `SahaKayitlari`, `AtolyeTakip` paylaşılan page/pageSize/total state'i.
+- **`useDebouncedValue`** — `IslemFilters` ve `IslemDialog` autocomplete'lerindeki inline debounce.
+- **`useIslemForm`** — `IslemDialog` form state + validation + karaliste check logic'i.
+- **`useIslemTableState`** — `IslemTable` sort/filter/page/selection state'i.
+
+## Bu turda yapılan (Phase 6)
+- `useReferenceData` + `useAtolyeSocket` eklendi.
+- `IslemFilters`, `IslemDialog`, `AtolyeTakip` hook'lara taşındı.
+- Hiçbir endpoint, payload, event ismi, cache key, TTL veya UI davranışı değişmedi.

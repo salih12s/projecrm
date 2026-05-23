@@ -8,14 +8,9 @@ import {
   Chip,
 } from '@mui/material';
 import debounce from 'lodash.debounce';
-import { Islem, Montaj, Aksesuar, Teknisyen, Marka } from '../../types';
-import {
-  montajService,
-  aksesuarService,
-  teknisyenService,
-  markaService,
-} from '../../services/api';
+import { Islem } from '../../types';
 import { useAuth } from '../../context/AuthContext';
+import { useReferenceData } from '../../hooks/useReferenceData';
 
 interface IslemFiltersProps {
   islemler: Islem[];
@@ -55,52 +50,31 @@ const IslemFilters: React.FC<IslemFiltersProps> = ({
   const isAdmin = user?.role === 'admin';
   
   const [filteredCount, setFilteredCount] = useState(0);
-  
+
   // Montaj ve Aksesuar filtreleri (sadece admin için)
-  const [montajlar, setMontajlar] = useState<Montaj[]>([]);
-  const [aksesuarlar, setAksesuarlar] = useState<Aksesuar[]>([]);
+  // Referans listeleri ortak hook ile yükleniyor (sadece admin'de enabled).
+  const { montajlar, aksesuarlar, teknisyenler, markalar: markaListesi } = useReferenceData({
+    keys: ['montajlar', 'aksesuarlar', 'teknisyenler', 'markalar'],
+    enabled: isAdmin,
+  });
   const [selectedMontajlar, setSelectedMontajlar] = useState<string[]>([]);
   const [selectedAksesuarlar, setSelectedAksesuarlar] = useState<string[]>([]);
   const [filteredTutar, setFilteredTutar] = useState<number>(0);
-  
+
   // Teknisyen filtresi (sadece admin için)
-  const [teknisyenler, setTeknisyenler] = useState<Teknisyen[]>([]);
   const [selectedTeknisyenler, setSelectedTeknisyenler] = useState<string[]>([]);
-  
+
   // Marka filtresi (sadece admin için)
-  const [markaListesi, setMarkaListesi] = useState<Marka[]>([]);
   const [selectedMarkalar, setSelectedMarkalar] = useState<string[]>([]);
-  
+
   // Ay filtresi (sadece admin için)
   const [selectedAy, setSelectedAy] = useState<number | null>(null);
-  
+
   // Tarih aralığı filtreleri (sadece admin için Montaj/Aksesuar ile birlikte)
   const [startDate, setStartDate] = useState<string>('');
   const [endDate, setEndDate] = useState<string>('');
 
-  // Montaj ve Aksesuarları yükle
-  useEffect(() => {
-    if (isAdmin) {
-      loadMontajVeAksesuar();
-    }
-  }, [isAdmin]);
-
-  const loadMontajVeAksesuar = async () => {
-    try {
-      const [montajData, aksesuarData, teknisyenData, markaData] = await Promise.all([
-        montajService.getAll(),
-        aksesuarService.getAll(),
-        teknisyenService.getAll(),
-        markaService.getAll(),
-      ]);
-      setMontajlar(montajData);
-      setAksesuarlar(aksesuarData);
-      setTeknisyenler(teknisyenData);
-      setMarkaListesi(markaData);
-    } catch (error) {
-      console.error('Filtre seçenekleri yükleme hatası:', error);
-    }
-  };
+  // (Referans listeleri artık useReferenceData hook'u tarafından yönetiliyor.)
 
   // ⚡ PERFORMANS İYİLEŞTİRMESİ: useMemo ile filtreleme sonuçlarını cache'le
   // Bu sayede sadece bağımlılıklar değiştiğinde yeniden hesaplanır

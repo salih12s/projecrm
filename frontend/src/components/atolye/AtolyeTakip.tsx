@@ -31,7 +31,7 @@ import { atolyeService } from '../../services/api';
 import { useSnackbar } from '../../context/SnackbarContext';
 import { useAuth } from '../../context/AuthContext';
 import AtolyeDialog from './AtolyeDialog.tsx';
-import { io } from 'socket.io-client';
+import { useAtolyeSocket } from '../../hooks/useAtolyeSocket';
 
 // Debounce hook
 function useDebounce<T>(value: T, delay: number): T {
@@ -205,68 +205,46 @@ const AtolyeTakip: React.FC = () => {
   useEffect(() => {
     fetchAtolyeList();
     fetchStatusCounts();
+  }, [isBayi, bayiIsim]);
 
-    // Socket.IO bağlantısı - Gerçek zamanlı güncellemeler için
-    const SOCKET_URL = import.meta.env.MODE === 'production' 
-      ? 'https://projecrm-production.up.railway.app' 
-      : 'http://localhost:5000';
-    
-    const newSocket = io(SOCKET_URL, {
-      reconnection: true,
-      reconnectionDelay: 1000,
-      reconnectionAttempts: 10,
-      transports: ['websocket', 'polling'],
-    });
-
-    newSocket.on('connect', () => {
-      console.log('AtolyeTakip: Socket.IO bağlantısı kuruldu');
-    });
-
-    newSocket.on('connect_error', (error) => {
-      console.error('AtolyeTakip: Socket.IO bağlantı hatası:', error);
-    });
-
-    // Yeni atölye kaydı eklendiğinde
-    newSocket.on('yeni-atolye', (atolye: Atolye) => {
-      if (atolye && atolye.id) {
-        // Bayi ise sadece kendi kayıtlarını görüntülenen listeye ekle
-        if (isBayi) {
-          if (atolye.bayi_adi === bayiIsim) {
-            setAtolyeList((prev) => [atolye, ...prev]);
-            showSnackbar('Yeni atölye kaydı eklendi!', 'info');
-          }
-        } else {
+  // Socket.IO gerçek zamanlı güncellemeler ortak hook ile.
+  // Event isimleri, payload şekilleri, reconnection ayarları legacy ile aynı.
+  const handleYeniAtolye = useCallback((atolye: Atolye) => {
+    if (atolye && atolye.id) {
+      // Bayi ise sadece kendi kayıtlarını görüntülenen listeye ekle
+      if (isBayi) {
+        if (atolye.bayi_adi === bayiIsim) {
           setAtolyeList((prev) => [atolye, ...prev]);
           showSnackbar('Yeni atölye kaydı eklendi!', 'info');
         }
+      } else {
+        setAtolyeList((prev) => [atolye, ...prev]);
+        showSnackbar('Yeni atölye kaydı eklendi!', 'info');
       }
-    });
+    }
+  }, [isBayi, bayiIsim, showSnackbar]);
 
-    // Atölye kaydı güncellendiğinde
-    newSocket.on('atolye-guncellendi', (updatedAtolyeRecord: Atolye) => {
-      if (updatedAtolyeRecord && updatedAtolyeRecord.id) {
-        // Görüntülenen listede güncelle
-        setAtolyeList((prev) =>
-          prev.map((atolye) => (atolye.id === updatedAtolyeRecord.id ? updatedAtolyeRecord : atolye))
-        );
-        showSnackbar('Atölye kaydı güncellendi!', 'info');
-      }
-    });
+  const handleAtolyeGuncellendi = useCallback((updatedAtolyeRecord: Atolye) => {
+    if (updatedAtolyeRecord && updatedAtolyeRecord.id) {
+      setAtolyeList((prev) =>
+        prev.map((atolye) => (atolye.id === updatedAtolyeRecord.id ? updatedAtolyeRecord : atolye))
+      );
+      showSnackbar('Atölye kaydı güncellendi!', 'info');
+    }
+  }, [showSnackbar]);
 
-    // Atölye kaydı silindiğinde
-    newSocket.on('atolye-silindi', (deletedId: number) => {
-      if (deletedId) {
-        // Görüntülenen listeden sil
-        setAtolyeList((prev) => prev.filter((atolye) => atolye.id !== deletedId));
-        showSnackbar('Atölye kaydı silindi!', 'info');
-      }
-    });
+  const handleAtolyeSilindi = useCallback((deletedId: number) => {
+    if (deletedId) {
+      setAtolyeList((prev) => prev.filter((atolye) => atolye.id !== deletedId));
+      showSnackbar('Atölye kaydı silindi!', 'info');
+    }
+  }, [showSnackbar]);
 
-    // Cleanup - component unmount olduğunda bağlantıyı kapat
-    return () => {
-      newSocket.disconnect();
-    };
-  }, [isBayi, bayiIsim]);
+  useAtolyeSocket({
+    onYeniAtolye: handleYeniAtolye,
+    onAtolyeGuncellendi: handleAtolyeGuncellendi,
+    onAtolyeSilindi: handleAtolyeSilindi,
+  });
 
   const fetchAtolyeList = useCallback(async () => {
     setLoading(true);

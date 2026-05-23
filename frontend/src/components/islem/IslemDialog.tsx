@@ -29,18 +29,14 @@ import {
   CircularProgress,
   Tooltip,
 } from '@mui/material';
-import { Islem, IslemCreateDto, IslemUpdateDto, Teknisyen, Marka, Montaj, Aksesuar, Urun } from '../../types';
+import { Islem, IslemCreateDto, IslemUpdateDto } from '../../types';
 import {
   islemService,
   karalisteService,
-  teknisyenService,
-  markaService,
-  montajService,
-  aksesuarService,
-  urunService,
   locationService,
 } from '../../services/api';
 import { useSnackbar } from '../../context/SnackbarContext';
+import { useReferenceData } from '../../hooks/useReferenceData';
 
 // Telefon numarasını formatla: 0544 448 88 88
 const formatPhoneNumber = (phone: string | undefined): string => {
@@ -73,12 +69,11 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const [isCloneMode, setIsCloneMode] = useState(false); // Çift tıklama ile klonlama modu
-  const [teknisyenler, setTeknisyenler] = useState<Teknisyen[]>([]);
-  const [markalar, setMarkalar] = useState<Marka[]>([]);
-  const [montajlar, setMontajlar] = useState<Montaj[]>([]);
-  const [aksesuarlar, setAksesuarlar] = useState<Aksesuar[]>([]);
-  const [urunler, setUrunler] = useState<Urun[]>([]);
-  const [ilceler, setIlceler] = useState<{ ilce_id: number; isim: string }[]>([]);
+  // Referans listeleri ortak hook ile yükleniyor (cache key/TTL legacy ile birebir aynı).
+  const { teknisyenler, markalar, montajlar, aksesuarlar, urunler, ilceler } = useReferenceData({
+    enabled: open,
+    cache: { storageKey: 'islemDialogData', ttlMs: 5 * 60 * 1000 },
+  });
   const [mahalleler, setMahalleler] = useState<{ mahalle_id: number; isim: string }[]>([]);
   const [selectedIlceId, setSelectedIlceId] = useState<number | null>(null);
   const [selectedMontajlar, setSelectedMontajlar] = useState<number[]>([]);
@@ -136,65 +131,8 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
     is_durumu: 'acik',
   });
 
-  // Teknisyen, marka, montaj, aksesuar, ürün ve ilçe listelerini yükle
-  // ⚡ PERFORMANS: Verileri localStorage'dan cache'le, her açılışta API'ye gitme
-  useEffect(() => {
-    const loadData = async () => {
-      try {
-        // Önce cache'den dene
-        const cachedData = localStorage.getItem('islemDialogData');
-        const cacheTime = localStorage.getItem('islemDialogDataTime');
-        const now = Date.now();
-        
-        // Cache 5 dakikadan eskiyse yenile
-        if (cachedData && cacheTime && (now - parseInt(cacheTime)) < 5 * 60 * 1000) {
-          const parsed = JSON.parse(cachedData);
-          setTeknisyenler(parsed.teknisyenler);
-          setMarkalar(parsed.markalar);
-          setMontajlar(parsed.montajlar);
-          setAksesuarlar(parsed.aksesuarlar);
-          setUrunler(parsed.urunler);
-          setIlceler(parsed.ilceler);
-          return; // Cache'den yüklendi, API'ye gitme
-        }
-        
-        // Cache yoksa veya eskiyse API'den yükle
-        const [teknisyenData, markaData, montajData, aksesuarData, urunData, ilcelerData] = await Promise.all([
-          teknisyenService.getAll(),
-          markaService.getAll(),
-          montajService.getAll(),
-          aksesuarService.getAll(),
-          urunService.getAll(),
-          locationService.getIlceler(),
-        ]);
-        
-        const data = {
-          teknisyenler: teknisyenData,
-          markalar: markaData,
-          montajlar: montajData,
-          aksesuarlar: aksesuarData,
-          urunler: urunData,
-          ilceler: ilcelerData,
-        };
-        
-        setTeknisyenler(data.teknisyenler);
-        setMarkalar(data.markalar);
-        setMontajlar(data.montajlar);
-        setAksesuarlar(data.aksesuarlar);
-        setUrunler(data.urunler);
-        setIlceler(data.ilceler);
-        
-        // Cache'e kaydet
-        localStorage.setItem('islemDialogData', JSON.stringify(data));
-        localStorage.setItem('islemDialogDataTime', now.toString());
-      } catch (error) {
-        console.error('Veri yükleme hatası:', error);
-      }
-    };
-    if (open) {
-      loadData();
-    }
-  }, [open]);
+  // Teknisyen, marka, montaj, aksesuar, ürün ve ilçe listeleri artık useReferenceData hook'u
+  // tarafından yönetiliyor (aynı 5 dk localStorage cache, aynı endpointler).
 
   // İlçe seçildiğinde mahalleleri yükle
   useEffect(() => {
