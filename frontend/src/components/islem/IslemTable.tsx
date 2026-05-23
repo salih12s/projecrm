@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback, useRef, memo, startTransition } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, memo, startTransition } from 'react';
 import {
   Table,
   TableBody,
@@ -24,45 +24,14 @@ import {
   useMediaQuery,
   useTheme,
   Divider,
-  Skeleton,
   Button,
   DialogActions,
 } from '@mui/material';
 
 // ⚡ Kendi state'ini yöneten debounced input - parent'ı her tuşta render etmez
-const DebouncedFilterInput = memo(({ placeholder, onChange, sx }: {
-  placeholder: string;
-  onChange: (value: string) => void;
-  sx?: any;
-}) => {
-  const [localValue, setLocalValue] = useState('');
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const onChangeRef = useRef(onChange);
-  onChangeRef.current = onChange;
-
-  const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const val = e.target.value;
-    setLocalValue(val);
-    if (timerRef.current) clearTimeout(timerRef.current);
-    timerRef.current = setTimeout(() => {
-      onChangeRef.current(val);
-    }, 120);
-  }, []);
-
-  useEffect(() => {
-    return () => { if (timerRef.current) clearTimeout(timerRef.current); };
-  }, []);
-
-  return (
-    <TextField
-      size="small"
-      placeholder={placeholder}
-      value={localValue}
-      onChange={handleChange}
-      sx={sx || { '& .MuiInputBase-input': { fontSize: '0.65rem', py: 0.2, px: 0.2 }, width: '100%' }}
-    />
-  );
-});
+import DebouncedFilterInput from './table/DebouncedFilterInput';
+import IslemTableLoadingState from './table/IslemTableLoadingState';
+import { formatPhoneNumber } from './table/islemTableUtils';
 import {
   Edit,
   CheckCircle,
@@ -78,16 +47,6 @@ import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea
 import { Islem } from '../../types';
 import PrintEditor from '../settings/PrintEditor';
 import { islemService, karalisteService } from '../../services/api';
-
-// Telefon numarasını formatla: 0544 448 88 88
-const formatPhoneNumber = (phone: string | undefined): string => {
-  if (!phone) return '';
-  const cleaned = phone.replace(/\D/g, '');
-  if (cleaned.length === 11) {
-    return `${cleaned.slice(0, 4)} ${cleaned.slice(4, 7)} ${cleaned.slice(7, 9)} ${cleaned.slice(9)}`;
-  }
-  return phone;
-};
 
 interface IslemTableProps {
   islemler: Islem[];
@@ -989,32 +948,10 @@ const IslemTable: React.FC<IslemTableProps> = ({
   if (loading) {
     // ⚡ SKELETON LOADER: Boş ekran yerine loading animasyonu
     return (
-      <TableContainer component={Paper} elevation={3}>
-        <Table size="small">
-          <TableHead>
-            <TableRow sx={{ bgcolor: 'primary.main' }}>
-              <TableCell sx={{ color: 'white', py: 1 }}>Sıra</TableCell>
-              {columnOrder.map((colId) => (
-                <TableCell key={colId} sx={{ color: 'white', py: 1 }}>
-                  {columnConfigs[colId]?.label || colId}
-                </TableCell>
-              ))}
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {[...Array(8)].map((_, index) => (
-              <TableRow key={index}>
-                <TableCell><Skeleton variant="text" width={40} /></TableCell>
-                {columnOrder.map((_, colIndex) => (
-                  <TableCell key={colIndex}>
-                    <Skeleton variant="text" width="80%" />
-                  </TableCell>
-                ))}
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </TableContainer>
+      <IslemTableLoadingState
+        columnOrder={columnOrder}
+        columnConfigs={columnConfigs}
+      />
     );
   }
 

@@ -64,13 +64,6 @@ riski nedeniyle sadece hazırlandı, entegrasyon ertelendi).
   `IslemDialog` "yüksek riskli" olarak işaretli olduğu için hook sadece hazır
   durumda bırakıldı.
 
-## İleride Eklenmesi Planlanan Hook'lar
-
-- **`usePagination`** — `IslemTable`, `SahaKayitlari`, `AtolyeTakip` paylaşılan page/pageSize/total state'i.
-- **`useIslemForm`** — `IslemDialog` form state + validation + karaliste check logic'i.
-- **`useIslemTableState`** — `IslemTable` sort/filter/page/selection state'i.
-- **`useColumnFilters`** — `IslemTable` kolon-bazlı filtre state'i.
-
 ## Bu turda yapılan (Phase 6)
 - `useReferenceData` + `useAtolyeSocket` eklendi.
 - `IslemFilters`, `IslemDialog`, `AtolyeTakip` hook'lara taşındı.
@@ -83,3 +76,24 @@ riski nedeniyle sadece hazırlandı, entegrasyon ertelendi).
   stabilize edildi (hook deps churn'ünü engellemek için).
 - `useDebouncedValue` ve `useMahalleler` integrasyonu bilinçli olarak ertelendi
   (sırasıyla `lodash.debounce` çakışma riski ve `IslemDialog` yüksek-risk skoru).
+
+## Bu turda yapılan (Phase 9-10)
+- **`useDebouncedValue` entegrasyonu — yapılmadı.** `IslemFilters` içindeki
+  `lodash.debounce` *callback* debouncing yapıyor (`onFilterChange` çağrısı
+  300ms gecikmeli), `useDebouncedValue` ise *value* debouncing yapar. İki
+  semantik denk değil — `.cancel()` davranışı, cleanup ve `onFilterChange`
+  identity değişimine yanıt farklı. Davranış değişme riski olduğu için spec
+  gereği sadece raporlandı.
+- **`useMahalleler` entegrasyonu — yapılmadı.** `IslemDialog`'da 3 farklı
+  call-site var (mount-effect, edit auto-fill `await`'i, duplicate-flow
+  `.then`'i). 1 noktayı izole etmek diğer iki manuel fetch ile race condition
+  yaratır. Spec'in "risk varsa dokunma" kuralı uygulandı.
+- `IslemTable` light split: `DebouncedFilterInput`, `IslemTableLoadingState`,
+  `formatPhoneNumber` ayrı dosyalara çıkarıldı. Davranış birebir aynı.
+
+## İleride Eklenmesi Planlanan Hook'lar (güncel sıra)
+
+- **`usePagination`** — `IslemTable`, `SahaKayitlari`, `AtolyeTakip` paylaşılan page/pageSize/total state'i.
+- **`useColumnFilters`** — `IslemTable` kolon-bazlı filtre state'i.
+- **`useIslemTableState`** — `IslemTable` sort/filter/page/selection state'i (yukarıdaki ikisinin üzerine).
+- **`useIslemForm`** — `IslemDialog` form state + validation + karaliste check logic'i (IslemDialog yüksek risk azaldıktan sonra).
