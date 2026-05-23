@@ -4,24 +4,9 @@ import authMiddleware from '../middleware/auth';
 
 const router = express.Router();
 
-// Tablo oluştur (uygulama başlatılırken çağrılacak)
-export const createKaralisteTable = async () => {
-  await query(`
-    CREATE TABLE IF NOT EXISTS karaliste (
-      id SERIAL PRIMARY KEY,
-      ad_soyad VARCHAR(100) NOT NULL,
-      cep_tel VARCHAR(20),
-      yedek_tel VARCHAR(20),
-      mahalle VARCHAR(100),
-      cadde VARCHAR(100),
-      sokak VARCHAR(100),
-      kapi_no VARCHAR(20),
-      sebep TEXT,
-      created_by VARCHAR(50),
-      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    )
-  `);
-};
+// `createKaralisteTable` Part 2 / P2.D1 ile bootstrap/createKaralisteTable.ts'ye
+// taşındı. server.ts artık doğrudan o dosyadan import eder. Route dosyası yalnız
+// HTTP handler'ları tutar.
 
 // Karalisteye ekle
 router.post('/', authMiddleware, async (req: Request, res: Response): Promise<void> => {

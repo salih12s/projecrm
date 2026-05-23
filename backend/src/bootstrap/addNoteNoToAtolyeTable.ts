@@ -1,4 +1,4 @@
-import pool from './db';
+﻿import pool from '../db';
 
 // Retry mekanizmalı bağlantı
 async function connectWithRetry(retries = 5, delay = 3000) {

@@ -6,10 +6,11 @@ import { Server } from 'socket.io';
 import dotenv from 'dotenv';
 import path from 'path';
 
-import createTables from './createTables';
-import { initLocations } from './initLocations';
-import addNoteNoToAtolyeTable from './addNoteNoToAtolyeTable';
-import addSahaPerformanceIndexes from './addSahaPerformanceIndexes';
+import createTables from './bootstrap/createTables';
+import { initLocations } from './bootstrap/initLocations';
+import addNoteNoToAtolyeTable from './bootstrap/addNoteNoToAtolyeTable';
+import addSahaPerformanceIndexes from './bootstrap/addSahaPerformanceIndexes';
+import createKaralisteTable from './bootstrap/createKaralisteTable';
 import authRoutes from './routes/auth';
 import islemlerRoutes from './routes/islemler';
 import teknisyenlerRoutes from './routes/teknisyenler';
@@ -23,7 +24,7 @@ import urunlerRoutes from './routes/urunler';
 import locationsRoutes from './routes/locations';
 import printerSettingsRoutes from './routes/printerSettings';
 import sahaRoutes from './routes/saha';
-import karalisteRoutes, { createKaralisteTable } from './routes/karaliste';
+import karalisteRoutes from './routes/karaliste';
 
 dotenv.config();
 

@@ -1,4 +1,4 @@
-import pool from './db';
+﻿import pool from '../db';
 
 // Retry mekanizmalı sorgu
 async function queryWithRetry(sql: string, retries = 5, delay = 3000): Promise<any> {

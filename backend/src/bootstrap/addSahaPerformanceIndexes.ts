@@ -1,4 +1,4 @@
-import pool from './db';
+﻿import pool from '../db';
 
 /**
  * Saha kayıtları için performans index'lerini ekler.

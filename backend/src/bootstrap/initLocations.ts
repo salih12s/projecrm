@@ -1,5 +1,5 @@
-import axios from 'axios';
-import pool from './db';
+﻿import axios from 'axios';
+import pool from '../db';
 
 interface District {
   id: number;
