@@ -2,123 +2,48 @@ import React, { useState, useEffect, useMemo, useCallback, memo } from 'react';
 import {
   Box,
   Paper,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  IconButton,
   Button,
-  Chip,
-  TextField,
-  MenuItem,
-  Tooltip,
-  Card,
-  CardContent,
-  CardActions,
-  Grid,
-  Typography,
-  Divider,
   useMediaQuery,
   useTheme,
-  TablePagination,
-  CircularProgress,
 } from '@mui/material';
-import { Edit, Delete, Add } from '@mui/icons-material';
+import { Add } from '@mui/icons-material';
 import { Atolye } from '../../types';
 import { atolyeService } from '../../services/atolye.service';
 import { useSnackbar } from '../../context/SnackbarContext';
 import { useAuth } from '../../context/AuthContext';
 import AtolyeDialog from './AtolyeDialog.tsx';
 import { useAtolyeSocket } from '../../hooks/useAtolyeSocket';
-import {
-  getAtolyeStatusColor as getStatusColor,
-  getAtolyeStatusLabel as getStatusLabel,
-  getAtolyeRowBackgroundColor as getRowBackgroundColor,
-} from '../../constants/atolyeStatus';
-// Phase 13 cleanup: shared debounce hook yerine artık burada local kopya tutmuyoruz.
-// Aynı imza (value: T, delay: number) → T olduğu için davranış birebir aynı.
 import { useDebouncedValue } from '../../hooks/useDebouncedValue';
-import { formatPhone } from '../../utils/format';
+import AtolyeStatusFilterBar from './AtolyeStatusFilterBar';
+import AtolyeCardView from './AtolyeCardView';
+import AtolyeTableView, { FilterState } from './AtolyeTableView';
 
-// Static helper functions — atölye durum sabitleri için
-// `constants/atolyeStatus.ts` modülüne taşındı; burada import alias'ları kullanılıyor.
+/**
+ * AtolyeTakip — Part 3 / P3.E1 sonrası ince orchestrator.
+ *
+ * State + iş mantığı (fetch, socket, filtre, pagination) burada;
+ * sunum katmanı `AtolyeStatusFilterBar`, `AtolyeCardView` (mobil) ve
+ * `AtolyeTableView` (masaüstü) bileşenlerine bölündü. Davranış,
+ * filtre semantiği, debounce süresi (700 ms), pagination boyut listesi
+ * ([25,50,100,200]), socket olayları ve mobil/masaüstü ayrımı orijinaliyle
+ * birebir aynı. Dead code (önceki inner kopya `formatDate` vs.) bu
+ * refactor'da kaldırıldı.
+ */
 
-
-const formatDate = (dateString: string | undefined | null): string => {
-  if (!dateString) return '';
-  try {
-    const date = new Date(dateString);
-    if (isNaN(date.getTime())) return '';
-    return date.toLocaleDateString('tr-TR', { day: '2-digit', month: '2-digit', year: 'numeric' });
-  } catch { return ''; }
-};
-
-// AtolyeTakip "-" fallback'ini koruyan ince adaptör (Part 3 / P3.G2).
-// Davranış birebir aynı: 11 hane → biçimli, diğer → input, boş → '-'.
-const formatPhoneNumber = (phone: string | null | undefined): string =>
-  formatPhone(phone, '-');
-
-// Memoized Table Row
-interface AtolyeRowProps {
-  atolye: Atolye;
-  isBayi: boolean;
-  isAdmin: boolean;
-  onEdit: (id: number) => void;
-  onDelete: (id: number) => void;
-}
-
-const AtolyeTableRow = memo(({ atolye, isBayi, isAdmin, onEdit, onDelete }: AtolyeRowProps) => (
-  <TableRow 
-    hover
-    onDoubleClick={() => !isBayi && onEdit(atolye.id)}
-    sx={{ 
-      backgroundColor: getRowBackgroundColor(atolye.teslim_durumu),
-      cursor: !isBayi ? 'pointer' : 'default',
-      '&:hover': { backgroundColor: getRowBackgroundColor(atolye.teslim_durumu), filter: 'brightness(0.95)' }
-    }}
-  >
-    <TableCell sx={{ padding: '3px', fontSize: '1rem', fontWeight: 'bold', textAlign: 'center' }}>{atolye.id}</TableCell>
-    <TableCell sx={{ padding: '3px' }}>
-      <Chip label={getStatusLabel(atolye.teslim_durumu)} color={getStatusColor(atolye.teslim_durumu)} size="small"
-        sx={{ fontSize: '0.65rem', height: '20px', ...(atolye.teslim_durumu === 'siparis_verildi' && { backgroundColor: '#9c27b0', color: 'white' }) }} />
-    </TableCell>
-    <TableCell sx={{ padding: '3px', fontSize: '0.75rem' }}>{formatDate(atolye.kayit_tarihi || atolye.created_at)}</TableCell>
-    <TableCell sx={{ padding: '3px', fontSize: '0.75rem', textTransform: 'uppercase' }}>{atolye.bayi_adi}</TableCell>
-    <TableCell sx={{ padding: '3px', fontSize: '0.75rem', textTransform: 'uppercase' }}>{atolye.musteri_ad_soyad}</TableCell>
-    <TableCell sx={{ padding: '3px', fontSize: '0.75rem' }}>{formatPhoneNumber(atolye.tel_no)}</TableCell>
-    <TableCell sx={{ padding: '3px', fontSize: '0.75rem', textTransform: 'uppercase' }}>{atolye.marka}</TableCell>
-    <TableCell sx={{ padding: '3px', fontSize: '0.75rem', textTransform: 'uppercase' }}>{atolye.kod || '-'}</TableCell>
-    <TableCell sx={{ padding: '3px', fontSize: '0.75rem', textTransform: 'uppercase' }}>{atolye.seri_no || '-'}</TableCell>
-    <TableCell sx={{ padding: '3px', fontSize: '0.75rem', maxWidth: '120px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textTransform: 'uppercase' }}>
-      <Tooltip title={atolye.sikayet || ''} placement="top" arrow enterDelay={500}><span>{atolye.sikayet}</span></Tooltip>
-    </TableCell>
-    <TableCell sx={{ padding: '3px', fontSize: '0.75rem', maxWidth: '100px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textTransform: 'uppercase' }}>
-      <Tooltip title={atolye.ozel_not || '-'} placement="top" arrow enterDelay={500}><span>{atolye.ozel_not || '-'}</span></Tooltip>
-    </TableCell>
-    <TableCell sx={{ padding: '3px', fontSize: '0.75rem', maxWidth: '120px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textTransform: 'uppercase' }}>
-      <Tooltip title={atolye.yapilan_islem || '-'} placement="top" arrow enterDelay={500}><span>{atolye.yapilan_islem || '-'}</span></Tooltip>
-    </TableCell>
-    <TableCell sx={{ padding: '3px', fontSize: '0.75rem', maxWidth: '80px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textTransform: 'uppercase' }}>
-      <Tooltip title={atolye.note_no || '-'} placement="top" arrow enterDelay={500}><span>{atolye.note_no || '-'}</span></Tooltip>
-    </TableCell>
-    <TableCell sx={{ padding: '3px', fontSize: '0.75rem' }}>{atolye.ucret ? `${atolye.ucret} ₺` : '-'}</TableCell>
-    <TableCell sx={{ padding: '3px', fontSize: '0.75rem' }}>{atolye.yapilma_tarihi ? formatDate(atolye.yapilma_tarihi) : '-'}</TableCell>
-    {!isBayi && (
-      <TableCell sx={{ padding: '3px' }}>
-        <IconButton size="small" onClick={() => onEdit(atolye.id)} sx={{ mr: 0.5, padding: '3px' }}><Edit fontSize="small" sx={{ fontSize: '1rem' }} /></IconButton>
-        {isAdmin && <IconButton size="small" onClick={() => onDelete(atolye.id)} color="error" sx={{ padding: '3px' }}><Delete fontSize="small" sx={{ fontSize: '1rem' }} /></IconButton>}
-      </TableCell>
-    )}
-  </TableRow>
-));
-AtolyeTableRow.displayName = 'AtolyeTableRow';
-
-// Status counts type
 interface StatusCounts {
-  total: number; beklemede: number; teslim_edildi: number; siparis_verildi: number; yapildi: number; fabrika_gitti: number; odeme_bekliyor: number;
+  total: number;
+  beklemede: number;
+  teslim_edildi: number;
+  siparis_verildi: number;
+  yapildi: number;
+  fabrika_gitti: number;
+  odeme_bekliyor: number;
 }
+
+const initialFilters: FilterState = {
+  sira: '', teslim_durumu: '', tarih: '', bayi_adi: '', musteri_ad_soyad: '', tel_no: '',
+  marka: '', kod: '', seri_no: '', sikayet: '', ozel_not: '', yapilan_islem: '', note_no: '', ucret: '', yapilma_tarihi: '',
+};
 
 const AtolyeTakip: React.FC = () => {
   const theme = useTheme();
@@ -130,39 +55,66 @@ const AtolyeTakip: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const { showSnackbar } = useSnackbar();
   const { user } = useAuth();
-  
+
   // Pagination
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(50);
-  
-  // Status counts
-  // @ts-ignore - Will be used for status badges later
-  const [statusCounts, setStatusCounts] = useState<StatusCounts>({ total: 0, beklemede: 0, teslim_edildi: 0, siparis_verildi: 0, yapildi: 0, fabrika_gitti: 0, odeme_bekliyor: 0 });
-  
+
+  // Status counts (badge ekranlarda kullanılmak üzere — orijinaldeki @ts-ignore
+  // notu da korunmaya çalışıldı: setter kullanılır ama state state-of-truth
+  // olarak şu an UI'de gösterilmez).
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [_statusCounts, setStatusCounts] = useState<StatusCounts>({
+    total: 0, beklemede: 0, teslim_edildi: 0, siparis_verildi: 0, yapildi: 0, fabrika_gitti: 0, odeme_bekliyor: 0,
+  });
+
   const isBayi = user?.role === 'bayi';
   const isAdmin = user?.role === 'admin';
   const bayiIsim = user?.bayiIsim || '';
 
   // Filter states
-  const [filters, setFilters] = useState({
-    sira: '', teslim_durumu: '', tarih: '', bayi_adi: '', musteri_ad_soyad: '', tel_no: '',
-    marka: '', kod: '', seri_no: '', sikayet: '', ozel_not: '', yapilan_islem: '', note_no: '', ucret: '', yapilma_tarihi: '',
-  });
-
+  const [filters, setFilters] = useState<FilterState>(initialFilters);
   const debouncedFilters = useDebouncedValue(filters, 700);
-  const hasActiveFilters = useMemo(() => Object.values(filters).some(v => v !== '') || activeStatusFilter !== '', [filters, activeStatusFilter]);
+  const hasActiveFilters = useMemo(
+    () => Object.values(filters).some((v) => v !== '') || activeStatusFilter !== '',
+    [filters, activeStatusFilter]
+  );
 
   const fetchStatusCounts = useCallback(async () => {
     try {
       const data = await atolyeService.getStatusCounts();
       setStatusCounts({
-        total: parseInt(String(data.total)) || 0, beklemede: parseInt(String(data.beklemede)) || 0,
-        teslim_edildi: parseInt(String(data.teslim_edildi)) || 0, siparis_verildi: parseInt(String(data.siparis_verildi)) || 0,
-        yapildi: parseInt(String(data.yapildi)) || 0, fabrika_gitti: parseInt(String(data.fabrika_gitti)) || 0,
-        odeme_bekliyor: parseInt(String(data.odeme_bekliyor)) || 0
+        total: parseInt(String(data.total)) || 0,
+        beklemede: parseInt(String(data.beklemede)) || 0,
+        teslim_edildi: parseInt(String(data.teslim_edildi)) || 0,
+        siparis_verildi: parseInt(String(data.siparis_verildi)) || 0,
+        yapildi: parseInt(String(data.yapildi)) || 0,
+        fabrika_gitti: parseInt(String(data.fabrika_gitti)) || 0,
+        odeme_bekliyor: parseInt(String(data.odeme_bekliyor)) || 0,
       });
-    } catch (error) { console.error('Status counts alınamadı:', error); }
+    } catch (error) {
+      console.error('Status counts alınamadı:', error);
+    }
   }, []);
+
+  const fetchAtolyeList = useCallback(async () => {
+    setLoading(true);
+    try {
+      // HER ZAMAN tüm veriyi çek — filtreler client-side uygulanacak.
+      const allData = await atolyeService.getAll();
+      const sortedAllData = allData.sort((a: Atolye, b: Atolye) => b.id - a.id);
+      if (isBayi) {
+        const bayiData = sortedAllData.filter((item: Atolye) => item.bayi_adi === bayiIsim);
+        setAtolyeList(bayiData);
+      } else {
+        setAtolyeList(sortedAllData);
+      }
+    } catch (error) {
+      showSnackbar('Atölye kayıtları yüklenirken hata oluştu', 'error');
+    } finally {
+      setLoading(false);
+    }
+  }, [isBayi, bayiIsim, showSnackbar]);
 
   useEffect(() => {
     fetchAtolyeList();
@@ -170,10 +122,8 @@ const AtolyeTakip: React.FC = () => {
   }, [isBayi, bayiIsim]);
 
   // Socket.IO gerçek zamanlı güncellemeler ortak hook ile.
-  // Event isimleri, payload şekilleri, reconnection ayarları legacy ile aynı.
   const handleYeniAtolye = useCallback((atolye: Atolye) => {
     if (atolye && atolye.id) {
-      // Bayi ise sadece kendi kayıtlarını görüntülenen listeye ekle
       if (isBayi) {
         if (atolye.bayi_adi === bayiIsim) {
           setAtolyeList((prev) => [atolye, ...prev]);
@@ -208,26 +158,7 @@ const AtolyeTakip: React.FC = () => {
     onAtolyeSilindi: handleAtolyeSilindi,
   });
 
-  const fetchAtolyeList = useCallback(async () => {
-    setLoading(true);
-    try {
-      // HER ZAMAN tüm veriyi çek - filtreler client-side uygulanacak
-      const allData = await atolyeService.getAll();
-      const sortedAllData = allData.sort((a: Atolye, b: Atolye) => b.id - a.id);
-      if (isBayi) {
-        const bayiData = sortedAllData.filter((item: Atolye) => item.bayi_adi === bayiIsim);
-        setAtolyeList(bayiData);
-      } else {
-        setAtolyeList(sortedAllData);
-      }
-    } catch (error) {
-      showSnackbar('Atölye kayıtları yüklenirken hata oluştu', 'error');
-    } finally {
-      setLoading(false);
-    }
-  }, [isBayi, bayiIsim, showSnackbar]);
-
-  // useMemo ile filtrelemeyi optimize et - debounced filters kullan
+  // useMemo ile filtrelemeyi optimize et — debounced filters kullan
   const filteredList = useMemo(() => {
     let filtered = [...atolyeList];
 
@@ -241,7 +172,7 @@ const AtolyeTakip: React.FC = () => {
       filtered = filtered.filter((item) => item.teslim_durumu === debouncedFilters.teslim_durumu);
     }
 
-    // Filter by tarih (kayit_tarihi or created_at) - Ana sayfa mantığıyla
+    // Filter by tarih (kayit_tarihi or created_at) — Ana sayfa mantığıyla
     if (debouncedFilters.tarih) {
       filtered = filtered.filter((item) => {
         const dateValue = item.kayit_tarihi || item.created_at;
@@ -254,84 +185,72 @@ const AtolyeTakip: React.FC = () => {
       });
     }
 
-    // Filter by bayi_adi
     if (debouncedFilters.bayi_adi) {
       filtered = filtered.filter((item) =>
         item.bayi_adi?.toLocaleLowerCase('tr-TR').includes(debouncedFilters.bayi_adi.toLocaleLowerCase('tr-TR'))
       );
     }
 
-    // Filter by musteri_ad_soyad
     if (debouncedFilters.musteri_ad_soyad) {
       filtered = filtered.filter((item) =>
         item.musteri_ad_soyad?.toLocaleLowerCase('tr-TR').includes(debouncedFilters.musteri_ad_soyad.toLocaleLowerCase('tr-TR'))
       );
     }
 
-    // Filter by tel_no
     if (debouncedFilters.tel_no) {
       filtered = filtered.filter((item) =>
         item.tel_no?.includes(debouncedFilters.tel_no.replace(/\D/g, ''))
       );
     }
 
-    // Filter by marka
     if (debouncedFilters.marka) {
       filtered = filtered.filter((item) =>
         item.marka?.toLocaleLowerCase('tr-TR').includes(debouncedFilters.marka.toLocaleLowerCase('tr-TR'))
       );
     }
 
-    // Filter by kod
     if (debouncedFilters.kod) {
       filtered = filtered.filter((item) =>
         (item.kod || '').toLocaleLowerCase('tr-TR').includes(debouncedFilters.kod.toLocaleLowerCase('tr-TR'))
       );
     }
 
-    // Filter by seri_no
     if (debouncedFilters.seri_no) {
       filtered = filtered.filter((item) =>
         (item.seri_no || '').toLocaleLowerCase('tr-TR').includes(debouncedFilters.seri_no.toLocaleLowerCase('tr-TR'))
       );
     }
 
-    // Filter by sikayet
     if (debouncedFilters.sikayet) {
       filtered = filtered.filter((item) =>
         item.sikayet?.toLocaleLowerCase('tr-TR').includes(debouncedFilters.sikayet.toLocaleLowerCase('tr-TR'))
       );
     }
 
-    // Filter by ozel_not
     if (debouncedFilters.ozel_not) {
       filtered = filtered.filter((item) =>
         (item.ozel_not || '').toLocaleLowerCase('tr-TR').includes(debouncedFilters.ozel_not.toLocaleLowerCase('tr-TR'))
       );
     }
 
-    // Filter by yapilan_islem
     if (debouncedFilters.yapilan_islem) {
       filtered = filtered.filter((item) =>
         (item.yapilan_islem || '').toLocaleLowerCase('tr-TR').includes(debouncedFilters.yapilan_islem.toLocaleLowerCase('tr-TR'))
       );
     }
 
-    // Filter by note_no
     if (debouncedFilters.note_no) {
       filtered = filtered.filter((item) =>
         (item.note_no || '').toLocaleLowerCase('tr-TR').includes(debouncedFilters.note_no.toLocaleLowerCase('tr-TR'))
       );
     }
 
-    // Filter by ucret
     if (debouncedFilters.ucret) {
       filtered = filtered.filter((item) =>
         (item.ucret?.toString() || '').includes(debouncedFilters.ucret)
       );
     }
 
-    // Filter by yapilma_tarihi - Ana sayfa mantığıyla
     if (debouncedFilters.yapilma_tarihi) {
       filtered = filtered.filter((item) => {
         if (!item.yapilma_tarihi) return false;
@@ -343,12 +262,9 @@ const AtolyeTakip: React.FC = () => {
       });
     }
 
-    // Filter by sira (ID bazlı - kalıcı sıra numarası)
+    // Sıra numarası olarak ID kullanılıyor
     if (debouncedFilters.sira) {
-      filtered = filtered.filter((item) => {
-        // Sıra numarası olarak ID kullanılıyor
-        return item.id.toString().includes(debouncedFilters.sira);
-      });
+      filtered = filtered.filter((item) => item.id.toString().includes(debouncedFilters.sira));
     }
 
     return filtered;
@@ -361,7 +277,6 @@ const AtolyeTakip: React.FC = () => {
     return filteredList.slice(startIndex, endIndex);
   }, [filteredList, page, rowsPerPage]);
 
-  // Pagination handlers
   const handleChangePage = useCallback((_event: unknown, newPage: number) => {
     setPage(newPage);
   }, []);
@@ -400,7 +315,6 @@ const AtolyeTakip: React.FC = () => {
 
   const handleDelete = useCallback(async (id: number) => {
     if (!window.confirm('Bu kaydı silmek istediğinize emin misiniz?')) return;
-
     try {
       await atolyeService.delete(id);
       showSnackbar('Kayıt başarıyla silindi', 'success');
@@ -418,19 +332,13 @@ const AtolyeTakip: React.FC = () => {
     }
   }, [fetchAtolyeList]);
 
-  // Phase 13 cleanup: getStatusColor / getStatusLabel / getRowBackgroundColor /
-  // formatDate / formatPhoneNumber inner kopyaları kaldırıldı — bu dosyanın
-  // module-scope versiyonları (dosyanın üst kısmı) zaten birebir aynı
-  // implementasyona sahipti, inner kopyalar onları shadow ediyordu. Davranış
-  // değişmedi; sadece dead code silindi.
-
   // Her durum için kayıt sayısını hesapla
-  const getStatusCount = (status: string) => {
+  const getStatusCount = useCallback((status: string) => {
     if (status === 'all') {
       return atolyeList.length;
     }
-    return atolyeList.filter(item => item.teslim_durumu === status).length;
-  };
+    return atolyeList.filter((item) => item.teslim_durumu === status).length;
+  }, [atolyeList]);
 
   return (
     <Box sx={{ mt: 2 }}>
@@ -438,150 +346,11 @@ const AtolyeTakip: React.FC = () => {
         <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 2 }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
             <h2 style={{ margin: 0 }}>Atölye Takip</h2>
-            
-            {/* Status Filter Buttons */}
-            <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-              <Button
-                variant={activeStatusFilter === '' ? 'contained' : 'outlined'}
-                size="small"
-                onClick={() => setActiveStatusFilter('')}
-                sx={{
-                  backgroundColor: activeStatusFilter === '' ? '#0D3282' : 'transparent',
-                  color: activeStatusFilter === '' ? 'white' : '#0D3282',
-                  borderColor: '#0D3282',
-                  '&:hover': {
-                    backgroundColor: activeStatusFilter === '' ? '#0a2566' : 'rgba(13, 50, 130, 0.1)',
-                  },
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: 0.3,
-                  py: 0.5,
-                }}
-              >
-                <span>Tümü</span>
-                <span style={{ fontSize: '0.75rem', fontWeight: 'bold' }}>({getStatusCount('all')})</span>
-              </Button>
-              <Button
-                variant={activeStatusFilter === 'beklemede' ? 'contained' : 'outlined'}
-                size="small"
-                onClick={() => setActiveStatusFilter('beklemede')}
-                sx={{
-                  backgroundColor: activeStatusFilter === 'beklemede' ? '#ff9800' : 'transparent',
-                  color: activeStatusFilter === 'beklemede' ? 'white' : '#ff9800',
-                  borderColor: '#ff9800',
-                  '&:hover': {
-                    backgroundColor: activeStatusFilter === 'beklemede' ? '#f57c00' : 'rgba(255, 152, 0, 0.1)',
-                  },
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: 0.3,
-                  py: 0.5,
-                }}
-              >
-                <span>Beklemede</span>
-                <span style={{ fontSize: '0.75rem', fontWeight: 'bold' }}>({getStatusCount('beklemede')})</span>
-              </Button>
-              <Button
-                variant={activeStatusFilter === 'teslim_edildi' ? 'contained' : 'outlined'}
-                size="small"
-                onClick={() => setActiveStatusFilter('teslim_edildi')}
-                sx={{
-                  backgroundColor: activeStatusFilter === 'teslim_edildi' ? '#0288d1' : 'transparent',
-                  color: activeStatusFilter === 'teslim_edildi' ? 'white' : '#0288d1',
-                  borderColor: '#0288d1',
-                  '&:hover': {
-                    backgroundColor: activeStatusFilter === 'teslim_edildi' ? '#01579b' : 'rgba(2, 136, 209, 0.1)',
-                  },
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: 0.3,
-                  py: 0.5,
-                }}
-              >
-                <span>Teslim Edildi</span>
-                <span style={{ fontSize: '0.75rem', fontWeight: 'bold' }}>({getStatusCount('teslim_edildi')})</span>
-              </Button>
-              <Button
-                variant={activeStatusFilter === 'siparis_verildi' ? 'contained' : 'outlined'}
-                size="small"
-                onClick={() => setActiveStatusFilter('siparis_verildi')}
-                sx={{
-                  backgroundColor: activeStatusFilter === 'siparis_verildi' ? '#9c27b0' : 'transparent',
-                  color: activeStatusFilter === 'siparis_verildi' ? 'white' : '#9c27b0',
-                  borderColor: '#9c27b0',
-                  '&:hover': {
-                    backgroundColor: activeStatusFilter === 'siparis_verildi' ? '#7b1fa2' : 'rgba(156, 39, 176, 0.1)',
-                  },
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: 0.3,
-                  py: 0.5,
-                }}
-              >
-                <span>Sipariş Verildi</span>
-                <span style={{ fontSize: '0.75rem', fontWeight: 'bold' }}>({getStatusCount('siparis_verildi')})</span>
-              </Button>
-              <Button
-                variant={activeStatusFilter === 'yapildi' ? 'contained' : 'outlined'}
-                size="small"
-                onClick={() => setActiveStatusFilter('yapildi')}
-                sx={{
-                  backgroundColor: activeStatusFilter === 'yapildi' ? '#8bc34a' : 'transparent',
-                  color: activeStatusFilter === 'yapildi' ? 'white' : '#8bc34a',
-                  borderColor: '#8bc34a',
-                  '&:hover': {
-                    backgroundColor: activeStatusFilter === 'yapildi' ? '#689f38' : 'rgba(139, 195, 74, 0.1)',
-                  },
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: 0.3,
-                  py: 0.5,
-                }}
-              >
-                <span>Yapıldı</span>
-                <span style={{ fontSize: '0.75rem', fontWeight: 'bold' }}>({getStatusCount('yapildi')})</span>
-              </Button>
-              <Button
-                variant={activeStatusFilter === 'fabrika_gitti' ? 'contained' : 'outlined'}
-                size="small"
-                onClick={() => setActiveStatusFilter('fabrika_gitti')}
-                sx={{
-                  backgroundColor: activeStatusFilter === 'fabrika_gitti' ? '#9e9e9e' : 'transparent',
-                  color: activeStatusFilter === 'fabrika_gitti' ? 'white' : '#9e9e9e',
-                  borderColor: '#9e9e9e',
-                  '&:hover': {
-                    backgroundColor: activeStatusFilter === 'fabrika_gitti' ? '#757575' : 'rgba(158, 158, 158, 0.1)',
-                  },
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: 0.3,
-                  py: 0.5,
-                }}
-              >
-                <span>Fabrika Gitti</span>
-                <span style={{ fontSize: '0.75rem', fontWeight: 'bold' }}>({getStatusCount('fabrika_gitti')})</span>
-              </Button>
-              <Button
-                variant={activeStatusFilter === 'odeme_bekliyor' ? 'contained' : 'outlined'}
-                size="small"
-                onClick={() => setActiveStatusFilter('odeme_bekliyor')}
-                sx={{
-                  backgroundColor: activeStatusFilter === 'odeme_bekliyor' ? '#f44336' : 'transparent',
-                  color: activeStatusFilter === 'odeme_bekliyor' ? 'white' : '#f44336',
-                  borderColor: '#f44336',
-                  '&:hover': {
-                    backgroundColor: activeStatusFilter === 'odeme_bekliyor' ? '#d32f2f' : 'rgba(244, 67, 54, 0.1)',
-                  },
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: 0.3,
-                  py: 0.5,
-                }}
-              >
-                <span>Ödeme Bekliyor</span>
-                <span style={{ fontSize: '0.75rem', fontWeight: 'bold' }}>({getStatusCount('odeme_bekliyor')})</span>
-              </Button>
-            </Box>
+            <AtolyeStatusFilterBar
+              activeStatusFilter={activeStatusFilter}
+              onChange={setActiveStatusFilter}
+              getStatusCount={getStatusCount}
+            />
           </Box>
 
           {!isBayi && (
@@ -593,497 +362,34 @@ const AtolyeTakip: React.FC = () => {
             >
               Yeni Kayıt
             </Button>
-          )}  
+          )}
         </Box>
 
-        {/* Mobil görünüm - Card layout */}
         {isMobile ? (
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 2 }}>
-            {filteredList.map((atolye) => {
-              // Kalıcı sıra numarası olarak ID kullan
-              const siraNo = atolye.id;
-
-              return (
-                <Card 
-                  key={atolye.id} 
-                  elevation={2}
-                  onDoubleClick={() => !isBayi && handleEdit(atolye.id)}
-                  sx={{ cursor: !isBayi ? 'pointer' : 'default' }}
-                >
-                  <CardContent sx={{ pb: 1 }}>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-                      <Chip 
-                        label={`Sıra: ${siraNo}`} 
-                        size="small" 
-                        color="primary"
-                        sx={{ fontWeight: 700, fontSize: '0.875rem' }}
-                      />
-                      <Chip 
-                        label={
-                          atolye.teslim_durumu === 'beklemede' ? 'Beklemede' :
-                          atolye.teslim_durumu === 'teslim_edildi' ? 'Teslim Edildi' :
-                          atolye.teslim_durumu === 'siparis_verildi' ? 'Sipariş Verildi' :
-                          atolye.teslim_durumu === 'yapildi' ? 'Yapıldı' :
-                          atolye.teslim_durumu === 'fabrika_gitti' ? 'Fabrika Gitti' :
-                          atolye.teslim_durumu === 'odeme_bekliyor' ? 'Ödeme Bekliyor' : '-'
-                        }
-                        size="small"
-                        color={
-                          atolye.teslim_durumu === 'beklemede' ? 'warning' :
-                          atolye.teslim_durumu === 'teslim_edildi' ? 'info' :
-                          atolye.teslim_durumu === 'siparis_verildi' ? 'secondary' :
-                          atolye.teslim_durumu === 'yapildi' ? 'success' :
-                          atolye.teslim_durumu === 'fabrika_gitti' ? 'default' :
-                          atolye.teslim_durumu === 'odeme_bekliyor' ? 'error' : 'default'
-                        }
-                      />
-                    </Box>
-                    
-                    <Grid container spacing={0.5} sx={{ fontSize: '0.75rem' }}>
-                      <Grid item xs={6}>
-                        <Typography variant="caption" color="text.secondary">Tarih:</Typography>
-                        <Typography variant="body2" sx={{ fontSize: '0.75rem' }}>
-                          {formatDate(atolye.kayit_tarihi || atolye.created_at) || '-'}
-                        </Typography>
-                      </Grid>
-                      {!isBayi && atolye.bayi_adi && (
-                        <Grid item xs={6}>
-                          <Typography variant="caption" color="text.secondary">Bayi:</Typography>
-                          <Typography variant="body2" sx={{ fontSize: '0.75rem', textTransform: 'uppercase' }}>{atolye.bayi_adi}</Typography>
-                        </Grid>
-                      )}
-                      {atolye.musteri_ad_soyad && (
-                        <Grid item xs={12}>
-                          <Typography variant="caption" color="text.secondary">Müşteri:</Typography>
-                          <Typography variant="body2" sx={{ fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase' }}>
-                            {atolye.musteri_ad_soyad}
-                          </Typography>
-                        </Grid>
-                      )}
-                      {atolye.tel_no && (
-                        <Grid item xs={12}>
-                          <Typography variant="caption" color="text.secondary">Tel:</Typography>
-                          <Typography variant="body2" sx={{ fontSize: '0.75rem' }}>{atolye.tel_no}</Typography>
-                        </Grid>
-                      )}
-                      <Grid item xs={6}>
-                        <Typography variant="caption" color="text.secondary">Marka:</Typography>
-                        <Typography variant="body2" sx={{ fontSize: '0.75rem', textTransform: 'uppercase' }}>{atolye.marka || '-'}</Typography>
-                      </Grid>
-                      <Grid item xs={6}>
-                        <Typography variant="caption" color="text.secondary">Model:</Typography>
-                        <Typography variant="body2" sx={{ fontSize: '0.75rem', textTransform: 'uppercase' }}>{atolye.kod || '-'}</Typography>
-                      </Grid>
-                      {atolye.seri_no && (
-                        <Grid item xs={12}>
-                          <Typography variant="caption" color="text.secondary">Seri No:</Typography>
-                          <Typography variant="body2" sx={{ fontSize: '0.75rem', textTransform: 'uppercase' }}>{atolye.seri_no}</Typography>
-                        </Grid>
-                      )}
-                      <Grid item xs={12}>
-                        <Typography variant="caption" color="text.secondary">Şikayet:</Typography>
-                        <Typography variant="body2" sx={{ fontSize: '0.75rem', textTransform: 'uppercase' }}>{atolye.sikayet || '-'}</Typography>
-                      </Grid>
-                      {atolye.ozel_not && (
-                        <Grid item xs={12}>
-                          <Typography variant="caption" color="text.secondary">Özel Not:</Typography>
-                          <Typography variant="body2" sx={{ fontSize: '0.75rem', textTransform: 'uppercase' }}>{atolye.ozel_not}</Typography>
-                        </Grid>
-                      )}
-                      {atolye.yapilan_islem && (
-                        <Grid item xs={12}>
-                          <Typography variant="caption" color="text.secondary">Yapılan İşlem:</Typography>
-                          <Typography variant="body2" sx={{ fontSize: '0.75rem', textTransform: 'uppercase' }}>{atolye.yapilan_islem}</Typography>
-                        </Grid>
-                      )}
-                      {atolye.ucret && (
-                        <Grid item xs={6}>
-                          <Typography variant="caption" color="text.secondary">Ücret:</Typography>
-                          <Typography variant="body2" sx={{ fontSize: '0.75rem' }}>{atolye.ucret} ₺</Typography>
-                        </Grid>
-                      )}
-                      {atolye.yapilma_tarihi && (
-                        <Grid item xs={6}>
-                          <Typography variant="caption" color="text.secondary">Yapılma Tarihi:</Typography>
-                          <Typography variant="body2" sx={{ fontSize: '0.75rem' }}>
-                            {formatDate(atolye.yapilma_tarihi) || '-'}
-                          </Typography>
-                        </Grid>
-                      )}
-                    </Grid>
-                  </CardContent>
-                  
-                  <Divider />
-                  
-                  <CardActions sx={{ justifyContent: 'flex-end', py: 0.5 }}>
-                    {!isBayi && (
-                      <Tooltip title="Düzenle">
-                        <IconButton 
-                          size="small" 
-                          onClick={() => handleEdit(atolye.id)}
-                          sx={{ bgcolor: 'primary.light' }}
-                        >
-                          <Edit sx={{ fontSize: '1rem', color: 'white' }} />
-                        </IconButton>
-                      </Tooltip>
-                    )}
-                    {isAdmin && (
-                      <Tooltip title="Sil">
-                        <IconButton 
-                          size="small" 
-                          onClick={() => handleDelete(atolye.id)}
-                          sx={{ bgcolor: 'error.light' }}
-                        >
-                          <Delete sx={{ fontSize: '1rem', color: 'white' }} />
-                        </IconButton>
-                      </Tooltip>
-                    )}
-                  </CardActions>
-                </Card>
-              );
-            })}
-          </Box>
+          <AtolyeCardView
+            atolyeList={filteredList}
+            isBayi={isBayi}
+            isAdmin={isAdmin}
+            onEdit={handleEdit}
+            onDelete={handleDelete}
+          />
         ) : (
-          /* Masaüstü görünüm - Table layout */
-          <>
-          <TableContainer sx={{ maxHeight: 'calc(100vh - 250px)', overflow: 'auto' }}>
-            <Table size="small" stickyHeader sx={{ 
-              '& .MuiTableCell-root': { 
-                borderRight: '1px solid rgba(0, 0, 0, 1)',
-                borderBottom: '1px solid rgba(0, 0, 0, 1)'
-              }
-            }}>
-            <TableHead>
-              {/* Filter Row */}
-              <TableRow>
-                <TableCell sx={{ width: '40px', padding: '3px', position: 'sticky', top: 0, backgroundColor: '#f5f5f5', zIndex: 10 }}>
-                  <TextField
-                    size="small"
-                    placeholder="#"
-                    value={filters.sira}
-                    onChange={(e) => handleFilterChange('sira', e.target.value)}
-                    sx={{ 
-                      width: '100%', 
-                      backgroundColor: 'white',
-                      '& .MuiInputBase-input': { padding: '3px 4px', fontSize: '0.7rem' }
-                    }}
-                  />
-                </TableCell>
-                <TableCell sx={{ width: '100px', padding: '3px', position: 'sticky', top: 0, backgroundColor: '#f5f5f5', zIndex: 10 }}>
-                  <TextField
-                    select
-                    size="small"
-                    placeholder="Durum..."
-                    value={filters.teslim_durumu}
-                    onChange={(e) => handleFilterChange('teslim_durumu', e.target.value)}
-                    sx={{ 
-                      width: '100%', 
-                      backgroundColor: 'white',
-                      '& .MuiInputBase-input': { padding: '3px 6px', fontSize: '0.75rem' }
-                    }}
-                  >
-                    <MenuItem value="">Tümü</MenuItem>
-                    <MenuItem value="beklemede">Beklemede</MenuItem>
-                    <MenuItem value="siparis_verildi">Sipariş Verildi</MenuItem>
-                    <MenuItem value="yapildi">Yapıldı</MenuItem>
-                    <MenuItem value="fabrika_gitti">Fabrika Gitti</MenuItem>
-                    <MenuItem value="odeme_bekliyor">Ödeme Bekliyor</MenuItem>
-                    <MenuItem value="teslim_edildi">Teslim Edildi</MenuItem>
-                  </TextField>
-                </TableCell>
-                <TableCell sx={{ width: '85px', padding: '3px', position: 'sticky', top: 0, backgroundColor: '#f5f5f5', zIndex: 10 }}>
-                  <TextField
-                    size="small"
-                    placeholder="GG.AA.YYYY"
-                    value={filters.tarih}
-                    onChange={(e) => handleFilterChange('tarih', e.target.value)}
-                    sx={{ 
-                      width: '100%', 
-                      backgroundColor: 'white',
-                      '& .MuiInputBase-input': { padding: '3px 6px', fontSize: '0.75rem' }
-                    }}
-                  />
-                </TableCell>
-                <TableCell sx={{ width: '100px', padding: '3px', position: 'sticky', top: 0, backgroundColor: '#f5f5f5', zIndex: 10 }}>
-                  <TextField
-                    size="small"
-                    placeholder="Bayi..."
-                    value={filters.bayi_adi}
-                    onChange={(e) => handleFilterChange('bayi_adi', e.target.value)}
-                    sx={{ 
-                      width: '100%', 
-                      backgroundColor: 'white',
-                      '& .MuiInputBase-input': { padding: '3px 6px', fontSize: '0.75rem' }
-                    }}
-                  />
-                </TableCell>
-                <TableCell sx={{ width: '120px', padding: '3px', position: 'sticky', top: 0, backgroundColor: '#f5f5f5', zIndex: 10 }}>
-                  <TextField
-                    size="small"
-                    placeholder="Müşteri..."
-                    value={filters.musteri_ad_soyad}
-                    onChange={(e) => handleFilterChange('musteri_ad_soyad', e.target.value)}
-                    sx={{ 
-                      width: '100%', 
-                      backgroundColor: 'white',
-                      '& .MuiInputBase-input': { padding: '3px 6px', fontSize: '0.75rem' }
-                    }}
-                  />
-                </TableCell>
-                <TableCell sx={{ width: '100px', padding: '3px', position: 'sticky', top: 0, backgroundColor: '#f5f5f5', zIndex: 10 }}>
-                  <TextField
-                    size="small"
-                    placeholder="Telefon..."
-                    value={filters.tel_no}
-                    onChange={(e) => handleFilterChange('tel_no', e.target.value)}
-                    sx={{ 
-                      width: '100%', 
-                      backgroundColor: 'white',
-                      '& .MuiInputBase-input': { padding: '3px 6px', fontSize: '0.75rem' }
-                    }}
-                  />
-                </TableCell>
-                <TableCell sx={{ width: '85px', padding: '3px', position: 'sticky', top: 0, backgroundColor: '#f5f5f5', zIndex: 10 }}>
-                  <TextField
-                    size="small"
-                    placeholder="Marka..."
-                    value={filters.marka}
-                    onChange={(e) => handleFilterChange('marka', e.target.value)}
-                    sx={{ 
-                      width: '100%', 
-                      backgroundColor: 'white',
-                      '& .MuiInputBase-input': { padding: '3px 6px', fontSize: '0.75rem' }
-                    }}
-                  />
-                </TableCell>
-                <TableCell sx={{ width: '75px', padding: '3px', position: 'sticky', top: 0, backgroundColor: '#f5f5f5', zIndex: 10 }}>
-                  <TextField
-                    size="small"
-                    placeholder="Kod..."
-                    value={filters.kod}
-                    onChange={(e) => handleFilterChange('kod', e.target.value)}
-                    sx={{ 
-                      width: '100%', 
-                      backgroundColor: 'white',
-                      '& .MuiInputBase-input': { padding: '3px 6px', fontSize: '0.75rem' }
-                    }}
-                  />
-                </TableCell>
-                <TableCell sx={{ width: '75px', padding: '3px', position: 'sticky', top: 0, backgroundColor: '#f5f5f5', zIndex: 10 }}>
-                  <TextField
-                    size="small"
-                    placeholder="Seri..."
-                    value={filters.seri_no}
-                    onChange={(e) => handleFilterChange('seri_no', e.target.value)}
-                    sx={{ 
-                      width: '100%', 
-                      backgroundColor: 'white',
-                      '& .MuiInputBase-input': { padding: '3px 6px', fontSize: '0.75rem' }
-                    }}
-                  />
-                </TableCell>
-                <TableCell sx={{ width: '120px', padding: '3px', position: 'sticky', top: 0, backgroundColor: '#f5f5f5', zIndex: 10 }}>
-                  <TextField
-                    size="small"
-                    placeholder="Şikayet..."
-                    value={filters.sikayet}
-                    onChange={(e) => handleFilterChange('sikayet', e.target.value)}
-                    sx={{ 
-                      width: '100%', 
-                      backgroundColor: 'white',
-                      '& .MuiInputBase-input': { padding: '3px 6px', fontSize: '0.75rem' }
-                    }}
-                  />
-                </TableCell>
-                <TableCell sx={{ width: '100px', padding: '3px', position: 'sticky', top: 0, backgroundColor: '#f5f5f5', zIndex: 10 }}>
-                  <TextField
-                    size="small"
-                    placeholder="Not..."
-                    value={filters.ozel_not}
-                    onChange={(e) => handleFilterChange('ozel_not', e.target.value)}
-                    sx={{ 
-                      width: '100%', 
-                      backgroundColor: 'white',
-                      '& .MuiInputBase-input': { padding: '3px 6px', fontSize: '0.75rem' }
-                    }}
-                  />
-                </TableCell>
-                <TableCell sx={{ width: '120px', padding: '3px', position: 'sticky', top: 0, backgroundColor: '#f5f5f5', zIndex: 10 }}>
-                  <TextField
-                    size="small"
-                    placeholder="İşlem..."
-                    value={filters.yapilan_islem}
-                    onChange={(e) => handleFilterChange('yapilan_islem', e.target.value)}
-                    sx={{ 
-                      width: '100%', 
-                      backgroundColor: 'white',
-                      '& .MuiInputBase-input': { padding: '3px 6px', fontSize: '0.75rem' }
-                    }}
-                  />
-                </TableCell>
-                <TableCell sx={{ width: '80px', padding: '3px', position: 'sticky', top: 0, backgroundColor: '#f5f5f5', zIndex: 10 }}>
-                  <TextField
-                    size="small"
-                    placeholder="Note..."
-                    value={filters.note_no}
-                    onChange={(e) => handleFilterChange('note_no', e.target.value)}
-                    sx={{ 
-                      width: '100%', 
-                      backgroundColor: 'white',
-                      '& .MuiInputBase-input': { padding: '3px 6px', fontSize: '0.75rem' }
-                    }}
-                  />
-                </TableCell>
-                <TableCell sx={{ width: '70px', padding: '3px', position: 'sticky', top: 0, backgroundColor: '#f5f5f5', zIndex: 10 }}>
-                  <TextField
-                    size="small"
-                    placeholder="Ücret..."
-                    value={filters.ucret}
-                    onChange={(e) => handleFilterChange('ucret', e.target.value)}
-                    sx={{ 
-                      width: '100%', 
-                      backgroundColor: 'white',
-                      '& .MuiInputBase-input': { padding: '3px 6px', fontSize: '0.75rem' }
-                    }}
-                  />
-                </TableCell>
-                <TableCell sx={{ width: '85px', padding: '3px', position: 'sticky', top: 0, backgroundColor: '#f5f5f5', zIndex: 10 }}>
-                  <TextField
-                    size="small"
-                    placeholder="GG.AA.YYYY"
-                    value={filters.yapilma_tarihi}
-                    onChange={(e) => handleFilterChange('yapilma_tarihi', e.target.value)}
-                    sx={{ 
-                      width: '100%', 
-                      backgroundColor: 'white',
-                      '& .MuiInputBase-input': { padding: '3px 6px', fontSize: '0.75rem' }
-                    }}
-                  />
-                </TableCell>
-                {!isBayi && <TableCell sx={{ width: '80px', padding: '3px', position: 'sticky', top: 0, backgroundColor: '#f5f5f5', zIndex: 10 }}></TableCell>}
-              </TableRow>
-              {/* Header Row */}
-              <TableRow sx={{ backgroundColor: '#0D3282' }}>
-                <TableCell sx={{ color: 'white', fontWeight: 'bold', padding: '6px', fontSize: '0.875rem', position: 'sticky', top: 30, backgroundColor: '#0D3282', zIndex: 9, textAlign: 'center' }}>Sıra</TableCell>
-                <TableCell sx={{ color: 'white', fontWeight: 'bold', padding: '6px', fontSize: '0.75rem', position: 'sticky', top: 30, backgroundColor: '#0D3282', zIndex: 9 }}>Teslim Durumu</TableCell>
-                <TableCell sx={{ color: 'white', fontWeight: 'bold', padding: '6px', fontSize: '0.75rem', position: 'sticky', top: 30, backgroundColor: '#0D3282', zIndex: 9 }}>Tarih</TableCell>
-                <TableCell sx={{ color: 'white', fontWeight: 'bold', padding: '6px', fontSize: '0.75rem', position: 'sticky', top: 30, backgroundColor: '#0D3282', zIndex: 9 }}>Bayi Adı</TableCell>
-                <TableCell sx={{ color: 'white', fontWeight: 'bold', padding: '6px', fontSize: '0.75rem', position: 'sticky', top: 30, backgroundColor: '#0D3282', zIndex: 9 }}>Müşteri</TableCell>
-                <TableCell sx={{ color: 'white', fontWeight: 'bold', padding: '6px', fontSize: '0.75rem', position: 'sticky', top: 30, backgroundColor: '#0D3282', zIndex: 9 }}>Tel No</TableCell>
-                <TableCell sx={{ color: 'white', fontWeight: 'bold', padding: '6px', fontSize: '0.75rem', position: 'sticky', top: 30, backgroundColor: '#0D3282', zIndex: 9 }}>Marka</TableCell>
-                <TableCell sx={{ color: 'white', fontWeight: 'bold', padding: '6px', fontSize: '0.75rem', position: 'sticky', top: 30, backgroundColor: '#0D3282', zIndex: 9 }}>Model</TableCell>
-                <TableCell sx={{ color: 'white', fontWeight: 'bold', padding: '6px', fontSize: '0.75rem', position: 'sticky', top: 30, backgroundColor: '#0D3282', zIndex: 9 }}>Seri No</TableCell>
-                <TableCell sx={{ color: 'white', fontWeight: 'bold', padding: '6px', fontSize: '0.75rem', position: 'sticky', top: 30, backgroundColor: '#0D3282', zIndex: 9 }}>Şikayet</TableCell>
-                <TableCell sx={{ color: 'white', fontWeight: 'bold', padding: '6px', fontSize: '0.75rem', position: 'sticky', top: 30, backgroundColor: '#0D3282', zIndex: 9 }}>Özel Not</TableCell>
-                <TableCell sx={{ color: 'white', fontWeight: 'bold', padding: '6px', fontSize: '0.75rem', position: 'sticky', top: 30, backgroundColor: '#0D3282', zIndex: 9 }}>Yapılan İşlem</TableCell>
-                <TableCell sx={{ color: 'white', fontWeight: 'bold', padding: '6px', fontSize: '0.75rem', position: 'sticky', top: 30, backgroundColor: '#0D3282', zIndex: 9 }}>Note No</TableCell>
-                <TableCell sx={{ color: 'white', fontWeight: 'bold', padding: '6px', fontSize: '0.75rem', position: 'sticky', top: 30, backgroundColor: '#0D3282', zIndex: 9 }}>Ücret</TableCell>
-                <TableCell sx={{ color: 'white', fontWeight: 'bold', padding: '6px', fontSize: '0.75rem', position: 'sticky', top: 30, backgroundColor: '#0D3282', zIndex: 9 }}>Yapılma Tarihi</TableCell>
-                {!isBayi && <TableCell sx={{ color: 'white', fontWeight: 'bold', padding: '6px', fontSize: '0.75rem', position: 'sticky', top: 30, backgroundColor: '#0D3282', zIndex: 9 }}>İşlemler</TableCell>}
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {displayedList.map((atolye) => {
-                // Kalıcı sıra numarası olarak ID kullan - silme işlemlerinde kayma olmaz
-                const siraNo = atolye.id;
-                
-                return (
-                <TableRow 
-                  key={atolye.id} 
-                  hover
-                  onDoubleClick={() => !isBayi && handleEdit(atolye.id)}
-                  sx={{ 
-                    backgroundColor: getRowBackgroundColor(atolye.teslim_durumu),
-                    cursor: !isBayi ? 'pointer' : 'default',
-                    '&:hover': {
-                      backgroundColor: getRowBackgroundColor(atolye.teslim_durumu),
-                      filter: 'brightness(0.95)',
-                    }
-                  }}
-                >
-                  <TableCell sx={{ padding: '3px', fontSize: '1rem', fontWeight: 'bold', textAlign: 'center' }}>{siraNo}</TableCell>
-                  <TableCell sx={{ padding: '3px' }}>
-                    <Chip
-                      label={getStatusLabel(atolye.teslim_durumu)}
-                      color={getStatusColor(atolye.teslim_durumu)}
-                      size="small"
-                      sx={{ 
-                        fontSize: '0.65rem', 
-                        height: '20px',
-                        ...(atolye.teslim_durumu === 'siparis_verildi' && {
-                          backgroundColor: '#9c27b0',
-                          color: 'white'
-                        })
-                      }}
-                    />
-                  </TableCell>
-                  <TableCell sx={{ padding: '3px', fontSize: '0.75rem' }}>{formatDate(atolye.kayit_tarihi || atolye.created_at)}</TableCell>
-                  <TableCell sx={{ padding: '3px', fontSize: '0.75rem', textTransform: 'uppercase' }}>{atolye.bayi_adi}</TableCell>
-                  <TableCell sx={{ padding: '3px', fontSize: '0.75rem', textTransform: 'uppercase' }}>{atolye.musteri_ad_soyad}</TableCell>
-                  <TableCell sx={{ padding: '3px', fontSize: '0.75rem' }}>{formatPhoneNumber(atolye.tel_no)}</TableCell>
-                  <TableCell sx={{ padding: '3px', fontSize: '0.75rem', textTransform: 'uppercase' }}>{atolye.marka}</TableCell>
-                  <TableCell sx={{ padding: '3px', fontSize: '0.75rem', textTransform: 'uppercase' }}>{atolye.kod || '-'}</TableCell>
-                  <TableCell sx={{ padding: '3px', fontSize: '0.75rem', textTransform: 'uppercase' }}>{atolye.seri_no || '-'}</TableCell>
-                  <TableCell sx={{ padding: '3px', fontSize: '0.75rem', maxWidth: '120px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textTransform: 'uppercase' }}>
-                    <Tooltip title={atolye.sikayet} placement="top" arrow>
-                      <span>{atolye.sikayet}</span>
-                    </Tooltip>
-                  </TableCell>
-                  <TableCell sx={{ padding: '3px', fontSize: '0.75rem', maxWidth: '100px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textTransform: 'uppercase' }}>
-                    <Tooltip title={atolye.ozel_not || '-'} placement="top" arrow>
-                      <span>{atolye.ozel_not || '-'}</span>
-                    </Tooltip>
-                  </TableCell>
-                  <TableCell sx={{ padding: '3px', fontSize: '0.75rem', maxWidth: '120px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textTransform: 'uppercase' }}>
-                    <Tooltip title={atolye.yapilan_islem || '-'} placement="top" arrow>
-                      <span>{atolye.yapilan_islem || '-'}</span>
-                    </Tooltip>
-                  </TableCell>
-                  <TableCell sx={{ padding: '3px', fontSize: '0.75rem', maxWidth: '80px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textTransform: 'uppercase' }}>
-                    <Tooltip title={atolye.note_no || '-'} placement="top" arrow>
-                      <span>{atolye.note_no || '-'}</span>
-                    </Tooltip>
-                  </TableCell>
-                  <TableCell sx={{ padding: '3px', fontSize: '0.75rem' }}>{atolye.ucret ? `${atolye.ucret} ₺` : '-'}</TableCell>
-                  <TableCell sx={{ padding: '3px', fontSize: '0.75rem' }}>{atolye.yapilma_tarihi ? formatDate(atolye.yapilma_tarihi) : '-'}</TableCell>
-                  {!isBayi && (
-                    <TableCell sx={{ padding: '3px' }}>
-                      <IconButton size="small" onClick={() => handleEdit(atolye.id)} sx={{ mr: 0.5, padding: '3px' }}>
-                        <Edit fontSize="small" sx={{ fontSize: '1rem' }} />
-                      </IconButton>
-                      {isAdmin && (
-                        <IconButton size="small" onClick={() => handleDelete(atolye.id)} color="error" sx={{ padding: '3px' }}>
-                          <Delete fontSize="small" sx={{ fontSize: '1rem' }} />
-                        </IconButton>
-                      )}
-                    </TableCell>
-                  )}
-                </TableRow>
-                );
-              })}
-              {displayedList.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={isBayi ? 14 : 15} align="center" sx={{ py: 3 }}>
-                    {loading ? <CircularProgress size={24} /> : (atolyeList.length === 0 ? 'Henüz kayıt bulunmamaktadır' : 'Filtreye uygun kayıt bulunamadı')}
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </TableContainer>
-        <TablePagination
-          component="div"
-          count={filteredList.length}
-          page={page}
-          onPageChange={handleChangePage}
-          rowsPerPage={rowsPerPage}
-          onRowsPerPageChange={handleChangeRowsPerPage}
-          rowsPerPageOptions={[25, 50, 100, 200]}
-          labelRowsPerPage="Sayfa başına:"
-          labelDisplayedRows={({ from, to, count }) => `${from}-${to} / ${count}`}
-          sx={{ borderTop: '1px solid #e0e0e0' }}
-        />
-        </>
+          <AtolyeTableView
+            displayedList={displayedList}
+            totalCount={filteredList.length}
+            atolyeList={atolyeList}
+            loading={loading}
+            isBayi={isBayi}
+            isAdmin={isAdmin}
+            filters={filters}
+            onFilterChange={handleFilterChange}
+            page={page}
+            rowsPerPage={rowsPerPage}
+            onChangePage={handleChangePage}
+            onChangeRowsPerPage={handleChangeRowsPerPage}
+            onEdit={handleEdit}
+            onDelete={handleDelete}
+          />
         )}
       </Paper>
 
