@@ -46,7 +46,8 @@ import {
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
 import { Islem } from '../../types';
 import PrintEditor from '../settings/PrintEditor';
-import { islemService, karalisteService } from '../../services/api';
+import { islemService } from '../../services/islem.service';
+import { karalisteService } from '../../services/karaliste.service';
 import { STORAGE_KEYS } from '../../constants/storageKeys';
 
 interface IslemTableProps {

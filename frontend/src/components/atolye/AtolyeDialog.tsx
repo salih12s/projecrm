@@ -13,7 +13,9 @@ import {
   useTheme,
 } from '@mui/material';
 import { Atolye, AtolyeCreateDto, AtolyeUpdateDto, Bayi, Marka } from '../../types';
-import { atolyeService, bayiService, markaService } from '../../services/api';
+import { atolyeService } from '../../services/atolye.service';
+import { bayiService } from '../../services/bayi.service';
+import { markaService } from '../../services/marka.service';
 import { useSnackbar } from '../../context/SnackbarContext';
 
 interface AtolyeDialogProps {

@@ -33,7 +33,8 @@ import {
   Engineering,
   People,
 } from '@mui/icons-material';
-import { adminService, sahaService } from '../../services/api';
+import { adminService } from '../../services/admin.service';
+import { sahaService } from '../../services/saha.service';
 import { useSnackbar } from '../../context/SnackbarContext';
 import { SahaElemani, SahaKayit } from '../../types';
 

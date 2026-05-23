@@ -37,7 +37,7 @@ import {
   Today,
 } from '@mui/icons-material';
 import { useSnackbar } from '../../context/SnackbarContext';
-import { sahaService } from '../../services/api';
+import { sahaService } from '../../services/saha.service';
 import { SahaKayit } from '../../types';
 import { useAuth } from '../../context/AuthContext';
 import SahaKayitDialog from './SahaKayitDialog';

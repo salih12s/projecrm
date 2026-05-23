@@ -20,14 +20,12 @@ import {
 } from '@mui/material';
 import { Edit, Add, Delete } from '@mui/icons-material';
 import { Teknisyen, Marka, Bayi, Montaj, Aksesuar, Urun } from '../../types';
-import {
-  teknisyenService,
-  markaService,
-  bayiService,
-  urunService,
-  montajService,
-  aksesuarService,
-} from '../../services/api';
+import { teknisyenService } from '../../services/teknisyen.service';
+import { markaService } from '../../services/marka.service';
+import { bayiService } from '../../services/bayi.service';
+import { urunService } from '../../services/urun.service';
+import { montajService } from '../../services/montaj.service';
+import { aksesuarService } from '../../services/aksesuar.service';
 import { useSnackbar } from '../../context/SnackbarContext';
 import { useAuth } from '../../context/AuthContext';
 

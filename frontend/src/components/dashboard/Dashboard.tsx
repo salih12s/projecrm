@@ -43,7 +43,7 @@ import {
 } from '@mui/icons-material';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import { islemService } from '../../services/api';
+import { islemService } from '../../services/islem.service';
 import { Islem } from '../../types';
 import { useIslemSocket } from '../../hooks/useIslemSocket';
 import IslemTable from '../islem/IslemTable.tsx';

@@ -12,7 +12,7 @@ import {
   CircularProgress,
 } from '@mui/material';
 import { Close, PhotoCamera } from '@mui/icons-material';
-import { sahaService } from '../../services/api';
+import { sahaService } from '../../services/saha.service';
 import { SahaKayit, SahaKayitCreateDto } from '../../types';
 import { useSnackbar } from '../../context/SnackbarContext';
 

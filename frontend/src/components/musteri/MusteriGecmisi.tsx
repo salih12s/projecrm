@@ -16,7 +16,7 @@ import {
 } from '@mui/material';
 import { Search, PictureAsPdf } from '@mui/icons-material';
 import { Islem } from '../../types';
-import { islemService } from '../../services/api';
+import { islemService } from '../../services/islem.service';
 import { useSnackbar } from '../../context/SnackbarContext';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';

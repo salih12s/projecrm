@@ -45,7 +45,7 @@ import {
   PhotoCamera,
 } from '@mui/icons-material';
 import { useSnackbar } from '../../context/SnackbarContext';
-import { sahaService } from '../../services/api';
+import { sahaService } from '../../services/saha.service';
 import { SahaKayit, SahaElemani } from '../../types';
 
 // Lazy-loading thumbnail: yalnızca viewport'a girdiğinde ilk fotoğrafı backend'den çeker.
