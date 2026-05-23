@@ -1,12 +1,12 @@
 import express, { Request, Response } from 'express';
-import pool from '../db';
+import { query } from '../db';
 import authMiddleware from '../middleware/auth';
 
 const router = express.Router();
 
 // Tablo oluştur (uygulama başlatılırken çağrılacak)
 export const createKaralisteTable = async () => {
-  await pool.query(`
+  await query(`
     CREATE TABLE IF NOT EXISTS karaliste (
       id SERIAL PRIMARY KEY,
       ad_soyad VARCHAR(100) NOT NULL,
@@ -37,7 +37,7 @@ router.post('/', authMiddleware, async (req: Request, res: Response): Promise<vo
       return;
     }
 
-    const result = await pool.query(
+    const result = await query(
       `INSERT INTO karaliste (ad_soyad, cep_tel, yedek_tel, mahalle, cadde, sokak, kapi_no, sebep, created_by)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *`,
       [ad_soyad, cep_tel || null, yedek_tel || null, mahalle || null, cadde || null, sokak || null, kapi_no || null, sebep || null, created_by]
@@ -54,7 +54,7 @@ router.post('/', authMiddleware, async (req: Request, res: Response): Promise<vo
 router.delete('/:id', authMiddleware, async (req: Request, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
-    await pool.query('DELETE FROM karaliste WHERE id = $1', [id]);
+    await query('DELETE FROM karaliste WHERE id = $1', [id]);
     res.json({ message: 'Karalisteden silindi' });
   } catch (error) {
     console.error('Karalisteden silme hatası:', error);
@@ -72,7 +72,7 @@ router.get('/check-phone', authMiddleware, async (req: Request, res: Response): 
     }
     const cleanedPhone = (phone as string).replace(/\D/g, '');
 
-    const result = await pool.query(
+    const result = await query(
       `SELECT * FROM karaliste WHERE 
         REPLACE(REPLACE(REPLACE(REPLACE(cep_tel, ' ', ''), '-', ''), '(', ''), ')', '') LIKE $1
         OR REPLACE(REPLACE(REPLACE(REPLACE(yedek_tel, ' ', ''), '-', ''), '(', ''), ')', '') LIKE $1
@@ -126,7 +126,7 @@ router.get('/check-address', authMiddleware, async (req: Request, res: Response)
       paramIndex++;
     }
 
-    const result = await pool.query(
+    const result = await query(
       `SELECT * FROM karaliste ${whereClause} ORDER BY created_at DESC LIMIT 1`,
       params
     );
@@ -145,7 +145,7 @@ router.get('/check-address', authMiddleware, async (req: Request, res: Response)
 // Tüm karaliste kayıtlarını listele
 router.get('/', authMiddleware, async (_req: Request, res: Response): Promise<void> => {
   try {
-    const result = await pool.query('SELECT * FROM karaliste ORDER BY created_at DESC');
+    const result = await query('SELECT * FROM karaliste ORDER BY created_at DESC');
     res.json(result.rows);
   } catch (error) {
     console.error('Karaliste listeleme hatası:', error);
