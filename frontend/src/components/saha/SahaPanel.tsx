@@ -131,7 +131,7 @@ const SahaPanel: React.FC = () => {
       setEditingKayit(kayit);
       if (photoCache[kayit.id]) {
         setDialogInitialPhotos(photoCache[kayit.id]);
-      } else if ((kayit as any).has_photos) {
+      } else if (kayit.has_photos) {
         try {
           const fotoData = await sahaService.getKayitPhotos(kayit.id);
           let fotolar: string[] = [];
@@ -362,8 +362,8 @@ const SahaPanel: React.FC = () => {
         /* Cards Grid */
         <Grid container spacing={2}>
           {kayitlar.map((kayit) => {
-            const hasPhotos = (kayit as any).has_photos;
-            const fotoPreview = (kayit as any).foto_preview;
+            const hasPhotos = kayit.has_photos;
+            const fotoPreview = kayit.foto_preview;
             
             const handleViewPhotos = async (e: React.MouseEvent) => {
               e.stopPropagation();

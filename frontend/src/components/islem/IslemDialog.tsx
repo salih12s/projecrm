@@ -1773,7 +1773,7 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
                       inputProps={{ 
                         'data-checkbox': 'montaj',
                         tabIndex: 0
-                      } as any}
+                      } as React.InputHTMLAttributes<HTMLInputElement>}
                       sx={{
                         color: '#0D3282',
                         '&.Mui-checked': { color: '#0D3282' },
@@ -1811,7 +1811,7 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
                       inputProps={{ 
                         'data-checkbox': 'ariza',
                         tabIndex: 0
-                      } as any}
+                      } as React.InputHTMLAttributes<HTMLInputElement>}
                       sx={{
                         color: '#0D3282',
                         '&.Mui-checked': { color: '#0D3282' },
@@ -1849,7 +1849,7 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
                       inputProps={{ 
                         'data-checkbox': 'diger',
                         tabIndex: 0
-                      } as any}
+                      } as React.InputHTMLAttributes<HTMLInputElement>}
                       sx={{
                         color: '#0D3282',
                         '&.Mui-checked': { color: '#0D3282' },

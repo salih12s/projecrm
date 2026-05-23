@@ -277,7 +277,7 @@ const IslemTable: React.FC<IslemTableProps> = ({
     event.stopPropagation(); // Satır tıklamasını engelle
     try {
       const newYazdirildi = !islem.yazdirildi;
-      await islemService.update(islem.id, { ...islem, yazdirildi: newYazdirildi } as any);
+      await islemService.update(islem.id, { ...islem, yazdirildi: newYazdirildi });
       // Socket.IO otomatik güncelleyecek, manuel güncellemeye gerek yok
     } catch (error) {
       console.error('Yazdırıldı durumu güncellenirken hata:', error);

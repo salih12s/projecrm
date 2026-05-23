@@ -480,7 +480,7 @@ const SahaKayitlari: React.FC = () => {
         /* Cards View */
         <Grid container spacing={2}>
           {kayitlar.map((kayit) => {
-            const hasPhotos = (kayit as any).has_photos;
+            const hasPhotos = kayit.has_photos;
             
             return (
             <Grid item xs={12} sm={6} md={4} lg={3} key={kayit.id}>
@@ -588,7 +588,7 @@ const SahaKayitlari: React.FC = () => {
             </TableHead>
             <TableBody>
               {kayitlar.map((kayit) => {
-                const hasPhotos = (kayit as any).has_photos;
+                const hasPhotos = kayit.has_photos;
                 
                 return (
                 <TableRow key={kayit.id} hover>

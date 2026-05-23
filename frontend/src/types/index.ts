@@ -87,6 +87,7 @@ export interface IslemUpdateDto {
   aksesuar?: string; // Aksesuar listesi (virgülle ayrılmış)
   atolye?: string; // Atölye ismi
   is_durumu: 'acik' | 'parca_bekliyor' | 'tamamlandi' | 'iptal';
+  yazdirildi?: boolean; // IslemTable yıldız toggle için opsiyonel flag
 }
 
 export interface FilterParams {
@@ -219,6 +220,9 @@ export interface SahaKayit {
   notlar?: string;
   created_at: string;
   updated_at: string;
+  // Liste endpoint'inden gelen optimize alanlar (detay endpoint'inde olmayabilir):
+  has_photos?: boolean;
+  foto_preview?: string;
 }
 
 export interface SahaKayitCreateDto {
