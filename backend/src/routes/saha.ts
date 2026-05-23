@@ -1,4 +1,4 @@
-import express, { Request, Response } from 'express';
+﻿import express, { Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import pool from '../db';
@@ -163,7 +163,7 @@ router.delete('/users/:id', authenticateToken, async (req: Request, res: Respons
 router.post('/kayit', authenticateToken, async (req: Request, res: Response): Promise<void> => {
   try {
     const { isim, soyisim, foto_data, notlar } = req.body;
-    const user = (req as any).user;
+    const user = req.user!;
 
     if (!isim || !soyisim) {
       res.status(400).json({ message: 'İsim ve soyisim zorunludur' });
@@ -191,7 +191,7 @@ router.post('/kayit', authenticateToken, async (req: Request, res: Response): Pr
 // Kendi Kayıtlarını Getir (Saha Elemanı) - paginated + search + today
 router.get('/kayitlar', authenticateToken, async (req: Request, res: Response): Promise<void> => {
   try {
-    const user = (req as any).user;
+    const user = req.user!;
     const { search, startDate, endDate, today, page, limit } = req.query;
 
     const pageNum = Math.max(1, parseInt(page as string) || 1);
@@ -285,7 +285,7 @@ router.get('/kayitlar', authenticateToken, async (req: Request, res: Response): 
 router.get('/kayit/:id', authenticateToken, async (req: Request, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
-    const user = (req as any).user;
+    const user = req.user!;
 
     const record = await pool.query(
       'SELECT * FROM saha_kayitlari WHERE id = $1 AND saha_elemani_id = $2',
@@ -309,7 +309,7 @@ router.put('/kayit/:id', authenticateToken, async (req: Request, res: Response):
   try {
     const { id } = req.params;
     const { isim, soyisim, foto_data, notlar } = req.body;
-    const user = (req as any).user;
+    const user = req.user!;
 
     const result = await pool.query(
       `UPDATE saha_kayitlari 
@@ -338,7 +338,7 @@ router.put('/kayit/:id', authenticateToken, async (req: Request, res: Response):
 router.delete('/kayit/:id', authenticateToken, async (req: Request, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
-    const user = (req as any).user;
+    const user = req.user!;
 
     await pool.query(
       'DELETE FROM saha_kayitlari WHERE id = $1 AND saha_elemani_id = $2',

@@ -12,6 +12,7 @@
  */
 
 import { AuthPayload } from './index';
+import type { Server as SocketIOServer } from 'socket.io';
 
 declare global {
   namespace Express {
@@ -23,28 +24,23 @@ declare global {
        */
       user?: AuthPayload;
     }
+
+    interface Application {
+      /**
+       * Typed overload for the global Socket.IO server attached via
+       * `app.set('io', io)` in `server.ts`. Lets routes call
+       * `req.app.get('io')` without `(req as any)` casts.
+       */
+      get(name: 'io'): SocketIOServer;
+    }
   }
 }
 
 /**
- * NOTE — `req.app.get('io')`:
- *
- * Express's `Application.get(name)` overload returns `any`. To tighten this
- * to a `socket.io` `Server` instance we would need to augment
- * `Express.Application` with an `get('io'): Server` overload AND import the
- * Socket.IO Server type at the type-only level. That import has side
- * effects on the d.ts graph (socket.io brings in @types/node etc.) and is
- * deliberately deferred to a later phase to keep this turn risk-free.
- *
- * Plan (not done this phase):
- *   import type { Server as SocketIOServer } from 'socket.io';
- *   declare global {
- *     namespace Express {
- *       interface Application {
- *         get(name: 'io'): SocketIOServer;
- *       }
- *     }
- *   }
+ * Historical note — `req.app.get('io')`:
+ * Earlier this file documented this overload as deferred. It is now active
+ * (see `Application.get('io')` above) so routes can broadcast events with
+ * full typing.
  */
 
 export {};

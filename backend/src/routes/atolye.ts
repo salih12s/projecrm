@@ -1,4 +1,4 @@
-import express, { Request, Response } from 'express';
+﻿import express, { Request, Response } from 'express';
 import pool from '../db';
 import auth from '../middleware/auth';
 import { Atolye, AtolyeCreateDto, AtolyeUpdateDto } from '../types';
@@ -129,7 +129,7 @@ router.get('/:id', auth, async (req: Request, res: Response) => {
 router.post('/', auth, async (req: Request, res: Response) => {
   try {
     const createDto: AtolyeCreateDto = req.body;
-    const username = (req as any).user?.username;
+    const username = req.user?.username;
 
     // Tarihi sadece YYYY-MM-DD formatında al (saat kısmını at)
     let kayitTarihi = null;
@@ -170,7 +170,7 @@ router.post('/', auth, async (req: Request, res: Response) => {
     invalidateCache();
 
     // Socket.IO ile tüm bağlı kullanıcılara bildir
-    const io = (req as any).app.get('io');
+    const io = req.app.get('io');
     if (io) {
       io.emit(SOCKET_EVENTS.YENI_ATOLYE, newRecord);
     }
@@ -279,7 +279,7 @@ router.put('/:id', auth, async (req: Request, res: Response) => {
     invalidateCache();
 
     // Socket.IO ile tüm bağlı kullanıcılara bildir
-    const io = (req as any).app.get('io');
+    const io = req.app.get('io');
     if (io) {
       io.emit(SOCKET_EVENTS.ATOLYE_GUNCELLENDI, updatedRecord);
     }
@@ -309,7 +309,7 @@ router.delete('/:id', auth, async (req: Request, res: Response) => {
     invalidateCache();
 
     // Socket.IO ile tüm bağlı kullanıcılara bildir
-    const io = (req as any).app.get('io');
+    const io = req.app.get('io');
     if (io) {
       io.emit(SOCKET_EVENTS.ATOLYE_SILINDI, parseInt(id));
     }
