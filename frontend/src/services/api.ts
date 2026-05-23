@@ -72,33 +72,10 @@ api.interceptors.response.use(
 
 export { api };
 
-// Re-export servisleri — mevcut import path'leri (`from '../services/api'`) bozulmasın diye.
-// Servis fonksiyonlarının gerçek implementasyonu ayrı dosyalarda:
-//   - ./auth.service.ts
-//   - ./islem.service.ts
-//   - ./admin.service.ts
-//   - ./saha.service.ts
-//   - ./karaliste.service.ts
-//   - ./marka.service.ts
-//   - ./teknisyen.service.ts
-//   - ./montaj.service.ts
-//   - ./aksesuar.service.ts
-//   - ./urun.service.ts
-//   - ./bayi.service.ts
-//   - ./location.service.ts
-//   - ./atolye.service.ts
-//   - ./printerSettings.service.ts
-export { authService } from './auth.service';
-export { islemService } from './islem.service';
-export { adminService } from './admin.service';
-export { sahaService } from './saha.service';
-export { karalisteService } from './karaliste.service';
-export { markaService } from './marka.service';
-export { teknisyenService } from './teknisyen.service';
-export { montajService } from './montaj.service';
-export { aksesuarService } from './aksesuar.service';
-export { urunService } from './urun.service';
-export { bayiService } from './bayi.service';
-export { locationService } from './location.service';
-export { atolyeService } from './atolye.service';
+// Re-export shim — sadece FROZEN dosya `components/settings/PrintEditor.tsx`
+// halen `from '../../services/api'` ile `printerSettingsService` import ettiği
+// için tutuluyor. Diğer 14 servisin re-export'u P1.B1'de tüketicilerin
+// modüllere taşınmasının ardından kaldırıldı.
+// PrintEditor unfreeze edildiğinde bu satır da silinmelidir; o noktada api.ts
+// salt axios konfigürasyonu olur.
 export { printerSettingsService } from './printerSettings.service';

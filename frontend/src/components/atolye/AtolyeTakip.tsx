@@ -27,7 +27,7 @@ import {
 } from '@mui/material';
 import { Edit, Delete, Add } from '@mui/icons-material';
 import { Atolye } from '../../types';
-import { atolyeService } from '../../services/api';
+import { atolyeService } from '../../services/atolye.service';
 import { useSnackbar } from '../../context/SnackbarContext';
 import { useAuth } from '../../context/AuthContext';
 import AtolyeDialog from './AtolyeDialog.tsx';

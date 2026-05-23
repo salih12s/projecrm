@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { User } from '../types';
-import { authService, sahaService } from '../services/api';
+import { authService } from '../services/auth.service';
+import { sahaService } from '../services/saha.service';
 
 interface AuthContextType {
   user: User | null;

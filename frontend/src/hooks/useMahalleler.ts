@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { locationService } from '../services/api';
+import { locationService } from '../services/location.service';
 import type { Mahalle } from '../services/location.service';
 
 export interface UseMahallelerOptions {

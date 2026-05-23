@@ -30,11 +30,9 @@ import {
   Tooltip,
 } from '@mui/material';
 import { Islem, IslemCreateDto, IslemUpdateDto } from '../../types';
-import {
-  islemService,
-  karalisteService,
-  locationService,
-} from '../../services/api';
+import { islemService } from '../../services/islem.service';
+import { karalisteService } from '../../services/karaliste.service';
+import { locationService } from '../../services/location.service';
 import { useSnackbar } from '../../context/SnackbarContext';
 import { useReferenceData } from '../../hooks/useReferenceData';
 

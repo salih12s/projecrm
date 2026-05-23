@@ -1,12 +1,10 @@
 import { useCallback, useEffect, useState } from 'react';
-import {
-  teknisyenService,
-  markaService,
-  montajService,
-  aksesuarService,
-  urunService,
-  locationService,
-} from '../services/api';
+import { teknisyenService } from '../services/teknisyen.service';
+import { markaService } from '../services/marka.service';
+import { montajService } from '../services/montaj.service';
+import { aksesuarService } from '../services/aksesuar.service';
+import { urunService } from '../services/urun.service';
+import { locationService } from '../services/location.service';
 import type { Teknisyen, Marka, Montaj, Aksesuar, Urun } from '../types';
 import type { Ilce } from '../services/location.service';
 
