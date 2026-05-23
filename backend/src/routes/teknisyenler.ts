@@ -1,5 +1,5 @@
-import express, { Request, Response } from 'express';
-import pool from '../db';
+﻿import express, { Request, Response } from 'express';
+import { query } from '../db';
 import authMiddleware from '../middleware/auth';
 
 const router = express.Router();
@@ -13,7 +13,7 @@ router.get('/', authMiddleware, async (_req: Request, res: Response): Promise<vo
       'ETag': `teknisyenler-${Date.now()}`, // Her 5 dakikada yeni ETag
     });
     
-    const result = await pool.query(
+    const result = await query(
       'SELECT * FROM teknisyenler ORDER BY isim ASC'
     );
     res.json(result.rows);
@@ -33,7 +33,7 @@ router.post('/', authMiddleware, async (req: Request, res: Response): Promise<vo
       return;
     }
 
-    const result = await pool.query(
+    const result = await query(
       'INSERT INTO teknisyenler (isim) VALUES ($1) RETURNING *',
       [isim.trim()]
     );
@@ -60,7 +60,7 @@ router.put('/:id', authMiddleware, async (req: Request, res: Response): Promise<
       return;
     }
 
-    const result = await pool.query(
+    const result = await query(
       'UPDATE teknisyenler SET isim = $1 WHERE id = $2 RETURNING *',
       [isim.trim(), id]
     );
@@ -86,7 +86,7 @@ router.delete('/:id', authMiddleware, async (req: Request, res: Response): Promi
   try {
     const { id } = req.params;
 
-    const result = await pool.query(
+    const result = await query(
       'DELETE FROM teknisyenler WHERE id = $1 RETURNING *',
       [id]
     );

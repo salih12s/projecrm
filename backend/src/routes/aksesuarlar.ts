@@ -1,5 +1,5 @@
-import express, { Request, Response } from 'express';
-import pool from '../db';
+﻿import express, { Request, Response } from 'express';
+import { query } from '../db';
 import auth from '../middleware/auth';
 import { Aksesuar } from '../types';
 
@@ -14,7 +14,7 @@ router.get('/', auth, async (_req: Request, res: Response) => {
       'ETag': `aksesuarlar-${Date.now()}`,
     });
     
-    const result = await pool.query<Aksesuar>(
+    const result = await query<Aksesuar>(
       'SELECT * FROM aksesuarlar ORDER BY isim ASC'
     );
     res.json(result.rows);
@@ -34,7 +34,7 @@ router.post('/', auth, async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    const result = await pool.query<Aksesuar>(
+    const result = await query<Aksesuar>(
       'INSERT INTO aksesuarlar (isim) VALUES ($1) RETURNING *',
       [isim.trim()]
     );
@@ -63,7 +63,7 @@ router.put('/:id', auth, async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    const result = await pool.query<Aksesuar>(
+    const result = await query<Aksesuar>(
       'UPDATE aksesuarlar SET isim = $1 WHERE id = $2 RETURNING *',
       [isim.trim(), id]
     );
@@ -91,7 +91,7 @@ router.delete('/:id', auth, async (req: Request, res: Response): Promise<void> =
   try {
     const { id } = req.params;
 
-    const result = await pool.query(
+    const result = await query(
       'DELETE FROM aksesuarlar WHERE id = $1 RETURNING *',
       [id]
     );

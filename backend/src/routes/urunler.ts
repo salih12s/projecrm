@@ -1,5 +1,5 @@
-import { Router } from 'express';
-import pool from '../db';
+﻿import { Router } from 'express';
+import { query } from '../db';
 import { Urun } from '../types';
 import authenticateToken from '../middleware/auth';
 
@@ -14,7 +14,7 @@ router.get('/', authenticateToken, async (_req, res) => {
       'ETag': `urunler-${Date.now()}`,
     });
     
-    const result = await pool.query<Urun>(
+    const result = await query<Urun>(
       'SELECT * FROM urunler ORDER BY isim ASC'
     );
     res.json(result.rows);
@@ -33,7 +33,7 @@ router.post('/', authenticateToken, async (req, res) => {
       return res.status(400).json({ error: 'Ürün ismi gerekli' });
     }
 
-    const result = await pool.query<Urun>(
+    const result = await query<Urun>(
       'INSERT INTO urunler (isim) VALUES ($1) RETURNING *',
       [isim]
     );
@@ -55,7 +55,7 @@ router.put('/:id', authenticateToken, async (req, res) => {
       return res.status(400).json({ error: 'Ürün ismi gerekli' });
     }
 
-    const result = await pool.query<Urun>(
+    const result = await query<Urun>(
       'UPDATE urunler SET isim = $1 WHERE id = $2 RETURNING *',
       [isim, id]
     );
@@ -76,7 +76,7 @@ router.delete('/:id', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
 
-    const result = await pool.query(
+    const result = await query(
       'DELETE FROM urunler WHERE id = $1 RETURNING *',
       [id]
     );
