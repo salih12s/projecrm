@@ -1,5 +1,5 @@
 ﻿import express, { Request, Response } from 'express';
-import pool from '../db';
+import { query } from '../db';
 import auth from '../middleware/auth';
 import { Atolye, AtolyeCreateDto, AtolyeUpdateDto } from '../types';
 import { SOCKET_EVENTS } from '../constants/socketEvents';
@@ -39,17 +39,17 @@ router.get('/', auth, async (req: Request, res: Response) => {
     const noPagination = req.query.all === 'true';
 
     if (noPagination) {
-      const result = await pool.query<Atolye>(
+      const result = await query<Atolye>(
         'SELECT * FROM atolye ORDER BY created_at DESC'
       );
       return res.json(result.rows);
     }
 
-    const countResult = await pool.query('SELECT COUNT(*) FROM atolye');
+    const countResult = await query('SELECT COUNT(*) FROM atolye');
     const totalCount = parseInt(countResult.rows[0].count);
     const totalPages = Math.ceil(totalCount / limit);
 
-    const result = await pool.query<Atolye>(
+    const result = await query<Atolye>(
       'SELECT * FROM atolye ORDER BY id DESC LIMIT $1 OFFSET $2',
       [limit, offset]
     );
@@ -70,7 +70,7 @@ router.get('/next-id', auth, async (_req: Request, res: Response) => {
     if (isCacheValid(cache.nextId)) {
       return res.json({ nextId: cache.nextId!.data });
     }
-    const result = await pool.query('SELECT COALESCE(MAX(id), 0) + 1 as next_id FROM atolye');
+    const result = await query('SELECT COALESCE(MAX(id), 0) + 1 as next_id FROM atolye');
     const nextId = result.rows[0].next_id;
     cache.nextId = { data: nextId, timestamp: Date.now() };
     return res.json({ nextId });
@@ -86,7 +86,7 @@ router.get('/status-counts', auth, async (_req: Request, res: Response) => {
     if (isCacheValid(cache.statusCounts)) {
       return res.json(cache.statusCounts!.data);
     }
-    const result = await pool.query(`
+    const result = await query(`
       SELECT 
         COUNT(*) as total,
         COUNT(*) FILTER (WHERE teslim_durumu = 'beklemede') as beklemede,
@@ -109,7 +109,7 @@ router.get('/status-counts', auth, async (_req: Request, res: Response) => {
 router.get('/:id', auth, async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const result = await pool.query<Atolye>(
+    const result = await query<Atolye>(
       'SELECT * FROM atolye WHERE id = $1',
       [id]
     );
@@ -141,7 +141,7 @@ router.post('/', auth, async (req: Request, res: Response) => {
     console.log('Frontend\'den gelen kayit_tarihi:', createDto.kayit_tarihi);
     console.log('Kullanılacak kayitTarihi (sadece tarih):', kayitTarihi);
 
-    const result = await pool.query<Atolye>(
+    const result = await query<Atolye>(
       `INSERT INTO atolye (
         bayi_adi, musteri_ad_soyad, tel_no, marka, kod, seri_no, sikayet, ozel_not, note_no, kayit_tarihi, created_by
       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) 
@@ -260,14 +260,14 @@ router.put('/:id', auth, async (req: Request, res: Response) => {
     updates.push(`updated_at = CURRENT_TIMESTAMP`);
     values.push(id);
 
-    const query = `
+    const sql = `
       UPDATE atolye 
       SET ${updates.join(', ')}
       WHERE id = $${paramCounter}
       RETURNING *
     `;
 
-    const result = await pool.query<Atolye>(query, values);
+    const result = await query<Atolye>(sql, values);
 
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Kayıt bulunamadı' });
@@ -296,7 +296,7 @@ router.delete('/:id', auth, async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
 
-    const result = await pool.query(
+    const result = await query(
       'DELETE FROM atolye WHERE id = $1 RETURNING *',
       [id]
     );

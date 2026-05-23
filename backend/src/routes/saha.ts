@@ -1,7 +1,7 @@
 ﻿import express, { Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import pool from '../db';
+import { query } from '../db';
 import authenticateToken from '../middleware/auth';
 
 const router = express.Router();
@@ -12,7 +12,7 @@ router.post('/login', async (req: Request, res: Response): Promise<void> => {
     const { username, password } = req.body;
 
     // Saha elemanını bul
-    const sahaElemani = await pool.query(
+    const sahaElemani = await query(
       'SELECT * FROM saha_elemanlari WHERE username = $1',
       [username]
     );
@@ -67,7 +67,7 @@ router.post('/create', authenticateToken, async (req: Request, res: Response): P
     const { username, password, ad_soyad } = req.body;
 
     // Kullanıcı var mı kontrol et
-    const userCheck = await pool.query(
+    const userCheck = await query(
       'SELECT * FROM saha_elemanlari WHERE username = $1',
       [username]
     );
@@ -81,7 +81,7 @@ router.post('/create', authenticateToken, async (req: Request, res: Response): P
     const hashedPassword = await bcrypt.hash(password, 10);
 
     // Saha elemanını kaydet
-    const newUser = await pool.query(
+    const newUser = await query(
       'INSERT INTO saha_elemanlari (username, password, ad_soyad, created_at, is_active) VALUES ($1, $2, $3, NOW(), TRUE) RETURNING id, username, ad_soyad, created_at, is_active',
       [username, hashedPassword, ad_soyad || null]
     );
@@ -99,7 +99,7 @@ router.post('/create', authenticateToken, async (req: Request, res: Response): P
 // Tüm Saha Elemanlarını Listele (Admin)
 router.get('/users', authenticateToken, async (_req: Request, res: Response): Promise<void> => {
   try {
-    const users = await pool.query(
+    const users = await query(
       `SELECT 
         se.id, 
         se.username, 
@@ -125,7 +125,7 @@ router.patch('/users/:id/toggle', authenticateToken, async (req: Request, res: R
   try {
     const { id } = req.params;
 
-    const result = await pool.query(
+    const result = await query(
       'UPDATE saha_elemanlari SET is_active = NOT is_active, updated_at = NOW() WHERE id = $1 RETURNING id, username, is_active',
       [id]
     );
@@ -150,7 +150,7 @@ router.delete('/users/:id', authenticateToken, async (req: Request, res: Respons
   try {
     const { id } = req.params;
 
-    await pool.query('DELETE FROM saha_elemanlari WHERE id = $1', [id]);
+    await query('DELETE FROM saha_elemanlari WHERE id = $1', [id]);
 
     res.json({ message: 'Saha elemanı başarıyla silindi' });
   } catch (error) {
@@ -170,7 +170,7 @@ router.post('/kayit', authenticateToken, async (req: Request, res: Response): Pr
       return;
     }
 
-    const newRecord = await pool.query(
+    const newRecord = await query(
       `INSERT INTO saha_kayitlari 
         (saha_elemani_id, saha_elemani_username, isim, soyisim, foto_data, notlar, created_at, updated_at) 
       VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW()) 
@@ -246,9 +246,9 @@ router.get('/kayitlar', authenticateToken, async (req: Request, res: Response): 
 
     // Paralel çalıştır: count + data + stats. Birini bekletmek diğerini bekletmesin.
     const [countResult, records, statsResult] = await Promise.all([
-      pool.query(countQuery, params),
-      pool.query(dataQuery, dataParams),
-      pool.query(
+      query(countQuery, params),
+      query(dataQuery, dataParams),
+      query(
         `SELECT
            COUNT(*)::int AS toplam,
            COUNT(*) FILTER (
@@ -287,7 +287,7 @@ router.get('/kayit/:id', authenticateToken, async (req: Request, res: Response):
     const { id } = req.params;
     const user = req.user!;
 
-    const record = await pool.query(
+    const record = await query(
       'SELECT * FROM saha_kayitlari WHERE id = $1 AND saha_elemani_id = $2',
       [id, user.id]
     );
@@ -311,7 +311,7 @@ router.put('/kayit/:id', authenticateToken, async (req: Request, res: Response):
     const { isim, soyisim, foto_data, notlar } = req.body;
     const user = req.user!;
 
-    const result = await pool.query(
+    const result = await query(
       `UPDATE saha_kayitlari 
        SET isim = $1, soyisim = $2, foto_data = $3, notlar = $4, updated_at = NOW()
        WHERE id = $5 AND saha_elemani_id = $6
@@ -340,7 +340,7 @@ router.delete('/kayit/:id', authenticateToken, async (req: Request, res: Respons
     const { id } = req.params;
     const user = req.user!;
 
-    await pool.query(
+    await query(
       'DELETE FROM saha_kayitlari WHERE id = $1 AND saha_elemani_id = $2',
       [id, user.id]
     );
@@ -356,7 +356,7 @@ router.delete('/kayit/:id', authenticateToken, async (req: Request, res: Respons
 router.get('/kayit-thumbnail/:id', authenticateToken, async (req: Request, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
-    const record = await pool.query(
+    const record = await query(
       'SELECT foto_data FROM saha_kayitlari WHERE id = $1',
       [id]
     );
@@ -389,7 +389,7 @@ router.get('/kayit-thumbnail/:id', authenticateToken, async (req: Request, res: 
 router.get('/kayit-photos/:id', authenticateToken, async (req: Request, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
-    const record = await pool.query(
+    const record = await query(
       'SELECT foto_data FROM saha_kayitlari WHERE id = $1',
       [id]
     );
@@ -419,7 +419,7 @@ router.get('/all-kayitlar', authenticateToken, async (req: Request, res: Respons
     // JOIN'siz COUNT çok daha hızlı çalışır.
     let countQuery = `SELECT COUNT(*) as total FROM saha_kayitlari sk WHERE 1=1`;
 
-    let query = `
+    let sql = `
       SELECT sk.id, sk.saha_elemani_id, sk.saha_elemani_username, sk.isim, sk.soyisim, 
              sk.notlar, sk.created_at, sk.updated_at,
              (sk.foto_data IS NOT NULL) as has_photos,
@@ -434,7 +434,7 @@ router.get('/all-kayitlar', authenticateToken, async (req: Request, res: Respons
     // Saha elemanı filtresi
     if (sahaElemaniId) {
       const filter = ` AND sk.saha_elemani_id = $${paramIndex}`;
-      query += filter;
+      sql += filter;
       countQuery += filter;
       params.push(sahaElemaniId);
       paramIndex++;
@@ -449,7 +449,7 @@ router.get('/all-kayitlar', authenticateToken, async (req: Request, res: Respons
         LOWER(sk.notlar) LIKE $${paramIndex} OR
         LOWER(CONCAT(sk.isim, ' ', sk.soyisim)) LIKE $${paramIndex}
       )`;
-      query += filter;
+      sql += filter;
       countQuery += filter;
       params.push(`%${searchLower}%`);
       paramIndex++;
@@ -458,7 +458,7 @@ router.get('/all-kayitlar', authenticateToken, async (req: Request, res: Respons
     // Tarih filtreleri
     if (startDate) {
       const filter = ` AND sk.created_at >= $${paramIndex}`;
-      query += filter;
+      sql += filter;
       countQuery += filter;
       params.push(startDate);
       paramIndex++;
@@ -466,7 +466,7 @@ router.get('/all-kayitlar', authenticateToken, async (req: Request, res: Respons
 
     if (endDate) {
       const filter = ` AND sk.created_at <= $${paramIndex}`;
-      query += filter;
+      sql += filter;
       countQuery += filter;
       params.push(endDate);
       paramIndex++;
@@ -475,19 +475,19 @@ router.get('/all-kayitlar', authenticateToken, async (req: Request, res: Respons
     // Bugün filtresi
     if (today === 'true' || today === '1') {
       const filter = ` AND sk.created_at >= CURRENT_DATE AND sk.created_at < CURRENT_DATE + INTERVAL '1 day'`;
-      query += filter;
+      sql += filter;
       countQuery += filter;
     }
 
-    query += ` ORDER BY sk.created_at DESC LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`;
+    sql += ` ORDER BY sk.created_at DESC LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`;
 
     const dataParams = [...params, limitNum, offset];
 
     // Paralel çalıştır: count + data + global stats
     const [countResult, records, statsResult] = await Promise.all([
-      pool.query(countQuery, params),
-      pool.query(query, dataParams),
-      pool.query(
+      query(countQuery, params),
+      query(sql, dataParams),
+      query(
         `SELECT
            COUNT(*)::int AS toplam,
            COUNT(*) FILTER (
@@ -523,7 +523,7 @@ router.get('/user-kayitlar/:username', authenticateToken, async (req: Request, r
   try {
     const { username } = req.params;
 
-    const records = await pool.query(
+    const records = await query(
       `SELECT id, saha_elemani_id, saha_elemani_username, isim, soyisim, notlar, created_at, updated_at,
               (foto_data IS NOT NULL) as has_photos
        FROM saha_kayitlari 
