@@ -27,7 +27,10 @@ export const createKaralisteTable = async () => {
 router.post('/', authMiddleware, async (req: Request, res: Response): Promise<void> => {
   try {
     const { ad_soyad, cep_tel, yedek_tel, mahalle, cadde, sokak, kapi_no, sebep } = req.body;
-    const created_by = (req as any).user?.username || 'system';
+    // Phase 13: (req as any).user cast'i kald\u0131r\u0131ld\u0131; Express.Request.user
+    // augmentation'\u0131 (backend/src/types/express.d.ts + middleware/auth.ts)
+    // sayesinde art\u0131k tip-safe \u015fekilde eri\u015fiyoruz. Runtime davran\u0131\u015f ayn\u0131.
+    const created_by = req.user?.username || 'system';
 
     if (!ad_soyad) {
       res.status(400).json({ message: 'Ad soyad zorunludur' });

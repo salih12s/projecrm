@@ -32,16 +32,9 @@ import { useSnackbar } from '../../context/SnackbarContext';
 import { useAuth } from '../../context/AuthContext';
 import AtolyeDialog from './AtolyeDialog.tsx';
 import { useAtolyeSocket } from '../../hooks/useAtolyeSocket';
-
-// Debounce hook
-function useDebounce<T>(value: T, delay: number): T {
-  const [debouncedValue, setDebouncedValue] = useState<T>(value);
-  useEffect(() => {
-    const handler = setTimeout(() => setDebouncedValue(value), delay);
-    return () => clearTimeout(handler);
-  }, [value, delay]);
-  return debouncedValue;
-}
+// Phase 13 cleanup: shared debounce hook yerine artık burada local kopya tutmuyoruz.
+// Aynı imza (value: T, delay: number) → T olduğu için davranış birebir aynı.
+import { useDebouncedValue } from '../../hooks/useDebouncedValue';
 
 // Static helper functions
 const getStatusColor = (status: string): "default" | "primary" | "secondary" | "error" | "info" | "success" | "warning" => {
@@ -187,7 +180,7 @@ const AtolyeTakip: React.FC = () => {
     marka: '', kod: '', seri_no: '', sikayet: '', ozel_not: '', yapilan_islem: '', note_no: '', ucret: '', yapilma_tarihi: '',
   });
 
-  const debouncedFilters = useDebounce(filters, 700);
+  const debouncedFilters = useDebouncedValue(filters, 700);
   const hasActiveFilters = useMemo(() => Object.values(filters).some(v => v !== '') || activeStatusFilter !== '', [filters, activeStatusFilter]);
 
   const fetchStatusCounts = useCallback(async () => {
@@ -456,87 +449,11 @@ const AtolyeTakip: React.FC = () => {
     }
   }, [fetchAtolyeList]);
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'teslim_edildi':
-        return 'info'; // Mavi
-      case 'beklemede':
-        return 'warning';
-      case 'siparis_verildi':
-        return 'secondary'; // Mor
-      case 'yapildi':
-        return 'success';
-      case 'fabrika_gitti':
-        return 'default';
-      case 'odeme_bekliyor':
-        return 'error';
-      default:
-        return 'default';
-    }
-  };
-
-  const getStatusLabel = (status: string) => {
-    switch (status) {
-      case 'teslim_edildi':
-        return 'Teslim Edildi';
-      case 'beklemede':
-        return 'Beklemede';
-      case 'siparis_verildi':
-        return 'Sipariş Verildi';
-      case 'yapildi':
-        return 'Yapıldı';
-      case 'fabrika_gitti':
-        return 'Fabrika Gitti';
-      case 'odeme_bekliyor':
-        return 'Ödeme Bekliyor';
-      default:
-        return status;
-    }
-  };
-
-  const getRowBackgroundColor = (status: string) => {
-    switch (status) {
-      case 'teslim_edildi':
-        return '#b3e5fc'; // Açık mavi
-      case 'beklemede':
-        return '#ffe0b2'; // Turuncu
-      case 'siparis_verildi':
-        return '#e1bee7'; // Mor
-      case 'yapildi':
-        return '#dcedc8'; // Yeşil
-      case 'fabrika_gitti':
-        return '#e0e0e0'; // Gri
-      case 'odeme_bekliyor':
-        return '#ffcdd2'; // Kırmızı
-      default:
-        return 'transparent';
-    }
-  };
-
-  const formatDate = (dateString: string | undefined | null): string => {
-    if (!dateString) return '';
-    try {
-      const date = new Date(dateString);
-      if (isNaN(date.getTime())) return ''; // Invalid date
-      return date.toLocaleDateString('tr-TR', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric',
-      });
-    } catch (error) {
-      console.error('Date formatting error:', error);
-      return '';
-    }
-  };
-
-  const formatPhoneNumber = (phone: string | null | undefined) => {
-    if (!phone) return '-';
-    const cleaned = phone.replace(/\D/g, '');
-    if (cleaned.length === 11) {
-      return `${cleaned.slice(0, 4)} ${cleaned.slice(4, 7)} ${cleaned.slice(7, 9)} ${cleaned.slice(9)}`;
-    }
-    return phone;
-  };
+  // Phase 13 cleanup: getStatusColor / getStatusLabel / getRowBackgroundColor /
+  // formatDate / formatPhoneNumber inner kopyaları kaldırıldı — bu dosyanın
+  // module-scope versiyonları (dosyanın üst kısmı) zaten birebir aynı
+  // implementasyona sahipti, inner kopyalar onları shadow ediyordu. Davranış
+  // değişmedi; sadece dead code silindi.
 
   // Her durum için kayıt sayısını hesapla
   const getStatusCount = (status: string) => {
