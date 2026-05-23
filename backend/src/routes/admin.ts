@@ -1,7 +1,7 @@
-import express, { Request, Response } from 'express';
+﻿import express, { Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import pool from '../db';
+import { query } from '../db';
 import authenticateToken from '../middleware/auth';
 
 const router = express.Router();
@@ -12,7 +12,7 @@ router.post('/login', async (req: Request, res: Response): Promise<void> => {
     const { username, password } = req.body;
 
     // Admin kullanıcısını bul
-    const admin = await pool.query(
+    const admin = await query(
       'SELECT * FROM admins WHERE username = $1',
       [username]
     );
@@ -58,7 +58,7 @@ router.post('/create-user', authenticateToken, async (req: Request, res: Respons
     const { username, password } = req.body;
 
     // Kullanıcı var mı kontrol et
-    const userCheck = await pool.query(
+    const userCheck = await query(
       'SELECT * FROM users WHERE username = $1',
       [username]
     );
@@ -72,7 +72,7 @@ router.post('/create-user', authenticateToken, async (req: Request, res: Respons
     const hashedPassword = await bcrypt.hash(password, 10);
 
     // Kullanıcıyı kaydet
-    const newUser = await pool.query(
+    const newUser = await query(
       'INSERT INTO users (username, password, created_at, is_active) VALUES ($1, $2, NOW(), TRUE) RETURNING id, username, created_at, is_active',
       [username, hashedPassword]
     );
@@ -90,7 +90,7 @@ router.post('/create-user', authenticateToken, async (req: Request, res: Respons
 // Tüm Kullanıcıları Listele
 router.get('/users', authenticateToken, async (_req: Request, res: Response): Promise<void> => {
   try {
-    const users = await pool.query(
+    const users = await query(
       `SELECT 
         u.id, 
         u.username, 
@@ -115,7 +115,7 @@ router.patch('/users/:id/toggle', authenticateToken, async (req: Request, res: R
   try {
     const { id } = req.params;
 
-    const result = await pool.query(
+    const result = await query(
       'UPDATE users SET is_active = NOT is_active WHERE id = $1 RETURNING id, username, is_active',
       [id]
     );
@@ -140,7 +140,7 @@ router.delete('/users/:id', authenticateToken, async (req: Request, res: Respons
   try {
     const { id } = req.params;
 
-    await pool.query('DELETE FROM users WHERE id = $1', [id]);
+    await query('DELETE FROM users WHERE id = $1', [id]);
 
     res.json({ message: 'Kullanıcı başarıyla silindi' });
   } catch (error) {
@@ -154,7 +154,7 @@ router.get('/user-records/:username', authenticateToken, async (req: Request, re
   try {
     const { username } = req.params;
 
-    const records = await pool.query(
+    const records = await query(
       `SELECT 
         id,
         full_tarih,
@@ -186,7 +186,7 @@ router.get('/user-atolye-records/:username', authenticateToken, async (req: Requ
   try {
     const { username } = req.params;
 
-    const records = await pool.query(
+    const records = await query(
       `SELECT 
         id,
         teslim_durumu,
@@ -224,10 +224,10 @@ router.get('/all-records', authenticateToken, async (req: Request, res: Response
     const limitNum = Math.min(500, Math.max(1, parseInt(req.query.limit as string) || 100));
     const offset = (pageNum - 1) * limitNum;
 
-    const countResult = await pool.query('SELECT COUNT(*) as total FROM islemler');
+    const countResult = await query('SELECT COUNT(*) as total FROM islemler');
     const total = parseInt(countResult.rows[0].total);
 
-    const records = await pool.query(
+    const records = await query(
       `SELECT * FROM islemler ORDER BY full_tarih DESC LIMIT $1 OFFSET $2`,
       [limitNum, offset]
     );

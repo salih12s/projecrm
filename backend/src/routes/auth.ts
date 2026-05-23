@@ -1,7 +1,7 @@
-import express, { Request, Response } from 'express';
+﻿import express, { Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import pool from '../db';
+import { query } from '../db';
 
 const router = express.Router();
 
@@ -11,7 +11,7 @@ router.post('/register', async (req: Request, res: Response): Promise<void> => {
     const { username, password } = req.body;
 
     // Kullanıcı var mı kontrol et
-    const userCheck = await pool.query(
+    const userCheck = await query(
       'SELECT * FROM users WHERE username = $1',
       [username]
     );
@@ -25,7 +25,7 @@ router.post('/register', async (req: Request, res: Response): Promise<void> => {
     const hashedPassword = await bcrypt.hash(password, 10);
 
     // Kullanıcıyı kaydet
-    const newUser = await pool.query(
+    const newUser = await query(
       'INSERT INTO users (username, password) VALUES ($1, $2) RETURNING id, username',
       [username, hashedPassword]
     );
@@ -46,7 +46,7 @@ router.post('/login', async (req: Request, res: Response): Promise<void> => {
     const { username, password } = req.body;
 
     // Kullanıcıyı bul
-    const user = await pool.query(
+    const user = await query(
       'SELECT * FROM users WHERE username = $1',
       [username]
     );
@@ -92,7 +92,7 @@ router.post('/bayi-login', async (req: Request, res: Response): Promise<void> =>
     const { username, password } = req.body;
 
     // Bayi'yi bul
-    const bayi = await pool.query(
+    const bayi = await query(
       'SELECT * FROM bayiler WHERE username = $1',
       [username]
     );
