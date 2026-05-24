@@ -7,7 +7,6 @@ import {
   Button,
   TextField,
   Grid,
-  Autocomplete,
   Alert,
   AlertTitle,
   Box,
@@ -30,6 +29,8 @@ import CustomerHistoryTable from './dialog/CustomerHistoryTable';
 import SikayetQuickSelect from './dialog/SikayetQuickSelect';
 import UrunAutocomplete from './dialog/UrunAutocomplete';
 import MarkaAutocomplete from './dialog/MarkaAutocomplete';
+import IlceAutocomplete from './dialog/IlceAutocomplete';
+import MahalleAutocomplete from './dialog/MahalleAutocomplete';
 
 // Formatlı telefonu temizle (sadece rakamlar)
 const cleanPhoneNumber = (phone: string): string => {
@@ -1120,173 +1121,25 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
               autoFocus
             />
           </Grid>
-          <Grid item xs={12} sm={6}>
-            <Autocomplete
-              size="small"
-              options={ilceler}
-              getOptionLabel={(option) => option.isim}
-              value={ilceler.find(i => i.isim === formData.ilce) || null}
-              inputValue={ilceInputValue}
-              filterOptions={(options, state) => {
-                // Eğer input boşsa tüm seçenekleri göster
-                if (!state.inputValue) return options;
-                // Eğer input varsa filtrele
-                const filtered = options.filter(option =>
-                  option.isim.toLocaleLowerCase('tr-TR').includes(state.inputValue.toLocaleLowerCase('tr-TR'))
-                );
-                // Eşleşme yoksa boş liste döndür (hiçbir şey gösterme)
-                return filtered;
-              }}
-              onChange={(_, newValue) => {
-                setFormData({ ...formData, ilce: newValue?.isim || '', mahalle: '' });
-                setSelectedIlceId(newValue?.ilce_id || null);
-                setIlceInputValue(newValue?.isim || '');
-              }}
-              onInputChange={(_, value, reason) => {
-                // Kullanıcı yazarken filtrelenen seçenekleri kontrol et
-                if (reason === 'input') {
-                  const filtered = ilceler.filter(ilce => 
-                    ilce.isim.toLocaleLowerCase('tr-TR').includes(value.toLocaleLowerCase('tr-TR'))
-                  );
-                  
-                  // Eğer eşleşme varsa ilk eşleşeni otomatik seç
-                  if (filtered.length === 1 && value.length > 0) {
-                    setFormData({ ...formData, ilce: filtered[0].isim, mahalle: '' });
-                    setSelectedIlceId(filtered[0].ilce_id);
-                    setIlceInputValue(filtered[0].isim); // Input'u tamamlanmış haliyle set et
-                  } else if (filtered.length > 1) {
-                    // Birden fazla eşleşme varsa input'u kullanıcının yazdığı ile güncel tut
-                    setIlceInputValue(value);
-                  } else if (filtered.length === 0) {
-                    // Eşleşme yoksa input'u değiştirme, son geçerli değer kalsın
-                    // Hiçbir şey yapma
-                  }
-                } else if (reason === 'reset') {
-                  setIlceInputValue(value);
-                }
-              }}
-              autoHighlight
-              selectOnFocus
-              clearOnBlur={false}
-              handleHomeEndKeys={false}
-              renderInput={(params) => (
-                <TextField 
-                  {...params}
-                  name="ilce"
-                  required 
-                  label="İlçe"
-                  onKeyDown={(e) => {
-                    if (e.key === 'Tab') {
-                      e.preventDefault(); // Default davranışı engelle
-                      // Eğer popup açıksa ve vurgulanan bir seçenek varsa onu seç
-                      const popup = document.querySelector('[role="listbox"]');
-                      if (popup) {
-                        const highlighted = popup.querySelector('[data-focus="true"]') as HTMLElement;
-                        if (highlighted) {
-                          const text = highlighted.textContent;
-                          const found = ilceler.find(i => i.isim === text);
-                          if (found) {
-                            setFormData({ ...formData, ilce: found.isim, mahalle: '' });
-                            setSelectedIlceId(found.ilce_id);
-                          }
-                        }
-                      }
-                      // Her durumda mahalle alanına geç
-                      setTimeout(() => {
-                        const mahalleInput = document.querySelector('input[name="mahalle"]') as HTMLInputElement;
-                        if (mahalleInput) {
-                          mahalleInput.focus();
-                        }
-                      }, 100);
-                    }
-                  }}
-                />
-              )}
-            />
-          </Grid>
-          <Grid item xs={12} sm={6}>
-            <Autocomplete
-              key={selectedIlceId || 'no-ilce'}
-              size="small"
-              options={mahalleler}
-              getOptionLabel={(option) => option.isim}
-              value={mahalleler.find(m => m.isim === formData.mahalle) || null}
-              inputValue={mahalleInputValue}
-              filterOptions={(options, state) => {
-                // Eğer input boşsa tüm seçenekleri göster
-                if (!state.inputValue) return options;
-                // Eğer input varsa filtrele
-                const filtered = options.filter(option =>
-                  option.isim.toLocaleLowerCase('tr-TR').includes(state.inputValue.toLocaleLowerCase('tr-TR'))
-                );
-                // Eşleşme yoksa boş liste döndür (hiçbir şey gösterme)
-                return filtered;
-              }}
-              onChange={(_, newValue) => {
-                setFormData({ ...formData, mahalle: newValue?.isim || '' });
-                setMahalleInputValue(newValue?.isim || '');
-              }}
-              onInputChange={(_, value, reason) => {
-                // Kullanıcı yazarken filtrelenen seçenekleri kontrol et
-                if (reason === 'input') {
-                  const filtered = mahalleler.filter(mahalle => 
-                    mahalle.isim.toLocaleLowerCase('tr-TR').includes(value.toLocaleLowerCase('tr-TR'))
-                  );
-                  
-                  // Eğer eşleşme varsa ilk eşleşeni otomatik seç
-                  if (filtered.length === 1 && value.length > 0) {
-                    setFormData({ ...formData, mahalle: filtered[0].isim });
-                    setMahalleInputValue(filtered[0].isim); // Input'u tamamlanmış haliyle set et
-                  } else if (filtered.length > 1) {
-                    // Birden fazla eşleşme varsa input'u kullanıcının yazdığı ile güncel tut
-                    setMahalleInputValue(value);
-                  } else if (filtered.length === 0) {
-                    // Eşleşme yoksa input'u değiştirme, son geçerli değer kalsın
-                    // Hiçbir şey yapma
-                  }
-                } else if (reason === 'reset') {
-                  setMahalleInputValue(value);
-                }
-              }}
-              autoHighlight
-              selectOnFocus
-              clearOnBlur={false}
-              handleHomeEndKeys={false}
-              disabled={!formData.ilce}
-              renderInput={(params) => (
-                <TextField 
-                  {...params}
-                  size="small"
-                  name="mahalle"
-                  label="Mahalle"
-                  onKeyDown={(e) => {
-                    if (e.key === 'Tab') {
-                      e.preventDefault(); // Default davranışı engelle
-                      // Eğer popup açıksa ve vurgulanan bir seçenek varsa onu seç
-                      const popup = document.querySelector('[role="listbox"]');
-                      if (popup) {
-                        const highlighted = popup.querySelector('[data-focus="true"]') as HTMLElement;
-                        if (highlighted) {
-                          const text = highlighted.textContent;
-                          const found = mahalleler.find(m => m.isim === text);
-                          if (found) {
-                            setFormData({ ...formData, mahalle: found.isim });
-                          }
-                        }
-                      }
-                      // Her durumda cadde alanına geç
-                      setTimeout(() => {
-                        const caddeInput = document.querySelector('input[name="cadde"]') as HTMLInputElement;
-                        if (caddeInput) {
-                          caddeInput.focus();
-                        }
-                      }, 100);
-                    }
-                  }}
-                />
-              )}
-            />
-          </Grid>
+          <IlceAutocomplete
+            ilceler={ilceler}
+            value={formData.ilce}
+            inputValue={ilceInputValue}
+            setInputValue={setIlceInputValue}
+            onChange={(isim, ilceId) => {
+              setFormData({ ...formData, ilce: isim, mahalle: '' });
+              setSelectedIlceId(ilceId);
+            }}
+          />
+          <MahalleAutocomplete
+            mahalleler={mahalleler}
+            selectedIlceId={selectedIlceId}
+            value={formData.mahalle}
+            inputValue={mahalleInputValue}
+            setInputValue={setMahalleInputValue}
+            onChange={(isim) => setFormData({ ...formData, mahalle: isim })}
+            disabled={!formData.ilce}
+          />
           <Grid item xs={12} sm={6}>
             <TextField
               fullWidth
