@@ -7,7 +7,6 @@ import {
   TextField,
   Button,
   Grid,
-  Autocomplete,
   useMediaQuery,
   useTheme,
 } from '@mui/material';
@@ -17,6 +16,8 @@ import { bayiService } from '../../services/bayi.service';
 import { markaService } from '../../services/marka.service';
 import { useSnackbar } from '../../context/SnackbarContext';
 import AtolyeEditOnlyFields from './dialog/AtolyeEditOnlyFields';
+import AtolyeBayiAutocomplete from './dialog/AtolyeBayiAutocomplete';
+import AtolyeMarkaAutocomplete from './dialog/AtolyeMarkaAutocomplete';
 
 interface AtolyeDialogProps {
   open: boolean;
@@ -314,73 +315,12 @@ const AtolyeDialog: React.FC<AtolyeDialogProps> = ({ open, onClose, atolyeId }) 
         <Grid container spacing={1.5} sx={{ mt: 0.5 }}>
           {/* Bayi Adı - Autocomplete */}
           <Grid item xs={12} md={6}>
-            <Autocomplete
-              options={bayiler.map((b) => b.isim)}
-              value={formData.bayi_adi || null}
+            <AtolyeBayiAutocomplete
+              bayiler={bayiler}
+              value={formData.bayi_adi || ''}
               inputValue={bayiInputValue}
-              filterOptions={(options, state) => {
-                if (!state.inputValue) return options;
-                return options.filter(option =>
-                  option.toLocaleLowerCase('tr-TR').includes(state.inputValue.toLocaleLowerCase('tr-TR'))
-                );
-              }}
-              onChange={(_, newValue) => {
-                handleChange('bayi_adi', newValue || '');
-                setBayiInputValue(newValue || '');
-              }}
-              onInputChange={(_, value, reason) => {
-                if (reason === 'input') {
-                  setBayiInputValue(value);
-                  const filtered = bayiler.filter(bayi => 
-                    bayi.isim.toLocaleLowerCase('tr-TR').includes(value.toLocaleLowerCase('tr-TR'))
-                  );
-                  
-                  if (filtered.length === 1 && value.length > 0) {
-                    handleChange('bayi_adi', filtered[0].isim);
-                    setBayiInputValue(filtered[0].isim);
-                  }
-                } else if (reason === 'reset') {
-                  setBayiInputValue(value);
-                } else if (reason === 'clear') {
-                  handleChange('bayi_adi', '');
-                  setBayiInputValue('');
-                }
-              }}
-              autoHighlight
-              selectOnFocus
-              clearOnBlur={false}
-              handleHomeEndKeys={false}
-              renderInput={(params) => (
-                <TextField 
-                  {...params}
-                  name="bayi_adi"
-                  label="Bayi Adı" 
-                  fullWidth 
-                  placeholder="Bayi ara ve seç..."
-                  onKeyDown={(e) => {
-                    if (e.key === 'Tab') {
-                      e.preventDefault();
-                      const popup = document.querySelector('[role="listbox"]');
-                      if (popup) {
-                        const highlighted = popup.querySelector('[data-focus="true"]') as HTMLElement;
-                        if (highlighted) {
-                          const text = highlighted.textContent;
-                          if (text && bayiler.some(b => b.isim === text)) {
-                            handleChange('bayi_adi', text);
-                            setBayiInputValue(text);
-                          }
-                        }
-                      }
-                      setTimeout(() => {
-                        const musteriInput = document.querySelector('input[name="musteri_ad_soyad"]') as HTMLInputElement;
-                        if (musteriInput) {
-                          musteriInput.focus();
-                        }
-                      }, 100);
-                    }
-                  }}
-                />
-              )}
+              setInputValue={setBayiInputValue}
+              onChange={(isim) => handleChange('bayi_adi', isim)}
             />
           </Grid>
 
@@ -408,77 +348,12 @@ const AtolyeDialog: React.FC<AtolyeDialogProps> = ({ open, onClose, atolyeId }) 
 
           {/* Marka */}
           <Grid item xs={12} md={6}>
-            <Autocomplete
-              options={markalar.map((m) => m.isim)}
-              value={formData.marka || null}
+            <AtolyeMarkaAutocomplete
+              markalar={markalar}
+              value={formData.marka || ''}
               inputValue={markaInputValue}
-              filterOptions={(options, state) => {
-                if (!state.inputValue) return options;
-                return options.filter(option =>
-                  option.toLocaleLowerCase('tr-TR').includes(state.inputValue.toLocaleLowerCase('tr-TR'))
-                );
-              }}
-              onChange={(_, newValue) => {
-                handleChange('marka', newValue || '');
-                setMarkaInputValue(newValue || '');
-              }}
-              onInputChange={(_, value, reason) => {
-                if (reason === 'input') {
-                  const filtered = markalar.filter(marka => 
-                    marka.isim.toLocaleLowerCase('tr-TR').includes(value.toLocaleLowerCase('tr-TR'))
-                  );
-                  
-                  // Eğer tek eşleşme varsa otomatik seç
-                  if (filtered.length === 1 && value.length > 0) {
-                    handleChange('marka', filtered[0].isim);
-                    setMarkaInputValue(filtered[0].isim); // Input'u tamamlanmış haliyle set et
-                  } else if (filtered.length > 1) {
-                    // Birden fazla eşleşme varsa input'u kullanıcının yazdığı ile güncel tut
-                    setMarkaInputValue(value);
-                  }
-                  // filtered.length === 0 durumunda hiçbir şey yapma
-                } else if (reason === 'reset') {
-                  setMarkaInputValue(value);
-                }
-              }}
-              autoHighlight
-              selectOnFocus
-              clearOnBlur={false}
-              handleHomeEndKeys={false}
-              renderInput={(params) => (
-                <TextField 
-                  {...params}
-                  name="marka"
-                  required
-                  label="Marka" 
-                  fullWidth 
-                  placeholder="Marka ara ve seç..."
-                  error={!formData.marka}
-                  helperText={!formData.marka ? 'Listeden bir marka seçmelisiniz' : ''}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Tab') {
-                      e.preventDefault();
-                      const popup = document.querySelector('[role="listbox"]');
-                      if (popup) {
-                        const highlighted = popup.querySelector('[data-focus="true"]') as HTMLElement;
-                        if (highlighted) {
-                          const text = highlighted.textContent;
-                          if (text && markalar.some(m => m.isim === text)) {
-                            handleChange('marka', text);
-                            setMarkaInputValue(text);
-                          }
-                        }
-                      }
-                      setTimeout(() => {
-                        const modelInput = document.querySelector('input[name="model"]') as HTMLInputElement;
-                        if (modelInput) {
-                          modelInput.focus();
-                        }
-                      }, 100);
-                    }
-                  }}
-                />
-              )}
+              setInputValue={setMarkaInputValue}
+              onChange={(isim) => handleChange('marka', isim)}
             />
           </Grid>
 
