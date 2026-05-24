@@ -7,15 +7,14 @@ dist/
 build/
 *.tsbuildinfo
 
-# Environment files
+# Environment files (secrets) — yalnızca *.example tracked
 .env
 .env.local
 .env.*.local
-# Not: backend/.env.production, frontend/.env.production şu an tracked.
-# Yeni ortam dosyaları repoya girmesin diye aşağıdaki kalıpları da ignore'a alıyoruz.
-# (Tracked olanlar için ayrı bir untrack adımı kullanıcı onayıyla yapılacak.)
 .env.development
 .env.production
+.env.staging
+.env.test
 
 # IDE
 .vscode/
