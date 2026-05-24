@@ -28,6 +28,7 @@ import KaralisteWarningDialog from './dialog/KaralisteWarningDialog';
 import TamamlaConfirmDialog from './dialog/TamamlaConfirmDialog';
 import CustomerHistoryTable from './dialog/CustomerHistoryTable';
 import SikayetQuickSelect from './dialog/SikayetQuickSelect';
+import UrunAutocomplete from './dialog/UrunAutocomplete';
 
 // Formatlı telefonu temizle (sadece rakamlar)
 const cleanPhoneNumber = (phone: string): string => {
@@ -1371,104 +1372,13 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
               placeholder="0544 448 88 88"
             />
           </Grid>
-          <Grid item xs={12} sm={6}>
-            <Autocomplete
-              size="small"
-              options={urunler.map(u => u.isim)}
-              value={formData.urun || null}
-              inputValue={urunInputValue}
-              filterOptions={(options, state) => {
-                // Eğer input boşsa tüm seçenekleri göster
-                if (!state.inputValue) return options;
-                // Eğer input varsa filtrele
-                const filtered = options.filter(option =>
-                  option.toLocaleLowerCase('tr-TR').includes(state.inputValue.toLocaleLowerCase('tr-TR'))
-                );
-                // Eşleşme yoksa boş liste döndür
-                return filtered;
-              }}
-              onChange={(_, newValue) => {
-                setFormData({ ...formData, urun: newValue || '' });
-                setUrunInputValue(newValue || '');
-              }}
-              onInputChange={(_, value, reason) => {
-                // Kullanıcı yazarken filtrelenen seçenekleri kontrol et
-                if (reason === 'input') {
-                  const filtered = urunler.filter(urun => 
-                    urun.isim.toLocaleLowerCase('tr-TR').includes(value.toLocaleLowerCase('tr-TR'))
-                  );
-                  
-                  // Eğer eşleşme varsa ilk eşleşeni otomatik seç
-                  if (filtered.length === 1 && value.length > 0) {
-                    setFormData({ ...formData, urun: filtered[0].isim });
-                    setUrunInputValue(filtered[0].isim); // Input'u tamamlanmış haliyle set et
-                  } else if (filtered.length > 1) {
-                    // Birden fazla eşleşme varsa input'u kullanıcının yazdığı ile güncel tut
-                    setUrunInputValue(value);
-                  } else if (filtered.length === 0) {
-                    // Eşleşme yoksa input'u değiştirme, son geçerli değer kalsın
-                  }
-                } else if (reason === 'reset') {
-                  setUrunInputValue(value);
-                }
-              }}
-              onClose={(_, reason) => {
-                if (reason === 'blur') {
-                  const popup = document.querySelector('[role="listbox"]');
-                  if (popup) {
-                    const highlighted = popup.querySelector('[data-focus="true"]');
-                    if (highlighted) {
-                      const text = highlighted.textContent;
-                      if (text && urunler.some(u => u.isim === text)) {
-                        setFormData({ ...formData, urun: text });
-                        setUrunInputValue(text);
-                      }
-                    }
-                  }
-                }
-              }}
-              autoHighlight
-              selectOnFocus
-              clearOnBlur={false}
-              handleHomeEndKeys={false}
-              renderInput={(params) => (
-                <TextField
-                  {...params}
-                  name="urun"
-                  fullWidth
-                  required
-                  size="small"
-                  label="Ürün"
-                  placeholder="Ürün ara ve seç..."
-                  error={!formData.urun}
-                  helperText={!formData.urun ? 'Listeden bir ürün seçmelisiniz' : ''}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Tab') {
-                      e.preventDefault(); // Default davranışı engelle
-                      // Eğer popup açıksa ve vurgulanan bir seçenek varsa onu seç
-                      const popup = document.querySelector('[role="listbox"]');
-                      if (popup) {
-                        const highlighted = popup.querySelector('[data-focus="true"]') as HTMLElement;
-                        if (highlighted) {
-                          const text = highlighted.textContent;
-                          if (text && urunler.some(u => u.isim === text)) {
-                            setFormData({ ...formData, urun: text });
-                          }
-                        }
-                      }
-                      // Her durumda marka alanına geç
-                      setTimeout(() => {
-                        const markaInput = document.querySelector('input[name="marka"]') as HTMLInputElement;
-                        if (markaInput) {
-                          markaInput.focus();
-                        }
-                      }, 100);
-                    }
-                  }}
-                />
-              )}
-            />
-          </Grid>
+          <UrunAutocomplete
+            urunler={urunler}
+            value={formData.urun}
+            inputValue={urunInputValue}
+            setInputValue={setUrunInputValue}
+            onChange={(val) => setFormData({ ...formData, urun: val })}
+          />
           <Grid item xs={12} sm={6}>
             <Autocomplete
               size="small"
