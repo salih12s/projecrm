@@ -7,10 +7,6 @@ import {
   Button,
   TextField,
   Grid,
-  Alert,
-  AlertTitle,
-  Box,
-  Typography,
   useMediaQuery,
   useTheme,
 } from '@mui/material';
@@ -25,12 +21,13 @@ import DuplicateRecordDialog from './dialog/DuplicateRecordDialog';
 import IslemHistoryViewDialog from './dialog/IslemHistoryViewDialog';
 import KaralisteWarningDialog from './dialog/KaralisteWarningDialog';
 import TamamlaConfirmDialog from './dialog/TamamlaConfirmDialog';
-import CustomerHistoryTable from './dialog/CustomerHistoryTable';
 import SikayetQuickSelect from './dialog/SikayetQuickSelect';
 import UrunAutocomplete from './dialog/UrunAutocomplete';
 import MarkaAutocomplete from './dialog/MarkaAutocomplete';
 import IlceAutocomplete from './dialog/IlceAutocomplete';
 import MahalleAutocomplete from './dialog/MahalleAutocomplete';
+import PhoneLookupRow from './dialog/PhoneLookupRow';
+import ExistingRecordAlert from './dialog/ExistingRecordAlert';
 
 // Formatlı telefonu temizle (sadece rakamlar)
 const cleanPhoneNumber = (phone: string): string => {
@@ -417,15 +414,6 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
       requestAnimationFrame(() => {
         try { input.setSelectionRange(cursorPos, cursorPos); } catch { /* noop */ }
       });
-    }
-  };
-
-  const handlePhoneNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    const cleaned = cleanPhoneNumber(value);
-    // Telefon numaraları için büyük harf dönüşümü YAPMA
-    if (cleaned.length <= 11) {
-      setPhoneNumber(cleaned);
     }
   };
 
@@ -1040,71 +1028,26 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
       <DialogContent sx={{ py: 0.5, px: 2, maxHeight: '80vh', overflowY: 'auto' }}>
         {/* Telefon Numarası Sorgusu (Sadece yeni kayıt için) */}
         {showPhoneQuery && !islem && (
-          <Box sx={{ mt: 1, mb: 1 }}>
-            <Alert severity="info" sx={{ mb: 1.5, py: 0.5 }}>
-              <AlertTitle sx={{ fontSize: '0.875rem', mb: 0.5 }}>Telefon Numarası Sorgusu</AlertTitle>
-              <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
-                Lütfen müşterinin cep telefon numarasını girin. Daha önce kayıt varsa bilgileri getireceğiz.
-              </Typography>
-            </Alert>
-            <Grid container spacing={1.5} alignItems="center">
-              <Grid item xs={12} sm={8}>
-                <TextField
-                  fullWidth
-                  autoFocus
-                  label="Cep Telefonu"
-                  value={formatPhoneNumber(phoneNumber)}
-                  onChange={handlePhoneNumberChange}
-                  placeholder="0544 448 88 88"
-                  helperText={`${phoneNumber.length}/11 hane`}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      e.preventDefault();
-                      handlePhoneSubmit();
-                    }
-                  }}
-                />
-              </Grid>
-              <Grid item xs={12} sm={4}>
-                <Button
-                  fullWidth
-                  variant="contained"
-                  onClick={handlePhoneSubmit}
-                  sx={{ height: 56 }}
-                >
-                  Devam Et
-                </Button>
-              </Grid>
-            </Grid>
-          </Box>
+          <PhoneLookupRow
+            phoneNumber={phoneNumber}
+            onPhoneNumberChange={(value) => {
+              const cleaned = cleanPhoneNumber(value);
+              if (cleaned.length <= 11) {
+                setPhoneNumber(cleaned);
+              }
+            }}
+            onSubmit={handlePhoneSubmit}
+          />
         )}
 
         {/* Uyarı Mesajı (Eski kayıt bulunduğunda) */}
         {showConfirmDialog && existingRecord && (
-          <Box sx={{ mt: 1 }}>
-            <Alert 
-              severity="warning" 
-              sx={{ mb: 1.5, py: 0.5 }}
-              action={
-                <Box sx={{ display: 'flex', gap: 0.5 }}>
-                  <Button color="inherit" size="small" onClick={handleUseExistingData}>
-                    Bilgileri Getir ve Yeni Kayıt Aç
-                  </Button>
-                </Box>
-              }
-            >
-              <AlertTitle sx={{ fontSize: '0.875rem', mb: 0.5 }}>Daha Önce Kayıt Bulundu!</AlertTitle>
-              <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
-                Bu telefon numarasıyla ({formatPhoneNumber(existingRecord.cep_tel)}) daha önce <strong>{existingRecord.ad_soyad}</strong> adına kayıt açılmış.
-              </Typography>
-            </Alert>
-
-            {/* Müşteri Geçmişi Tablosu - Direkt Görünür */}
-            <CustomerHistoryTable
-              customerHistory={customerHistory}
-              historyLoading={historyLoading}
-            />
-          </Box>
+          <ExistingRecordAlert
+            existingRecord={existingRecord}
+            customerHistory={customerHistory}
+            historyLoading={historyLoading}
+            onUseExistingData={handleUseExistingData}
+          />
         )}
 
         {/* Form Alanları (Form gösterildiyse) */}
