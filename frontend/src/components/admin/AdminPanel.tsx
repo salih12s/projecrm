@@ -14,7 +14,6 @@ import {
   Chip,
   Tooltip,
   Alert,
-  Collapse,
   Tabs,
   Tab,
 } from '@mui/material';
@@ -34,6 +33,9 @@ import { useSnackbar } from '../../context/SnackbarContext';
 import { SahaElemani, SahaKayit } from '../../types';
 import CreateUserDialog from './dialog/CreateUserDialog';
 import CreateSahaElemaniDialog from './dialog/CreateSahaElemaniDialog';
+import UserRecordsCollapse from './UserRecordsCollapse';
+import SahaUserRecordsCollapse from './SahaUserRecordsCollapse';
+import { UserRecord, AtolyeRecord } from './adminPanelTypes';
 
 interface User {
   id: number;
@@ -41,40 +43,6 @@ interface User {
   created_at: string;
   is_active: boolean;
   total_records: number;
-}
-
-interface UserRecord {
-  id: number;
-  full_tarih: string;
-  ad_soyad: string;
-  ilce: string;
-  mahalle: string;
-  cep_tel: string;
-  urun: string;
-  marka: string;
-  sikayet: string;
-  is_durumu: string;
-  created_by: string;
-  updated_at: string;
-}
-
-interface AtolyeRecord {
-  id: number;
-  teslim_durumu: string;
-  bayi_adi: string;
-  musteri_ad_soyad: string;
-  tel_no: string;
-  marka: string;
-  kod: string;
-  seri_no: string;
-  sikayet: string;
-  ozel_not: string;
-  yapilan_islem: string;
-  ucret: string;
-  yapilma_tarihi: string;
-  created_by: string;
-  created_at: string;
-  updated_at: string;
 }
 
 const AdminPanel: React.FC = () => {
@@ -369,174 +337,12 @@ const AdminPanel: React.FC = () => {
                 {/* Kullanıcı Kayıtları */}
                 <TableRow>
                   <TableCell colSpan={5} sx={{ p: 0 }}>
-                    <Collapse in={expandedUser === user.username} timeout="auto" unmountOnExit>
-                      <Box sx={{ bgcolor: '#f5f5f5', p: 2 }}>
-                        {/* İşlemler Tablosu */}
-                        <Typography variant="h6" gutterBottom sx={{ color: '#0D3282', display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-                          <PersonAdd sx={{ fontSize: '1.3rem' }} />
-                          {user.username} - Ana Sayfa Kayıtları ({userRecords[user.username]?.length || 0} adet)
-                        </Typography>
-                        {userRecords[user.username] && userRecords[user.username].length > 0 ? (
-                          <TableContainer component={Paper} sx={{ mt: 2, mb: 3, maxHeight: 400, overflow: 'auto', overflowX: 'auto' }}>
-                            <Table size="small" stickyHeader>
-                              <TableHead>
-                                <TableRow sx={{ bgcolor: '#e0e0e0' }}>
-                                  <TableCell sx={{ fontWeight: 600, bgcolor: '#0D3282', color: 'white' }}>Tarih</TableCell>
-                                  <TableCell sx={{ fontWeight: 600, bgcolor: '#0D3282', color: 'white' }}>Müşteri</TableCell>
-                                  <TableCell sx={{ fontWeight: 600, bgcolor: '#0D3282', color: 'white' }}>İlçe</TableCell>
-                                  <TableCell sx={{ fontWeight: 600, bgcolor: '#0D3282', color: 'white' }}>Mahalle</TableCell>
-                                  <TableCell sx={{ fontWeight: 600, bgcolor: '#0D3282', color: 'white' }}>Telefon</TableCell>
-                                  <TableCell sx={{ fontWeight: 600, bgcolor: '#0D3282', color: 'white' }}>Ürün</TableCell>
-                                  <TableCell sx={{ fontWeight: 600, bgcolor: '#0D3282', color: 'white' }}>Marka</TableCell>
-                                  <TableCell sx={{ fontWeight: 600, bgcolor: '#0D3282', color: 'white', minWidth: 200 }}>Şikayet</TableCell>
-                                  <TableCell sx={{ fontWeight: 600, bgcolor: '#0D3282', color: 'white' }}>Durum</TableCell>
-                                  <TableCell sx={{ fontWeight: 600, bgcolor: '#0D3282', color: 'white' }}>Son Güncelleme</TableCell>
-                                </TableRow>
-                              </TableHead>
-                              <TableBody>
-                                {userRecords[user.username].map((record) => (
-                                  <TableRow key={record.id} hover sx={{ '&:hover': { bgcolor: '#f0f7ff' } }}>
-                                    <TableCell sx={{ whiteSpace: 'nowrap', fontSize: '0.85rem' }}>
-                                      {new Date(record.full_tarih).toLocaleString('tr-TR', {
-                                        day: '2-digit',
-                                        month: '2-digit',
-                                        year: 'numeric',
-                                        hour: '2-digit',
-                                        minute: '2-digit'
-                                      })}
-                                    </TableCell>
-                                    <TableCell sx={{ fontWeight: 500, fontSize: '0.85rem' }}>{record.ad_soyad}</TableCell>
-                                    <TableCell sx={{ fontSize: '0.85rem' }}>{record.ilce}</TableCell>
-                                    <TableCell sx={{ fontSize: '0.85rem' }}>{record.mahalle}</TableCell>
-                                    <TableCell sx={{ fontSize: '0.85rem' }}>{record.cep_tel}</TableCell>
-                                    <TableCell sx={{ fontSize: '0.85rem' }}>{record.urun}</TableCell>
-                                    <TableCell sx={{ fontSize: '0.85rem' }}>{record.marka}</TableCell>
-                                    <TableCell sx={{ 
-                                      maxWidth: '300px', 
-                                      fontSize: '0.85rem',
-                                      whiteSpace: 'normal',
-                                      wordBreak: 'break-word'
-                                    }}>
-                                      {record.sikayet}
-                                    </TableCell>
-                                    <TableCell>
-                                      <Chip
-                                        label={record.is_durumu === 'acik' ? 'Açık' : 'Tamamlandı'}
-                                        color={record.is_durumu === 'acik' ? 'warning' : 'success'}
-                                        size="small"
-                                      />
-                                    </TableCell>
-                                    <TableCell sx={{ whiteSpace: 'nowrap', fontSize: '0.75rem', color: 'text.secondary' }}>
-                                      {new Date(record.updated_at).toLocaleString('tr-TR', {
-                                        day: '2-digit',
-                                        month: '2-digit',
-                                        year: 'numeric',
-                                        hour: '2-digit',
-                                        minute: '2-digit'
-                                      })}
-                                    </TableCell>
-                                  </TableRow>
-                                ))}
-                              </TableBody>
-                            </Table>
-                          </TableContainer>
-                        ) : (
-                          <Alert severity="info" sx={{ mb: 3 }}>Bu kullanıcının Ana Sayfa'da henüz kaydı yok.</Alert>
-                        )}
-
-                        {/* Atölye Kayıtları Tablosu */}
-                        <Typography variant="h6" gutterBottom sx={{ color: '#0D3282', display: 'flex', alignItems: 'center', gap: 1, mb: 2, mt: 3 }}>
-                          <PersonAdd sx={{ fontSize: '1.3rem' }} />
-                          {user.username} - Atölye Takip Kayıtları ({userAtolyeRecords[user.username]?.length || 0} adet)
-                        </Typography>
-                        {userAtolyeRecords[user.username] && userAtolyeRecords[user.username].length > 0 ? (
-                          <TableContainer component={Paper} sx={{ mt: 2, maxHeight: 400, overflow: 'auto', overflowX: 'auto' }}>
-                            <Table size="small" stickyHeader>
-                              <TableHead>
-                                <TableRow sx={{ bgcolor: '#e0e0e0' }}>
-                                  <TableCell sx={{ fontWeight: 600, bgcolor: '#1976d2', color: 'white' }}>Oluşturma</TableCell>
-                                  <TableCell sx={{ fontWeight: 600, bgcolor: '#1976d2', color: 'white' }}>Bayi</TableCell>
-                                  <TableCell sx={{ fontWeight: 600, bgcolor: '#1976d2', color: 'white' }}>Müşteri</TableCell>
-                                  <TableCell sx={{ fontWeight: 600, bgcolor: '#1976d2', color: 'white' }}>Telefon</TableCell>
-                                  <TableCell sx={{ fontWeight: 600, bgcolor: '#1976d2', color: 'white' }}>Marka</TableCell>
-                                  <TableCell sx={{ fontWeight: 600, bgcolor: '#1976d2', color: 'white' }}>Model</TableCell>
-                                  <TableCell sx={{ fontWeight: 600, bgcolor: '#1976d2', color: 'white' }}>Seri No</TableCell>
-                                  <TableCell sx={{ fontWeight: 600, bgcolor: '#1976d2', color: 'white', minWidth: 150 }}>Şikayet</TableCell>
-                                  <TableCell sx={{ fontWeight: 600, bgcolor: '#1976d2', color: 'white', minWidth: 150 }}>Yapılan İşlem</TableCell>
-                                  <TableCell sx={{ fontWeight: 600, bgcolor: '#1976d2', color: 'white' }}>Ücret</TableCell>
-                                  <TableCell sx={{ fontWeight: 600, bgcolor: '#1976d2', color: 'white' }}>Teslim Durumu</TableCell>
-                                  <TableCell sx={{ fontWeight: 600, bgcolor: '#1976d2', color: 'white' }}>Son Güncelleme</TableCell>
-                                </TableRow>
-                              </TableHead>
-                              <TableBody>
-                                {userAtolyeRecords[user.username].map((record) => (
-                                  <TableRow key={record.id} hover sx={{ '&:hover': { bgcolor: '#e3f2fd' } }}>
-                                    <TableCell sx={{ whiteSpace: 'nowrap', fontSize: '0.85rem' }}>
-                                      {new Date(record.created_at).toLocaleString('tr-TR', {
-                                        day: '2-digit',
-                                        month: '2-digit',
-                                        year: 'numeric',
-                                        hour: '2-digit',
-                                        minute: '2-digit'
-                                      })}
-                                    </TableCell>
-                                    <TableCell sx={{ fontSize: '0.85rem' }}>{record.bayi_adi}</TableCell>
-                                    <TableCell sx={{ fontWeight: 500, fontSize: '0.85rem' }}>{record.musteri_ad_soyad}</TableCell>
-                                    <TableCell sx={{ fontSize: '0.85rem' }}>{record.tel_no}</TableCell>
-                                    <TableCell sx={{ fontSize: '0.85rem' }}>{record.marka}</TableCell>
-                                    <TableCell sx={{ fontSize: '0.85rem' }}>{record.kod || '-'}</TableCell>
-                                    <TableCell sx={{ fontSize: '0.85rem' }}>{record.seri_no || '-'}</TableCell>
-                                    <TableCell sx={{ 
-                                      maxWidth: '200px', 
-                                      fontSize: '0.85rem',
-                                      whiteSpace: 'normal',
-                                      wordBreak: 'break-word'
-                                    }}>
-                                      {record.sikayet}
-                                    </TableCell>
-                                    <TableCell sx={{ 
-                                      maxWidth: '200px', 
-                                      fontSize: '0.85rem',
-                                      whiteSpace: 'normal',
-                                      wordBreak: 'break-word'
-                                    }}>
-                                      {record.yapilan_islem || '-'}
-                                    </TableCell>
-                                    <TableCell sx={{ fontSize: '0.85rem' }}>{record.ucret ? `${record.ucret} ₺` : '-'}</TableCell>
-                                    <TableCell>
-                                      <Chip
-                                        label={
-                                          record.teslim_durumu === 'beklemede' ? 'Beklemede' :
-                                          record.teslim_durumu === 'tamamlandi' ? 'Tamamlandı' :
-                                          record.teslim_durumu === 'teslim_edildi' ? 'Teslim Edildi' : 'Bilinmiyor'
-                                        }
-                                        color={
-                                          record.teslim_durumu === 'beklemede' ? 'warning' :
-                                          record.teslim_durumu === 'tamamlandi' ? 'info' :
-                                          record.teslim_durumu === 'teslim_edildi' ? 'success' : 'default'
-                                        }
-                                        size="small"
-                                      />
-                                    </TableCell>
-                                    <TableCell sx={{ whiteSpace: 'nowrap', fontSize: '0.75rem', color: 'text.secondary' }}>
-                                      {new Date(record.updated_at).toLocaleString('tr-TR', {
-                                        day: '2-digit',
-                                        month: '2-digit',
-                                        year: 'numeric',
-                                        hour: '2-digit',
-                                        minute: '2-digit'
-                                      })}
-                                    </TableCell>
-                                  </TableRow>
-                                ))}
-                              </TableBody>
-                            </Table>
-                          </TableContainer>
-                        ) : (
-                          <Alert severity="info">Bu kullanıcının Atölye Takip'te henüz kaydı yok.</Alert>
-                        )}
-                      </Box>
-                    </Collapse>
+                    <UserRecordsCollapse
+                      open={expandedUser === user.username}
+                      username={user.username}
+                      records={userRecords[user.username]}
+                      atolyeRecords={userAtolyeRecords[user.username]}
+                    />
                   </TableCell>
                 </TableRow>
               </React.Fragment>
@@ -650,74 +456,11 @@ const AdminPanel: React.FC = () => {
                       {/* Saha Elemanı Kayıtları */}
                       <TableRow>
                         <TableCell colSpan={6} sx={{ p: 0 }}>
-                          <Collapse in={expandedSahaUser === se.username} timeout="auto" unmountOnExit>
-                            <Box sx={{ bgcolor: '#e3f2fd', p: 2 }}>
-                              <Typography variant="h6" gutterBottom sx={{ color: '#1976d2', display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-                                <Engineering sx={{ fontSize: '1.3rem' }} />
-                                {se.ad_soyad || se.username} - Saha Kayıtları ({sahaUserRecords[se.username]?.length || 0} adet)
-                              </Typography>
-                              {sahaUserRecords[se.username] && sahaUserRecords[se.username].length > 0 ? (
-                                <TableContainer component={Paper} sx={{ maxHeight: 400, overflow: 'auto' }}>
-                                  <Table size="small" stickyHeader>
-                                    <TableHead>
-                                      <TableRow>
-                                        <TableCell sx={{ fontWeight: 600, bgcolor: '#1976d2', color: 'white' }}>Fotoğraf</TableCell>
-                                        <TableCell sx={{ fontWeight: 600, bgcolor: '#1976d2', color: 'white' }}>İsim</TableCell>
-                                        <TableCell sx={{ fontWeight: 600, bgcolor: '#1976d2', color: 'white' }}>Soyisim</TableCell>
-                                        <TableCell sx={{ fontWeight: 600, bgcolor: '#1976d2', color: 'white' }}>Notlar</TableCell>
-                                        <TableCell sx={{ fontWeight: 600, bgcolor: '#1976d2', color: 'white' }}>Tarih</TableCell>
-                                      </TableRow>
-                                    </TableHead>
-                                    <TableBody>
-                                      {sahaUserRecords[se.username].map((record) => (
-                                        <TableRow key={record.id} hover sx={{ '&:hover': { bgcolor: '#bbdefb' } }}>
-                                          <TableCell>
-                                            {record.foto_data ? (
-                                              <img 
-                                                src={record.foto_data} 
-                                                alt={`${record.isim} ${record.soyisim}`}
-                                                style={{ width: 50, height: 50, objectFit: 'cover', borderRadius: 4 }}
-                                              />
-                                            ) : (
-                                              <Box sx={{ 
-                                                width: 50, 
-                                                height: 50, 
-                                                bgcolor: '#f5f5f5', 
-                                                display: 'flex', 
-                                                alignItems: 'center', 
-                                                justifyContent: 'center',
-                                                borderRadius: 1,
-                                              }}>
-                                                <PersonAdd sx={{ color: '#ccc' }} />
-                                              </Box>
-                                            )}
-                                          </TableCell>
-                                          <TableCell sx={{ fontWeight: 500 }}>{record.isim}</TableCell>
-                                          <TableCell sx={{ fontWeight: 500 }}>{record.soyisim}</TableCell>
-                                          <TableCell sx={{ maxWidth: 200 }}>
-                                            <Typography variant="body2" noWrap title={record.notlar}>
-                                              {record.notlar || '-'}
-                                            </Typography>
-                                          </TableCell>
-                                          <TableCell sx={{ whiteSpace: 'nowrap', fontSize: '0.85rem' }}>
-                                            {new Date(record.created_at).toLocaleString('tr-TR', {
-                                              day: '2-digit',
-                                              month: '2-digit',
-                                              year: 'numeric',
-                                              hour: '2-digit',
-                                              minute: '2-digit'
-                                            })}
-                                          </TableCell>
-                                        </TableRow>
-                                      ))}
-                                    </TableBody>
-                                  </Table>
-                                </TableContainer>
-                              ) : (
-                                <Alert severity="info">Bu saha elemanının henüz kaydı yok.</Alert>
-                              )}
-                            </Box>
-                          </Collapse>
+                          <SahaUserRecordsCollapse
+                            open={expandedSahaUser === se.username}
+                            displayName={se.ad_soyad || se.username}
+                            records={sahaUserRecords[se.username]}
+                          />
                         </TableCell>
                       </TableRow>
                     </React.Fragment>
