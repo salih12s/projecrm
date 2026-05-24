@@ -29,6 +29,7 @@ import TamamlaConfirmDialog from './dialog/TamamlaConfirmDialog';
 import CustomerHistoryTable from './dialog/CustomerHistoryTable';
 import SikayetQuickSelect from './dialog/SikayetQuickSelect';
 import UrunAutocomplete from './dialog/UrunAutocomplete';
+import MarkaAutocomplete from './dialog/MarkaAutocomplete';
 
 // Formatlı telefonu temizle (sadece rakamlar)
 const cleanPhoneNumber = (phone: string): string => {
@@ -1379,95 +1380,15 @@ const IslemDialog: React.FC<IslemDialogProps> = ({ open, islem, onClose, onSave,
             setInputValue={setUrunInputValue}
             onChange={(val) => setFormData({ ...formData, urun: val })}
           />
-          <Grid item xs={12} sm={6}>
-            <Autocomplete
-              size="small"
-              options={markalar.map(m => m.isim)}
-              value={formData.marka || null}
-              inputValue={markaInputValue}
-              filterOptions={(options, state) => {
-                // Eğer input boşsa tüm seçenekleri göster
-                if (!state.inputValue) return options;
-                // Eğer input varsa filtrele
-                const filtered = options.filter(option =>
-                  option.toLocaleLowerCase('tr-TR').includes(state.inputValue.toLocaleLowerCase('tr-TR'))
-                );
-                // Eşleşme yoksa boş liste döndür
-                return filtered;
-              }}
-              onChange={(_, newValue) => {
-                setFormData({ ...formData, marka: newValue || '' });
-                setMarkaInputValue(newValue || '');
-                setMarkaUyari(''); // Seçim yapıldığında uyarıyı temizle
-              }}
-              onInputChange={(_, value, reason) => {
-                // Kullanıcı yazarken filtrelenen seçenekleri kontrol et
-                if (reason === 'input') {
-                  const filtered = markalar.filter(marka => 
-                    marka.isim.toLocaleLowerCase('tr-TR').includes(value.toLocaleLowerCase('tr-TR'))
-                  );
-                  
-                  // Eğer eşleşme varsa ilk eşleşeni otomatik seç
-                  if (filtered.length === 1 && value.length > 0) {
-                    setFormData({ ...formData, marka: filtered[0].isim });
-                    setMarkaInputValue(filtered[0].isim); // Input'u tamamlanmış haliyle set et
-                    setMarkaUyari('');
-                  } else if (filtered.length > 1) {
-                    // Birden fazla eşleşme varsa input'u kullanıcının yazdığı ile güncel tut
-                    setMarkaInputValue(value);
-                  } else if (filtered.length === 0) {
-                    // Eşleşme yoksa input'u değiştirme, son geçerli değer kalsın
-                  }
-                } else if (reason === 'reset') {
-                  setMarkaInputValue(value);
-                }
-              }}
-              autoHighlight
-              selectOnFocus
-              clearOnBlur={false}
-              handleHomeEndKeys={false}
-              renderInput={(params) => (
-                <TextField
-                  {...params}
-                  name="marka"
-                  fullWidth
-                  required
-                  size="small"
-                  label="Marka"
-                  placeholder="Marka ara ve seç..."
-                  error={!formData.marka}
-                  helperText={markaUyari || (!formData.marka ? 'Listeden bir marka seçmelisiniz' : '')}
-                  FormHelperTextProps={{
-                    sx: markaUyari ? { color: 'warning.main', fontWeight: 500 } : undefined
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Tab' && !e.shiftKey) {
-                      e.preventDefault(); // Default davranışı engelle
-                      // Eğer popup açıksa ve vurgulanan bir seçenek varsa onu seç
-                      const popup = document.querySelector('[role="listbox"]');
-                      if (popup) {
-                        const highlighted = popup.querySelector('[data-focus="true"]') as HTMLElement;
-                        if (highlighted) {
-                          const text = highlighted.textContent;
-                          if (text && markalar.some(m => m.isim === text)) {
-                            setFormData({ ...formData, marka: text });
-                            setMarkaUyari(''); // Uyarıyı temizle
-                          }
-                        }
-                      }
-                      // İlk checkbox'a (MONTAJ) geç
-                      setTimeout(() => {
-                        const firstCheckbox = document.querySelector('[data-checkbox="montaj"]') as HTMLElement;
-                        if (firstCheckbox) {
-                          firstCheckbox.focus();
-                        }
-                      }, 100);
-                    }
-                  }}
-                />
-              )}
-            />
-          </Grid>
+          <MarkaAutocomplete
+            markalar={markalar}
+            value={formData.marka}
+            inputValue={markaInputValue}
+            setInputValue={setMarkaInputValue}
+            onChange={(val) => setFormData({ ...formData, marka: val })}
+            markaUyari={markaUyari}
+            clearMarkaUyari={() => setMarkaUyari('')}
+          />
           
           {/* Şikayet Hızlı Seçim */}
           <SikayetQuickSelect
