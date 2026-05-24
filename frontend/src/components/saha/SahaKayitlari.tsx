@@ -24,7 +24,6 @@ import {
   TableRow,
   IconButton,
   Collapse,
-  Dialog,
   Tooltip,
 } from '@mui/material';
 import {
@@ -41,6 +40,7 @@ import { useSnackbar } from '../../context/SnackbarContext';
 import { sahaService } from '../../services/saha.service';
 import { SahaKayit, SahaElemani } from '../../types';
 import ImagePreviewDialog from './ImagePreviewDialog';
+import PhotoLoadingOverlay from './PhotoLoadingOverlay';
 
 // Lazy-loading thumbnail: yalnızca viewport'a girdiğinde ilk fotoğrafı backend'den çeker.
 // Performansı korumak için IntersectionObserver ve ortak bir cache kullanır.
@@ -660,15 +660,7 @@ const SahaKayitlari: React.FC = () => {
       )}
 
       {/* Photo Loading Overlay */}
-      <Dialog 
-        open={photoLoading} 
-        PaperProps={{ sx: { bgcolor: 'transparent', boxShadow: 'none', overflow: 'hidden' } }}
-      >
-        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', p: 3 }}>
-          <CircularProgress sx={{ color: 'white' }} />
-          <Typography sx={{ color: 'white', mt: 2 }}>Fotoğraflar yükleniyor...</Typography>
-        </Box>
-      </Dialog>
+      <PhotoLoadingOverlay open={photoLoading} />
 
       {/* Image Preview Dialog */}
       <ImagePreviewDialog
