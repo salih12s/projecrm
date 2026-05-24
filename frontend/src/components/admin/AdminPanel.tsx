@@ -3,27 +3,10 @@ import {
   Box,
   Paper,
   Typography,
-  Button,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  IconButton,
-  Chip,
-  Tooltip,
-  Alert,
   Tabs,
   Tab,
 } from '@mui/material';
 import {
-  PersonAdd,
-  Block,
-  CheckCircle,
-  Delete,
-  ExpandMore,
-  ExpandLess,
   Engineering,
   People,
 } from '@mui/icons-material';
@@ -33,8 +16,8 @@ import { useSnackbar } from '../../context/SnackbarContext';
 import { SahaElemani, SahaKayit } from '../../types';
 import CreateUserDialog from './dialog/CreateUserDialog';
 import CreateSahaElemaniDialog from './dialog/CreateSahaElemaniDialog';
-import UserRecordsCollapse from './UserRecordsCollapse';
-import SahaUserRecordsCollapse from './SahaUserRecordsCollapse';
+import UsersTab from './UsersTab';
+import SahaElemanlariTab from './SahaElemanlariTab';
 import { UserRecord, AtolyeRecord } from './adminPanelTypes';
 
 interface User {
@@ -241,235 +224,33 @@ const AdminPanel: React.FC = () => {
         </Tabs>
       </Paper>
 
+
       {/* Kullanıcılar Tab */}
       {activeTab === 0 && (
-        <>
-          <Box sx={{ 
-            display: 'flex', 
-            flexDirection: { xs: 'column', sm: 'row' },
-            justifyContent: 'space-between', 
-            alignItems: { xs: 'stretch', sm: 'center' }, 
-            mb: 3,
-            gap: 2
-          }}>
-            <Typography variant="h5" fontWeight={600} sx={{ fontSize: { xs: '1.25rem', sm: '1.5rem' } }}>
-              Kullanıcı Yönetimi
-            </Typography>
-            <Button
-              variant="contained"
-              startIcon={<PersonAdd />}
-              onClick={() => setOpenCreateDialog(true)}
-              fullWidth
-              sx={{ maxWidth: { sm: 200 } }}
-            >
-              Yeni Kullanıcı Ekle
-            </Button>
-          </Box>
-
-          <Alert severity="info" sx={{ mb: 3, fontSize: { xs: '0.875rem', sm: '1rem' } }}>
-            Sistemdeki tüm kullanıcıları görüntüleyebilir, aktif/pasif yapabilir ve kayıtlarını inceleyebilirsiniz.
-          </Alert>
-
-          <TableContainer component={Paper} sx={{ overflowX: 'auto' }}>
-            <Table sx={{ minWidth: 650 }}>
-              <TableHead>
-                <TableRow sx={{ bgcolor: '#0D3282' }}>
-                  <TableCell sx={{ color: 'white', fontWeight: 600 }}>Kullanıcı Adı</TableCell>
-                  <TableCell sx={{ color: 'white', fontWeight: 600 }}>Kayıt Tarihi</TableCell>
-                  <TableCell sx={{ color: 'white', fontWeight: 600 }}>Toplam Kayıt</TableCell>
-                  <TableCell sx={{ color: 'white', fontWeight: 600 }}>Durum</TableCell>
-                  <TableCell sx={{ color: 'white', fontWeight: 600 }}>İşlemler</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {users.map((user) => (
-                  <React.Fragment key={user.id}>
-                    <TableRow hover>
-                      <TableCell>
-                        <Typography fontWeight={500}>{user.username}</Typography>
-                      </TableCell>
-                  <TableCell>
-                    {new Date(user.created_at).toLocaleString('tr-TR')}
-                  </TableCell>
-                  <TableCell>
-                    <Chip label={user.total_records} color="primary" size="small" />
-                  </TableCell>
-                  <TableCell>
-                    <Chip
-                      label={user.is_active ? 'Aktif' : 'Pasif'}
-                      color={user.is_active ? 'success' : 'error'}
-                      size="small"
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <Box sx={{ display: 'flex', gap: 1 }}>
-                      <Tooltip title="Kayıtları Görüntüle">
-                        <IconButton
-                          size="small"
-                          onClick={() => handleViewRecords(user.username)}
-                          color="info"
-                        >
-                          {expandedUser === user.username ? <ExpandLess /> : <ExpandMore />}
-                        </IconButton>
-                      </Tooltip>
-                      <Tooltip title={user.is_active ? 'Pasif Yap' : 'Aktif Yap'}>
-                        <IconButton
-                          size="small"
-                          onClick={() => handleToggleUserStatus(user.id, user.is_active)}
-                          color={user.is_active ? 'warning' : 'success'}
-                        >
-                          {user.is_active ? <Block /> : <CheckCircle />}
-                        </IconButton>
-                      </Tooltip>
-                      <Tooltip title="Sil">
-                        <IconButton
-                          size="small"
-                          onClick={() => handleDeleteUser(user.id, user.username)}
-                          color="error"
-                        >
-                          <Delete />
-                        </IconButton>
-                      </Tooltip>
-                    </Box>
-                  </TableCell>
-                </TableRow>
-                
-                {/* Kullanıcı Kayıtları */}
-                <TableRow>
-                  <TableCell colSpan={5} sx={{ p: 0 }}>
-                    <UserRecordsCollapse
-                      open={expandedUser === user.username}
-                      username={user.username}
-                      records={userRecords[user.username]}
-                      atolyeRecords={userAtolyeRecords[user.username]}
-                    />
-                  </TableCell>
-                </TableRow>
-              </React.Fragment>
-            ))}
-          </TableBody>
-        </Table>
-      </TableContainer>
-        </>
+        <UsersTab
+          users={users}
+          expandedUser={expandedUser}
+          userRecords={userRecords}
+          userAtolyeRecords={userAtolyeRecords}
+          onOpenCreateDialog={() => setOpenCreateDialog(true)}
+          onViewRecords={handleViewRecords}
+          onToggleStatus={handleToggleUserStatus}
+          onDelete={handleDeleteUser}
+        />
       )}
 
       {/* Saha Elemanları Tab */}
       {activeTab === 1 && (
-        <>
-          <Box sx={{ 
-            display: 'flex', 
-            flexDirection: { xs: 'column', sm: 'row' },
-            justifyContent: 'space-between', 
-            alignItems: { xs: 'stretch', sm: 'center' }, 
-            mb: 3,
-            gap: 2
-          }}>
-            <Typography variant="h5" fontWeight={600} sx={{ fontSize: { xs: '1.25rem', sm: '1.5rem' } }}>
-              Saha Elemanları Yönetimi
-            </Typography>
-            <Button
-              variant="contained"
-              startIcon={<Engineering />}
-              onClick={() => setOpenSahaDialog(true)}
-              fullWidth
-              sx={{ maxWidth: { sm: 220 }, bgcolor: '#0D3282', '&:hover': { bgcolor: '#082052' } }}
-            >
-              Yeni Saha Elemanı Ekle
-            </Button>
-          </Box>
-
-          <Alert severity="info" sx={{ mb: 3, fontSize: { xs: '0.875rem', sm: '1rem' } }}>
-            Saha elemanlarını yönetebilir, ekleyebilir, aktif/pasif yapabilir ve kayıtlarını görüntüleyebilirsiniz.
-          </Alert>
-
-          {sahaLoading ? (
-            <Typography>Yükleniyor...</Typography>
-          ) : sahaElemanlari.length === 0 ? (
-            <Alert severity="warning">Henüz saha elemanı bulunmuyor.</Alert>
-          ) : (
-            <TableContainer component={Paper} sx={{ overflowX: 'auto' }}>
-              <Table sx={{ minWidth: 650 }}>
-                <TableHead>
-                  <TableRow sx={{ bgcolor: '#1976d2' }}>
-                    <TableCell sx={{ color: 'white', fontWeight: 600 }}>Kullanıcı Adı</TableCell>
-                    <TableCell sx={{ color: 'white', fontWeight: 600 }}>Ad Soyad</TableCell>
-                    <TableCell sx={{ color: 'white', fontWeight: 600 }}>Kayıt Tarihi</TableCell>
-                    <TableCell sx={{ color: 'white', fontWeight: 600 }}>Toplam Kayıt</TableCell>
-                    <TableCell sx={{ color: 'white', fontWeight: 600 }}>Durum</TableCell>
-                    <TableCell sx={{ color: 'white', fontWeight: 600 }}>İşlemler</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {sahaElemanlari.map((se) => (
-                    <React.Fragment key={se.id}>
-                      <TableRow hover>
-                        <TableCell>
-                          <Typography fontWeight={500}>{se.username}</Typography>
-                        </TableCell>
-                        <TableCell>{se.ad_soyad || '-'}</TableCell>
-                        <TableCell>
-                          {new Date(se.created_at).toLocaleString('tr-TR')}
-                        </TableCell>
-                        <TableCell>
-                          <Chip label={se.total_records || 0} color="info" size="small" />
-                        </TableCell>
-                        <TableCell>
-                          <Chip
-                            label={se.is_active ? 'Aktif' : 'Pasif'}
-                            color={se.is_active ? 'success' : 'error'}
-                            size="small"
-                          />
-                        </TableCell>
-                        <TableCell>
-                          <Box sx={{ display: 'flex', gap: 1 }}>
-                            <Tooltip title="Kayıtları Görüntüle">
-                              <IconButton
-                                size="small"
-                                onClick={() => handleViewSahaRecords(se.username)}
-                                color="info"
-                              >
-                                {expandedSahaUser === se.username ? <ExpandLess /> : <ExpandMore />}
-                              </IconButton>
-                            </Tooltip>
-                            <Tooltip title={se.is_active ? 'Pasif Yap' : 'Aktif Yap'}>
-                              <IconButton
-                                size="small"
-                                onClick={() => handleToggleSahaStatus(se.id, se.is_active)}
-                                color={se.is_active ? 'warning' : 'success'}
-                              >
-                                {se.is_active ? <Block /> : <CheckCircle />}
-                              </IconButton>
-                            </Tooltip>
-                            <Tooltip title="Sil">
-                              <IconButton
-                                size="small"
-                                onClick={() => handleDeleteSahaElemani(se.id, se.username)}
-                                color="error"
-                              >
-                                <Delete />
-                              </IconButton>
-                            </Tooltip>
-                          </Box>
-                        </TableCell>
-                      </TableRow>
-
-                      {/* Saha Elemanı Kayıtları */}
-                      <TableRow>
-                        <TableCell colSpan={6} sx={{ p: 0 }}>
-                          <SahaUserRecordsCollapse
-                            open={expandedSahaUser === se.username}
-                            displayName={se.ad_soyad || se.username}
-                            records={sahaUserRecords[se.username]}
-                          />
-                        </TableCell>
-                      </TableRow>
-                    </React.Fragment>
-                  ))}
-                </TableBody>
-              </Table>
-            </TableContainer>
-          )}
-        </>
+        <SahaElemanlariTab
+          sahaElemanlari={sahaElemanlari}
+          sahaLoading={sahaLoading}
+          expandedSahaUser={expandedSahaUser}
+          sahaUserRecords={sahaUserRecords}
+          onOpenCreateDialog={() => setOpenSahaDialog(true)}
+          onViewRecords={handleViewSahaRecords}
+          onToggleStatus={handleToggleSahaStatus}
+          onDelete={handleDeleteSahaElemani}
+        />
       )}
 
       {/* Kullanıcı Oluşturma Dialog */}
