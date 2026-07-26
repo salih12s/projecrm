@@ -42,24 +42,17 @@ Uygulamanın odaklandığı temel iş problemleri:
 
 Ana operasyon ekranı; durum sayaçlarını, tarih ve tanım filtrelerini, kolon bazlı aramayı, kayıt listesini ve işlem araçlarını aynı görünümde bir araya getirir. Ekipler açık işleri, parça bekleyen kayıtları ve tamamlanan operasyonları tek bakışta takip edebilir.
 
-### Yeni servis kaydı ve işlem detayı
+### Yeni servis kaydı
 
-<table>
-  <tr>
-    <td width="50%">
-      <img src="docs/screenshots/service-create-form.png" alt="ProjeCRM yeni servis kaydı formu">
-    </td>
-    <td width="50%">
-      <img src="docs/screenshots/service-record-detail.png" alt="ProjeCRM servis işlem detayı">
-    </td>
-  </tr>
-  <tr>
-    <td align="center"><strong>Yapılandırılmış yeni işlem formu</strong></td>
-    <td align="center"><strong>Servis kaydı düzenleme ve durum yönetimi</strong></td>
-  </tr>
-</table>
+![ProjeCRM yapılandırılmış yeni servis kaydı formu](docs/screenshots/service-create-form.png)
 
-Yeni işlem akışında müşteri, adres, iletişim, cihaz, marka ve şikâyet bilgileri tek formda yönetilir. Mevcut kayıtlar aynı ayrıntı düzeyinde görüntülenebilir; teknisyen, yapılan işlem, ücret ve operasyon durumu güncellenebilir.
+Yeni işlem akışında müşteri, adres, iletişim, cihaz, marka ve şikâyet bilgileri tek formda yönetilir. Telefon sorgusuyla başlayan akış, mevcut müşteri kontrolünü ve yeni kaydın gerekli alanlarını aynı süreçte ele alır.
+
+### Servis işlem detayı
+
+![ProjeCRM servis işlem detayı ve durum yönetimi](docs/screenshots/service-record-detail.png)
+
+Mevcut kayıtlar aynı ayrıntı düzeyinde görüntülenebilir; teknisyen, yapılan işlem, ücret ve operasyon durumu güncellenebilir. Böylece müşteri kabulünde oluşan kayıt, iş tamamlanana kadar bağlamını kaybetmeden ilerler.
 
 ### Müşteri geçmişi
 
