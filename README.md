@@ -12,6 +12,7 @@ Müşteri kabulünden teknisyen yönlendirmesine, atölye durum takibinden saha 
 [![Node.js](https://img.shields.io/badge/Node.js-20-339933?logo=node.js&logoColor=white)](https://nodejs.org/)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15+-4169E1?logo=postgresql&logoColor=white)](https://www.postgresql.org/)
 [![Socket.IO](https://img.shields.io/badge/Socket.IO-4-010101?logo=socketdotio&logoColor=white)](https://socket.io/)
+[![Project Status](https://img.shields.io/badge/Durum-Aktif%20Geliştirme-2ea44f)](https://github.com/salih12s/projecrm)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
 </div>

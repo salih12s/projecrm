@@ -1,7 +1,7 @@
 {
   "name": "projecrm",
   "version": "1.0.0",
-  "description": "Modern bir CRM (Müşteri İlişkileri Yönetimi) sistemi. React, Node.js, PostgreSQL ve TypeScript kullanılarak geliştirilmiştir.",
+  "description": "Teknik servis, atölye ve saha operasyonları için gerçek zamanlı CRM platformu.",
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
@@ -27,9 +27,13 @@
     "socket.io",
     "real-time"
   ],
-  "author": "",
-  "license": "ISC",
+  "author": "Salih Saydam",
+  "license": "MIT",
   "type": "commonjs",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/salih12s/projecrm.git"
+  },
   "bugs": {
     "url": "https://github.com/salih12s/projecrm/issues"
   },

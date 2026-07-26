@@ -1,7 +1,8 @@
 {
   "name": "projecrm-backend",
   "version": "1.0.0",
-  "description": "CRM Backend with Node.js, Express and PostgreSQL",
+  "private": true,
+  "description": "ProjeCRM REST API, gerçek zamanlı olay ve PostgreSQL servis katmanı.",
   "main": "dist/server.js",
   "scripts": {
     "start": "node dist/server.js",
@@ -11,8 +12,8 @@
     "fetch-locations": "ts-node src/scripts/dev/fetchLocations.ts"
   },
   "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "author": "Salih Saydam",
+  "license": "MIT",
   "dependencies": {
     "@types/bcryptjs": "^2.4.6",
     "@types/compression": "^1.8.1",
