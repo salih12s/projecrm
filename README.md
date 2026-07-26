@@ -18,6 +18,25 @@ Müşteri kabulünden servis kaydına, atölye sürecinden saha ekiplerine ve y�
 
 ---
 
+
+<!-- english-overview:start -->
+## English Overview
+
+ProjeCRM is a full-stack operations platform for technical service, workshop, dealer, and field teams. It centralizes customer and device intake, status-based service tracking, workshop workflows, mobile photo records, customer history, real-time updates, and PDF/Excel output.
+
+### My Contribution
+
+I designed and implemented the product across the React/TypeScript frontend, Node.js/Express API, PostgreSQL data layer, role-based workspaces, real-time Socket.IO events, reporting flows, and automated quality checks.
+
+### Engineering Challenges
+
+- Keeping service and workshop records consistent across multiple active users
+- Preserving usability in dense operational tables through server-side pagination, filters, indexing, and lazy loading
+- Enforcing permissions at both the API and interface layers
+- Generating reliable Turkish-language PDF and Excel documents
+- Publishing a portfolio-safe demo with synthetic data instead of real customer records
+<!-- english-overview:end -->
+
 ## Proje özeti
 
 ProjeCRM, teknik servis işletmelerinde farklı tablolar, mesajlaşma kanalları ve fiziksel formlar arasında dağılan iş akışını tek uygulamada toplamak için geliştirildi. Sistem; müşteri ve cihaz bilgilerinin kaydedilmesini, servis sürecinin durum bazlı izlenmesini, atölye ve saha ekiplerinin koordine edilmesini ve operasyon verisinin raporlanmasını sağlar.
