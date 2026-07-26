@@ -1,14 +1,14 @@
-name: CI
+name: ProjeCRM Kalite Kontrolleri
 
 on:
   push:
-    branches: [main, master, 'refactor/**']
+    branches: [main]
   pull_request:
-    branches: [main, master]
+    branches: [main]
 
 jobs:
   build:
-    name: Type-check, Lint & Build
+    name: Tip Kontrolü, Kod Kalitesi ve Build
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
@@ -18,46 +18,46 @@ jobs:
         node-version: [20.x]
 
     steps:
-      - name: Checkout
+      - name: Depoyu hazırla
         uses: actions/checkout@v4
 
-      - name: Use Node.js ${{ matrix.node-version }}
+      - name: Node.js ${{ matrix.node-version }} ortamını hazırla
         uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node-version }}
           cache: 'npm'
 
-      - name: Install root deps
+      - name: Kök paketleri doğrula
         run: npm ci --no-audit --no-fund
 
-      - name: Install backend deps
+      - name: Backend paketlerini doğrula
         working-directory: backend
         run: npm ci --no-audit --no-fund
 
-      - name: Install frontend deps
+      - name: Frontend paketlerini doğrula
         working-directory: frontend
         run: npm ci --no-audit --no-fund
 
-      - name: Type-check (backend)
+      - name: Backend tip kontrolü
         working-directory: backend
         run: npx tsc --noEmit
 
-      - name: Type-check (frontend)
+      - name: Frontend tip kontrolü
         working-directory: frontend
         run: npx tsc --noEmit
 
-      - name: Lint
+      - name: Kod kalitesi kontrolü
         run: npm run lint
         continue-on-error: true
 
-      - name: Format check
+      - name: Biçim standardı kontrolü
         run: npm run format:check
         continue-on-error: true
 
-      - name: Build frontend
+      - name: Frontend üretim build'i
         working-directory: frontend
         run: npm run build
 
-      - name: Build backend
+      - name: Backend üretim build'i
         working-directory: backend
         run: npx tsc -p tsconfig.json

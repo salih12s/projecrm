@@ -50,7 +50,7 @@ reports/
 docs/baseline-outputs/
 *.dump
 
-# Build / release archives (history'de tracked olanlar dokunulmadı)
+# Build / release archives
 *.zip
 
 # Lint output
