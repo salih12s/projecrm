@@ -2,648 +2,240 @@
 
 # ProjeCRM
 
-### Teknik servis, atölye ve saha operasyonları için gerçek zamanlı CRM platformu
+### Teknik servis, atölye ve saha operasyonlarını tek merkezde buluşturan CRM platformu
 
-Müşteri kabulünden teknisyen yönlendirmesine, atölye durum takibinden saha kayıtlarına kadar servis operasyonunun tamamını tek merkezde yöneten, rol tabanlı ve mobil uyumlu bir uygulama.
+Müşteri kabulünden servis kaydına, atölye sürecinden saha ekiplerine ve yönetsel raporlamaya kadar tüm operasyonu gerçek zamanlı, rol tabanlı ve izlenebilir bir yapıda yönetir.
 
-[![CI](https://github.com/salih12s/projecrm/actions/workflows/ci.yml/badge.svg)](https://github.com/salih12s/projecrm/actions/workflows/ci.yml)
-[![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![Kalite Kontrolleri](https://github.com/salih12s/projecrm/actions/workflows/ci.yml/badge.svg)](https://github.com/salih12s/projecrm/actions/workflows/ci.yml)
+[![TypeScript](https://img.shields.io/badge/TypeScript-Strict-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![React](https://img.shields.io/badge/React-18-61DAFB?logo=react&logoColor=white)](https://react.dev/)
 [![Node.js](https://img.shields.io/badge/Node.js-20-339933?logo=node.js&logoColor=white)](https://nodejs.org/)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15+-4169E1?logo=postgresql&logoColor=white)](https://www.postgresql.org/)
-[![Socket.IO](https://img.shields.io/badge/Socket.IO-4-010101?logo=socketdotio&logoColor=white)](https://socket.io/)
-[![Project Status](https://img.shields.io/badge/Durum-Aktif%20Geliştirme-2ea44f)](https://github.com/salih12s/projecrm)
-[![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+[![Socket.IO](https://img.shields.io/badge/Socket.IO-Gerçek%20Zamanlı-010101?logo=socketdotio&logoColor=white)](https://socket.io/)
+[![Lisans](https://img.shields.io/badge/Lisans-MIT-2ea44f)](LICENSE)
 
 </div>
 
 ---
 
-## İçindekiler
+## Proje özeti
 
-- [Proje hakkında](#proje-hakkında)
-- [Ekran görüntüleri](#ekran-görüntüleri)
-- [Temel yetenekler](#temel-yetenekler)
-- [Kullanıcı rolleri](#kullanıcı-rolleri)
-- [Mimari](#mimari)
-- [Teknoloji yığını](#teknoloji-yığını)
-- [Proje yapısı](#proje-yapısı)
-- [Yerel kurulum](#yerel-kurulum)
-- [Ortam değişkenleri](#ortam-değişkenleri)
-- [Komutlar](#komutlar)
-- [API ve gerçek zamanlı olaylar](#api-ve-gerçek-zamanlı-olaylar)
-- [Kalite kontrolleri](#kalite-kontrolleri)
-- [Güvenlik ve veri gizliliği](#güvenlik-ve-veri-gizliliği)
-- [Production dağıtımı](#production-dağıtımı)
-- [Sorun giderme](#sorun-giderme)
-- [Teknik dokümantasyon](#teknik-dokümantasyon)
-- [Yol haritası](#yol-haritası)
-- [Lisans](#lisans)
+ProjeCRM, teknik servis işletmelerinde farklı tablolar, mesajlaşma kanalları ve fiziksel formlar arasında dağılan iş akışını tek uygulamada toplamak için geliştirildi. Sistem; müşteri ve cihaz bilgilerinin kaydedilmesini, servis sürecinin durum bazlı izlenmesini, atölye ve saha ekiplerinin koordine edilmesini ve operasyon verisinin raporlanmasını sağlar.
 
-## Proje hakkında
+Uygulamanın odaklandığı temel iş problemleri:
 
-ProjeCRM, teknik servis işletmelerinin günlük operasyonlarını dağınık tablolar ve bağımsız araçlar yerine tek bir uygulamada yönetmesi için geliştirilmiştir. Uygulama; servis kaydı oluşturma, müşteri geçmişini inceleme, atölyeye alınan ürünleri durum bazlı takip etme, saha ekiplerinin fotoğraflı kayıtlarını yönetme, kullanıcı yetkilendirme, yazdırma ve raporlama süreçlerini bir araya getirir.
+- Yoğun servis kayıtları içinde hızlı arama, filtreleme ve durum takibi
+- Aynı müşterinin geçmiş işlemlerine tek noktadan erişim
+- Servis, atölye, bayi ve saha ekipleri arasında güncel bilgi paylaşımı
+- Açık, parça bekleyen, tamamlanan ve iptal edilen işlerin görünür hâle gelmesi
+- Kullanıcı rolüne göre sadeleştirilmiş ekran ve yetki yapısı
+- Operasyon verisinin PDF, Excel ve özelleştirilebilir servis formuna dönüştürülmesi
 
-Sistem özellikle aşağıdaki operasyonel ihtiyaçlara odaklanır:
+> [!IMPORTANT]
+> Bu README’deki tüm ekranlar yalnızca dokümantasyon için oluşturulmuş, izole bir yerel PostgreSQL veritabanından alınmıştır. Görünen adlar, telefonlar, adresler, kullanıcılar, tutarlar ve kayıtlar tamamen sentetik örnek verilerdir. Canlı veritabanına bağlanılmamış ve gerçek müşteri verisi kullanılmamıştır.
 
-- Yoğun servis kayıtlarında hızlı arama, filtreleme ve sayfalama
-- Telefon numarasına göre mükerrer müşteri ve geçmiş kayıt kontrolü
-- Servis, atölye ve saha ekipleri arasında güncel veri paylaşımı
-- Açık, parça bekleyen, tamamlanan ve iptal edilen işlerin anlık takibi
-- Bayi, standart kullanıcı, yönetici ve saha personeli için farklı arayüzler
-- Excel, PDF ve özelleştirilebilir servis formu çıktıları
-- Masaüstü ve mobil cihazlarda kullanılabilir operasyon ekranları
-
-## Ekran görüntüleri
-
-> [!NOTE]
-> Aşağıdaki ekranların tamamı yalnızca localhost üzerinde çalışan, bu dokümantasyon için oluşturulmuş izole bir PostgreSQL veritabanından alınmıştır. Görünen isimler, telefonlar, adresler, kullanıcılar, tutarlar ve saha görselleri tamamen sentetik demo verileridir. Canlı veritabanı veya gerçek müşteri verisi kullanılmamıştır.
+## Ürün deneyimi
 
 ### Servis operasyon panosu
 
 ![ProjeCRM servis operasyon panosu](docs/screenshots/service-dashboard.png)
 
-Durum sayaçları, gelişmiş filtreler, kolon bazlı arama, tarih aralığı, Excel aktarımı ve yeni servis kaydı işlemleri aynı ekranda sunulur.
+Ana operasyon ekranı; durum sayaçlarını, tarih ve tanım filtrelerini, kolon bazlı aramayı, kayıt listesini ve işlem araçlarını aynı görünümde bir araya getirir. Ekipler açık işleri, parça bekleyen kayıtları ve tamamlanan operasyonları tek bakışta takip edebilir.
 
-### Atölye ve saha operasyonları
+### Yeni servis kaydı ve işlem detayı
 
 <table>
   <tr>
     <td width="50%">
-      <img src="docs/screenshots/workshop-tracking.png" alt="ProjeCRM atölye takip ekranı">
+      <img src="docs/screenshots/service-create-form.png" alt="ProjeCRM yeni servis kaydı formu">
     </td>
     <td width="50%">
-      <img src="docs/screenshots/field-records.png" alt="ProjeCRM saha kayıtları ekranı">
+      <img src="docs/screenshots/service-record-detail.png" alt="ProjeCRM servis işlem detayı">
     </td>
   </tr>
   <tr>
-    <td align="center"><strong>Durum bazlı atölye takibi</strong></td>
+    <td align="center"><strong>Yapılandırılmış yeni işlem formu</strong></td>
+    <td align="center"><strong>Servis kaydı düzenleme ve durum yönetimi</strong></td>
+  </tr>
+</table>
+
+Yeni işlem akışında müşteri, adres, iletişim, cihaz, marka ve şikâyet bilgileri tek formda yönetilir. Mevcut kayıtlar aynı ayrıntı düzeyinde görüntülenebilir; teknisyen, yapılan işlem, ücret ve operasyon durumu güncellenebilir.
+
+### Müşteri geçmişi
+
+![ProjeCRM müşteri geçmişi ekranı](docs/screenshots/customer-history.png)
+
+Müşteri geçmişi görünümü, aynı kişiye ait önceki servis kayıtlarını kronolojik olarak bir araya getirir. Ürün, marka, şikâyet, yapılan işlem, tutar ve güncel durum bilgileri karşılaştırılabilir; sonuçlar PDF çıktısına dönüştürülebilir.
+
+### Atölye operasyonu
+
+![ProjeCRM atölye takip ekranı](docs/screenshots/workshop-tracking.png)
+
+Atölyeye alınan cihazlar; bayi, müşteri, marka, model, seri numarası, ücret, işlem ve teslim durumu üzerinden takip edilir. Renk kodlu durumlar ve özet sayaçları, bekleyen ve tamamlanan işlerin hızla ayrıştırılmasını sağlar.
+
+### Atölye kayıt detayı
+
+![ProjeCRM atölye kayıt detayı](docs/screenshots/workshop-record-detail.png)
+
+Kayıt detayında cihazın kabul bilgileri, teknik notları, işlem sonucu, mali verileri ve teslim süreci birlikte yönetilir. Böylece cihazın atölyedeki yaşam döngüsü tek kayıt üzerinden izlenebilir.
+
+### Tanımlar ve operasyon sözlüğü
+
+![ProjeCRM tanımlar ekranı](docs/screenshots/definitions.png)
+
+Teknisyen, ürün, marka, bayi, montaj türü ve aksesuar gibi tekrar kullanılan operasyon verileri merkezi tanım ekranlarından yönetilir. Bu yaklaşım veri girişini hızlandırırken kayıtlar arasındaki isim ve kategori tutarlılığını korur.
+
+### Saha ve yönetim ekranları
+
+<table>
+  <tr>
+    <td width="50%">
+      <img src="docs/screenshots/field-records.png" alt="ProjeCRM fotoğraflı saha kayıtları">
+    </td>
+    <td width="50%">
+      <img src="docs/screenshots/admin-management.png" alt="ProjeCRM kullanıcı yönetimi">
+    </td>
+  </tr>
+  <tr>
     <td align="center"><strong>Fotoğraflı saha kayıtları</strong></td>
+    <td align="center"><strong>Kullanıcı ve aktivite yönetimi</strong></td>
   </tr>
 </table>
 
-### Rol ve kullanıcı yönetimi
+Saha personeli yaptığı çalışmaları birden fazla fotoğraf ve açıklamayla kayıt altına alabilir. Yönetim ekranı ise kullanıcıların aktiflik durumunu, oluşturdukları servis ve atölye kayıtlarını ve saha personeli hesaplarını merkezi olarak gösterir.
 
-<table>
-  <tr>
-    <td width="50%">
-      <img src="docs/screenshots/login-overview.png" alt="ProjeCRM rol bazlı giriş ekranı">
-    </td>
-    <td width="50%">
-      <img src="docs/screenshots/admin-management.png" alt="ProjeCRM kullanıcı yönetimi ekranı">
-    </td>
-  </tr>
-  <tr>
-    <td align="center"><strong>Dört farklı giriş deneyimi</strong></td>
-    <td align="center"><strong>Merkezi kullanıcı yönetimi</strong></td>
-  </tr>
-</table>
+### Rol bazlı giriş deneyimi
 
-## Temel yetenekler
+![ProjeCRM rol bazlı giriş ekranı](docs/screenshots/login-overview.png)
 
-### Servis kaydı yönetimi
+Yönetici, standart kullanıcı, bayi ve saha personeli için ayrı giriş akışları bulunur. Oturum açıldıktan sonra navigasyon ve erişilebilir modüller kullanıcının rolüne göre otomatik biçimlenir.
 
-- Müşteri, adres, iletişim, ürün, marka ve şikâyet bilgilerinin tek formda yönetimi
-- Açık, parça bekliyor, tamamlandı ve iptal durumları
-- Telefon ve ad üzerinden müşteri geçmişi arama
-- Mükerrer kayıt tespiti ve mevcut kayıt uyarısı
-- Karaliste telefon/adres kontrolü
-- Kayıt klonlama, düzenleme, silme ve durum değiştirme
-- Beklemeye alınan formları daha sonra sürdürme
-- Kolon bazlı, tarih bazlı ve tanım bazlı gelişmiş filtreleme
-- Sunucu taraflı sayfalama ve büyük veri kümeleri için kademeli gösterim
+## Fonksiyonel kapsam
 
-### Atölye takibi
+### Servis yönetimi
 
-- Bayi, müşteri, telefon, marka, model, seri ve not bilgileri
-- `Beklemede`, `Teslim Edildi`, `Sipariş Verildi`, `Yapıldı`, `Fabrika Gitti` ve `Ödeme Bekliyor` akışları
-- Durumlara göre renk kodlu satırlar ve anlık sayaçlar
-- İşlem, ücret, not numarası ve tamamlanma tarihi takibi
-- Filtreleme, sayfalama ve gerçek zamanlı güncelleme
+- Müşteri, adres, telefon, ürün, marka ve şikâyet bilgilerinin birlikte yönetimi
+- Açık, parça bekliyor, tamamlandı ve iptal edildi durum akışları
+- Telefon ve ad üzerinden geçmiş kayıt sorgulama
+- Mükerrer müşteri, telefon ve adres kontrolleri
+- Beklemeye alınan formu daha sonra sürdürme
+- Kayıt düzenleme, klonlama, durum değiştirme ve yazdırma
+- Tarih aralığı, teknisyen, marka, montaj ve aksesuar filtreleri
+- Her kolon için bağımsız arama ve sıralama
+
+### Atölye yönetimi
+
+- Bayi, müşteri, iletişim, marka, model ve seri numarası takibi
+- Teknik işlem, not numarası, ücret ve tamamlanma tarihi yönetimi
+- Beklemede, teslim edildi, sipariş verildi, yapıldı, fabrikaya gitti ve ödeme bekliyor durumları
+- Durumlara göre renk kodlu satırlar ve anlık özet sayaçları
+- Filtrelenebilir, sayfalanabilir ve gerçek zamanlı güncellenen kayıt listesi
 
 ### Saha operasyonları
 
-- Saha personeline özel giriş ve çalışma ekranı
-- Bir kayda birden fazla fotoğraf ekleyebilme
-- Fotoğraf önizleme, galeri ve kayıt detayları
-- Yönetici tarafında kart ve tablo görünümü
-- Personel, isim, tarih aralığı ve gün bazlı filtreler
-- Saha personeli aktif/pasif durumu ve kayıt performansı
+- Saha personeline özel, mobil kullanıma uygun çalışma alanı
+- Bir iş kaydına birden fazla fotoğraf ekleme
+- Fotoğraf önizleme, galeri ve kayıt ayrıntıları
+- Personel ve tarih bazlı saha performansı görünümü
+- Kart ve tablo arasında değiştirilebilen yönetici ekranı
 
-### Tanımlar ve çıktı araçları
+### Raporlama ve çıktı
 
-- Teknisyen, marka, ürün, bayi, montaj ve aksesuar tanımları
+- Filtrelenmiş operasyon listesini Excel’e aktarma
+- Müşteri geçmişi ve servis formlarını PDF olarak üretme
 - Marka bazlı yazdırma ayarları
-- Sürükle-bırak destekli yazdırma şablonu düzenleme
-- PDF servis formu üretimi
-- Excel dışa aktarımı
-- Türkçe karakter uyumlu gömülü fontlar
-
-### Gerçek zamanlı çalışma
-
-Socket.IO bağlantısı sayesinde yeni servis/atölye kaydı, güncelleme, silme ve durum değişiklikleri açık oturumlara anlık olarak iletilir. Kullanıcıların sayfayı manuel yenilemeden güncel operasyon verisini görmesi hedeflenir.
+- Sürükle-bırak destekli servis formu şablon düzenleyicisi
+- Türkçe karakterleri koruyan gömülü PDF fontları
 
 ## Kullanıcı rolleri
 
-| Yetki alanı                      |   Admin    | Standart kullanıcı |    Bayi     | Saha personeli |
-| -------------------------------- | :--------: | :----------------: | :---------: | :------------: |
-| Servis kayıtları                 | Tam erişim | Operasyon erişimi  |      —      |       —        |
-| Müşteri geçmişi                  |     ✓      |         ✓          |      —      |       —        |
-| Atölye takibi                    |     ✓      |         ✓          | Odak ekranı |       —        |
-| Tanım yönetimi                   |     ✓      |         —          |      —      |       —        |
-| Kullanıcı yönetimi               |     ✓      |         —          |      —      |       —        |
-| Tüm saha kayıtlarını görüntüleme |     ✓      |         ✓          |      —      |       —        |
-| Kendi saha kayıtlarını yönetme   |     —      |         —          |      —      |       ✓        |
+| Yetki alanı                    |  Yönetici  | Standart kullanıcı |    Bayi     | Saha personeli |
+| ------------------------------ | :--------: | :----------------: | :---------: | :------------: |
+| Servis operasyonları           | Tam erişim | Operasyon erişimi  |      —      |       —        |
+| Müşteri geçmişi                |     ✓      |         ✓          |      —      |       —        |
+| Atölye takibi                  |     ✓      |         ✓          | Odak ekranı |       —        |
+| Merkezi tanımlar               |     ✓      |         —          |      —      |       —        |
+| Kullanıcı yönetimi             |     ✓      |         —          |      —      |       —        |
+| Tüm saha kayıtlarını inceleme  |     ✓      |         ✓          |      —      |       —        |
+| Kendi saha kayıtlarını yönetme |     —      |         —          |      —      |       ✓        |
 
-Arayüz, oturumdaki role göre sekmeleri ve çalışma akışını otomatik olarak düzenler. API istekleri JWT bearer token ile doğrulanır.
+Rol ayrımı yalnızca arayüz görünümünü değil, kimlik doğrulama akışını ve korunan API işlemlerini de kapsar.
 
-## Mimari
+## Sistem mimarisi
 
 ```mermaid
 flowchart LR
-    U["Kullanıcı<br/>Masaüstü / Mobil"]
-    F["React + TypeScript<br/>Vite / Material UI"]
-    A["Express + TypeScript<br/>REST API"]
-    S["Socket.IO<br/>Gerçek zamanlı olaylar"]
-    D[("PostgreSQL")]
-    P["PDF / Excel<br/>Yazdırma araçları"]
+    K["Kullanıcılar<br/>Masaüstü ve Mobil"]
+    UI["React + TypeScript<br/>Material UI"]
+    API["Express + TypeScript<br/>REST API"]
+    RT["Socket.IO<br/>Anlık Olaylar"]
+    DB[("PostgreSQL")]
+    DOC["PDF · Excel<br/>Yazdırma"]
 
-    U --> F
-    F -->|"HTTPS + JWT"| A
-    F <-->|"WebSocket"| S
-    A --> D
-    S --> A
-    F --> P
+    K --> UI
+    UI -->|"HTTPS · JWT"| API
+    UI <-->|"WebSocket"| RT
+    API --> DB
+    API --> RT
+    UI --> DOC
 ```
 
-### İstek akışı
-
-1. React istemcisi kullanıcı oturumunu ilgili giriş endpoint'i üzerinden açar.
-2. API, kimliği doğrular ve 24 saat geçerli JWT üretir.
-3. Axios katmanı token'ı korunan isteklere `Authorization: Bearer ...` başlığıyla ekler.
-4. Express route katmanı isteği doğrular, PostgreSQL sorgusunu çalıştırır ve sonucu istemciye döndürür.
-5. Veri değiştiren işlemler ilgili Socket.IO olayını yayınlar.
-6. Aktif istemciler veriyi yeniden yüklemeden arayüz durumunu günceller.
-
-### Veri ve performans yaklaşımı
-
-- PostgreSQL bağlantıları `pg.Pool` ile yönetilir.
-- Geçici bağlantı hataları için sınırlı sorgu retry mekanizması vardır.
-- Sık kullanılan durum, tarih, teknisyen, telefon ve müşteri alanlarında indeksler bulunur.
-- Servis ve atölye listeleri sunucu taraflı sayfalama kullanır.
-- Filtre girişleri debounce edilir.
-- Ağır ekranlar `React.lazy` ve `Suspense` ile ihtiyaç anında yüklenir.
-- Büyük tablolar parça parça render edilir.
-
-## Teknoloji yığını
-
-| Katman             | Teknolojiler                                         |
-| ------------------ | ---------------------------------------------------- |
-| Frontend           | React 18, TypeScript 5, Vite 5, Material UI 5        |
-| State ve istemci   | React Context, custom hooks, Axios                   |
-| Gerçek zamanlı     | Socket.IO Client 4, Socket.IO Server 4               |
-| Backend            | Node.js 20, Express 4, TypeScript, compression, CORS |
-| Veritabanı         | PostgreSQL 15+, `pg` bağlantı havuzu                 |
-| Kimlik doğrulama   | JWT, bcryptjs                                        |
-| Dosya ve raporlama | pdf-lib, jsPDF, jspdf-autotable, xlsx                |
-| Arayüz araçları    | @hello-pangea/dnd, react-window                      |
-| Kod kalitesi       | ESLint, Prettier, TypeScript strict kontrolleri      |
-| CI                 | GitHub Actions                                       |
-
-## Proje yapısı
-
-```text
-projecrm/
-├── .github/
-│   └── workflows/
-│       └── ci.yml                  # Type-check, lint, format ve build pipeline
-├── backend/
-│   ├── src/
-│   │   ├── bootstrap/              # Tablo, lokasyon ve indeks başlangıç işleri
-│   │   ├── constants/              # Socket event sabitleri
-│   │   ├── middleware/             # JWT, async ve hata middleware'leri
-│   │   ├── migrations/             # SQL migration dosyaları
-│   │   ├── routes/                 # REST API modülleri
-│   │   ├── scripts/                # Admin, seed, dev ve legacy bakım araçları
-│   │   ├── types/                  # Backend TypeScript tipleri
-│   │   ├── utils/                  # Logger ve ortak yardımcılar
-│   │   ├── db.ts                   # PostgreSQL pool ve retry katmanı
-│   │   └── server.ts               # Express + Socket.IO başlangıç noktası
-│   ├── package.json
-│   └── tsconfig.json
-├── frontend/
-│   ├── public/
-│   │   ├── fonts/                  # PDF/yazdırma fontları
-│   │   └── templates/              # Servis formu şablonları
-│   ├── src/
-│   │   ├── components/
-│   │   │   ├── admin/              # Kullanıcı ve saha personeli yönetimi
-│   │   │   ├── atolye/             # Atölye takip ekranları
-│   │   │   ├── auth/               # Rol bazlı giriş
-│   │   │   ├── dashboard/          # Ana operasyon panosu
-│   │   │   ├── islem/              # Servis formu, filtre ve tablo
-│   │   │   ├── musteri/            # Müşteri geçmişi
-│   │   │   ├── saha/               # Saha kayıtları ve fotoğraf galerisi
-│   │   │   └── settings/           # Tanımlar ve yazdırma editörü
-│   │   ├── constants/              # Rol, durum ve event sabitleri
-│   │   ├── context/                # Auth ve snackbar context'leri
-│   │   ├── hooks/                  # Pagination, filtre ve socket hook'ları
-│   │   ├── services/               # Modül bazlı API servisleri
-│   │   ├── types/                  # Frontend TypeScript tipleri
-│   │   └── utils/                  # Format, Excel ve print yardımcıları
-│   ├── package.json
-│   └── vite.config.ts
-├── docs/
-│   ├── screenshots/                # README ekran görüntüleri
-│   └── refactor/                   # Mimari ve refactor raporları
-├── LICENSE
-├── package.json                    # Monorepo komutları
-└── README.md
-```
-
-## Yerel kurulum
-
-### Ön koşullar
-
-- Node.js `20.x` veya üzeri
-- npm `10.x` veya üzeri
-- PostgreSQL `15` veya üzeri
-- Git
-
-### 1. Repoyu klonlayın
-
-```bash
-git clone https://github.com/salih12s/projecrm.git
-cd projecrm
-```
-
-### 2. Bağımlılıkları yükleyin
-
-```bash
-npm run install:all
-```
-
-Bu komut kök, backend ve frontend bağımlılıklarını sırasıyla yükler.
-
-### 3. Ortam dosyalarını oluşturun
-
-macOS/Linux:
-
-```bash
-cp backend/.env.example backend/.env
-cp frontend/.env.example frontend/.env.development
-```
-
-PowerShell:
-
-```powershell
-Copy-Item backend/.env.example backend/.env
-Copy-Item frontend/.env.example frontend/.env.development
-```
-
-> [!IMPORTANT]
-> Backend geliştirme sırasında doğrudan `backend/.env` dosyasını yükler. Bu dosyanın `DB_HOST=127.0.0.1` veya `DB_HOST=localhost` kullandığını çalıştırmadan önce mutlaka doğrulayın. Uygulama başlangıçta tablo, kolon ve indeks kontrolleri yaptığı için yanlışlıkla production veritabanına yönlendirilmiş bir geliştirme süreci şema değişikliği oluşturabilir.
-
-### 4. Yerel veritabanını oluşturun
-
-Önerilen yöntem, proje için ayrı bir yerel veritabanı kullanmaktır:
-
-```sql
-CREATE DATABASE projecrm;
-```
-
-Ardından `backend/.env` içinde bağlantıyı yapılandırın:
-
-```dotenv
-DB_HOST=127.0.0.1
-DB_PORT=5432
-DB_NAME=projecrm
-DB_USER=postgres
-DB_PASSWORD=yerel_postgresql_parolaniz
-```
-
-Backend ilk çalıştırmada operasyon tablolarını, gerekli kolonları, lokasyon verilerini ve performans indekslerini kontrol eder. Eksik yapılar otomatik oluşturulur.
-
-### 5. Uygulamayı başlatın
-
-```bash
-npm run dev
-```
-
-| Servis      | Adres                   |
-| ----------- | ----------------------- |
-| Frontend    | `http://localhost:5173` |
-| Backend API | `http://localhost:5000` |
-| Socket.IO   | `http://localhost:5000` |
-
-Frontend ve backend'i ayrı terminallerde çalıştırmak isterseniz:
-
-```bash
-npm run dev:backend
-npm run dev:frontend
-```
-
-### 6. İlk yerel standart kullanıcıyı oluşturun
-
-Backend çalışırken yalnızca yerel ortamınızda:
-
-```bash
-curl -X POST http://localhost:5000/api/auth/register \
-  -H "Content-Type: application/json" \
-  -d '{"username":"local.user","password":"guclu-bir-yerel-parola"}'
-```
-
-Yönetici hesabı ayrı `admins` tablosunda tutulur. Yönetici yardımcıları `backend/src/scripts/admin/` altındadır; bunları çalıştırmadan önce hedef veritabanını ve script içindeki varsayılan değerleri mutlaka gözden geçirin.
-
-## Ortam değişkenleri
-
-### Backend
-
-| Değişken                   |     Gerekli     | Açıklama                         | Yerel örnek               |
-| -------------------------- | :-------------: | -------------------------------- | ------------------------- |
-| `PORT`                     |      Hayır      | API portu                        | `5000`                    |
-| `NODE_ENV`                 |      Evet       | Çalışma modu                     | `development`             |
-| `DB_HOST`                  |     Yerelde     | PostgreSQL sunucusu              | `127.0.0.1`               |
-| `DB_PORT`                  |     Yerelde     | PostgreSQL portu                 | `5432`                    |
-| `DB_NAME`                  |     Yerelde     | Veritabanı adı                   | `projecrm`                |
-| `DB_USER`                  |     Yerelde     | Veritabanı kullanıcısı           | `postgres`                |
-| `DB_PASSWORD`              |     Yerelde     | Veritabanı parolası              | —                         |
-| `DATABASE_URL`             |   Production    | Tek parça PostgreSQL bağlantısı  | —                         |
-| `JWT_SECRET`               |      Evet       | JWT imzalama anahtarı            | Güçlü ve rastgele değer   |
-| `SYSTEM_PASSWORD_HASH`     | Kullanıma bağlı | Sistem parolasının bcrypt hash'i | —                         |
-| `FRONTEND_URL`             |   Production    | CORS allow-list ek origin'i      | `https://app.example.com` |
-| `DEBUG_DB_POOL`            |      Hayır      | Pool bağlantı logları            | `false`                   |
-| `DB_POOL_MAX`              |      Hayır      | Production pool üst sınırı       | `10`                      |
-| `DB_IDLE_TIMEOUT_MS`       |      Hayır      | Boş bağlantı zaman aşımı         | `60000`                   |
-| `DB_CONNECTION_TIMEOUT_MS` |      Hayır      | Bağlantı kurma zaman aşımı       | `15000`                   |
-
-Rastgele JWT secret üretmek için:
-
-```bash
-node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"
-```
-
-### Frontend
-
-| Değişken       | Gerekli | Açıklama            | Yerel örnek                 |
-| -------------- | :-----: | ------------------- | --------------------------- |
-| `VITE_API_URL` |  Evet   | REST API kök adresi | `http://localhost:5000/api` |
-
-Örnek `frontend/.env.development`:
-
-```dotenv
-VITE_API_URL=http://localhost:5000/api
-```
-
-## Komutlar
-
-### Kök komutlar
-
-| Komut                  | Açıklama                                               |
-| ---------------------- | ------------------------------------------------------ |
-| `npm run dev`          | Backend ve frontend'i birlikte başlatır                |
-| `npm run dev:backend`  | Yalnızca Express/Socket.IO sunucusunu başlatır         |
-| `npm run dev:frontend` | Yalnızca Vite geliştirme sunucusunu başlatır           |
-| `npm run install:all`  | Tüm workspace bağımlılıklarını yükler                  |
-| `npm run build`        | Backend TypeScript ve frontend production build üretir |
-| `npm run lint`         | Tüm repo için ESLint çalıştırır                        |
-| `npm run lint:fix`     | Otomatik düzeltilebilir lint sorunlarını düzeltir      |
-| `npm run format`       | Desteklenen dosyaları Prettier ile biçimlendirir       |
-| `npm run format:check` | Biçim farklarını dosya değiştirmeden kontrol eder      |
-
-### Paket bazlı komutlar
-
-```bash
-# Backend
-cd backend
-npm run dev
-npm run build
-npm run start
-
-# Frontend
-cd frontend
-npm run dev
-npm run build
-npm run preview
-```
-
-## API ve gerçek zamanlı olaylar
-
-### REST API modülleri
-
-| Kök endpoint             | Sorumluluk                                                         |
-| ------------------------ | ------------------------------------------------------------------ |
-| `/api/auth`              | Standart kullanıcı/bayi girişi, kayıt ve sistem parolası doğrulama |
-| `/api/admin`             | Admin girişi, kullanıcılar ve kullanıcı kayıtları                  |
-| `/api/islemler`          | Servis kayıtları, arama, istatistik ve durum yönetimi              |
-| `/api/atolye`            | Atölye CRUD, sayfalama ve durum sayaçları                          |
-| `/api/saha`              | Saha girişleri, personel ve fotoğraflı kayıtlar                    |
-| `/api/karaliste`         | Telefon/adres kontrolü ve karaliste yönetimi                       |
-| `/api/locations/ilceler` | İlçe ve mahalle verileri                                           |
-| `/api/teknisyenler`      | Teknisyen tanımları                                                |
-| `/api/markalar`          | Marka tanımları                                                    |
-| `/api/urunler`           | Ürün tanımları                                                     |
-| `/api/bayiler`           | Bayi tanımları                                                     |
-| `/api/montajlar`         | Montaj tanımları                                                   |
-| `/api/aksesuarlar`       | Aksesuar tanımları                                                 |
-| `/api/printer-settings`  | Marka bazlı yazdırma ayarları                                      |
-
-Auth ve lokasyon girişleri dışındaki operasyon endpoint'leri JWT doğrulaması kullanır.
-
-### Socket.IO olayları
-
-| Olay                  | Kullanım                  |
-| --------------------- | ------------------------- |
-| `yeni-islem`          | Yeni servis kaydı         |
-| `islem-guncellendi`   | Servis kaydı güncellemesi |
-| `islem-silindi`       | Servis kaydı silinmesi    |
-| `islem-durum-degisti` | İş durumu değişikliği     |
-| `yeni-atolye`         | Yeni atölye kaydı         |
-| `atolye-guncellendi`  | Atölye kaydı güncellemesi |
-| `atolye-silindi`      | Atölye kaydı silinmesi    |
-
-Event isimleri frontend ve backend'de ayrı sabit dosyalarında aynı sözleşmeyle tutulur:
-
-- `backend/src/constants/socketEvents.ts`
-- `frontend/src/constants/socketEvents.ts`
-
-## Kalite kontrolleri
-
-Yerel doğrulama:
-
-```bash
-# Backend type-check
-npx tsc -p backend/tsconfig.json --noEmit
-
-# Frontend type-check
-npx tsc -p frontend/tsconfig.json --noEmit
-
-# Kod kalitesi
-npm run lint
-npm run format:check
-
-# Production build
-npm run build
-```
-
-GitHub Actions pipeline şu adımları Node.js 20 üzerinde çalıştırır:
-
-1. Kök, backend ve frontend bağımlılıklarının temiz kurulumu
-2. Backend TypeScript type-check
-3. Frontend TypeScript type-check
-4. ESLint kontrolü
-5. Prettier format kontrolü
-6. Frontend production build
-7. Backend TypeScript build
-
-> [!NOTE]
-> Mevcut CI yapılandırmasında type-check ve build adımları zorunlu; lint ve format kontrolleri bilgilendirici çalışır (`continue-on-error`). Yeni katkılarda tüm kontrollerin yerelde hatasız tamamlanması önerilir.
-
-## Güvenlik ve veri gizliliği
-
-- API oturumları süreli JWT bearer token kullanır.
-- Admin, standart kullanıcı ve saha hesabı parola akışlarında bcrypt hash doğrulaması bulunur.
-- Korumalı route'lar merkezi auth middleware üzerinden doğrulanır.
-- Production bağlantılarında PostgreSQL SSL yapılandırması desteklenir.
-- CORS origin listesi backend tarafında sınırlandırılır.
-- `.env`, `.env.development`, `.env.local` ve `.env.production` dosyaları Git dışında tutulur.
-- Log katmanı production ortamında hassas hata ayrıntılarını sınırlar.
-- README görsellerinde canlı veya yerel gerçek kullanıcı verisi bulunmaz.
-
-> [!CAUTION]
-> `.env.production` veya production `DATABASE_URL` kullanarak migration, seed, bakım ya da geliştirme komutu çalıştırmayın. Önce `DB_HOST`, `DB_NAME`, `NODE_ENV` ve varsa `DATABASE_URL` değerlerini doğrulayın. Özellikle `backend/src/scripts/migrations-legacy/` altındaki araçlar tek seferlik bakım amacı taşır.
-
-Production'a açmadan önce ayrıca HTTPS reverse proxy, rate limit, Helmet, secret rotation, yedekleme ve rol bazlı endpoint yetki denetimi uygulanması önerilir.
-
-## Production dağıtımı
-
-### Build
-
-```bash
-npm ci
-cd backend && npm ci
-cd ../frontend && npm ci
-cd ..
-npm run build
-```
-
-Build çıktıları:
-
-| Paket    | Çıktı            |
-| -------- | ---------------- |
-| Backend  | `backend/dist/`  |
-| Frontend | `frontend/dist/` |
-
-### Backend production değişkenleri
-
-Asgari olarak:
-
-```dotenv
-NODE_ENV=production
-PORT=5000
-DATABASE_URL=postgresql://...
-JWT_SECRET=...
-FRONTEND_URL=https://uygulama.example.com
-```
-
-### Dağıtım kontrol listesi
-
-- [ ] Production veritabanı yedeği alındı
-- [ ] Ortam değişkenleri platform secret yönetiminde tanımlandı
-- [ ] `JWT_SECRET` güçlü ve ortama özel
-- [ ] HTTPS ve reverse proxy aktif
-- [ ] Frontend origin'i CORS listesinde
-- [ ] Backend ve frontend build kontrolleri başarılı
-- [ ] Veritabanı migration etkisi önceden incelendi
-- [ ] Login, servis kaydı, atölye ve Socket.IO smoke testleri tamamlandı
-- [ ] Log ve hata izleme sistemi doğrulandı
-
-## Sorun giderme
-
-### Backend veritabanına bağlanamıyor
-
-1. PostgreSQL servisinin çalıştığını kontrol edin.
-2. `backend/.env` içindeki host, port, veritabanı, kullanıcı ve parolayı doğrulayın.
-3. Geliştirme ortamında `DATABASE_URL` tanımlıysa kaldırın; bu değer ayrı DB alanlarının önüne geçer.
-4. Hedef veritabanının kullanıcı tarafından erişilebilir olduğunu kontrol edin.
-
-### Frontend API istekleri CORS hatası veriyor
-
-- Uygulamayı varsayılan olarak `http://localhost:5173` üzerinden açın.
-- `VITE_API_URL=http://localhost:5000/api` değerini doğrulayın.
-- Farklı bir origin kullanıyorsanız backend `allowedOrigins` listesine ekleyin.
-
-### Girişten sonra tekrar login ekranına dönüyor
-
-- API'nin çalıştığını ve frontend'in doğru endpoint'e bağlandığını kontrol edin.
-- Tarayıcıdaki eski `token` ve `user` localStorage değerlerini temizleyin.
-- `JWT_SECRET` değerinin backend yeniden başlatmaları arasında değişmediğini doğrulayın.
-
-### Lokasyon listeleri boş
-
-İlk başlangıçta lokasyon bootstrap işleminin tamamlanmasını bekleyin. Gerekirse:
-
-```bash
-cd backend
-npm run fetch-locations
-```
-
-Bu komutu yalnızca doğrulanmış yerel veritabanı bağlantısıyla çalıştırın.
-
-### Port kullanımda
-
-Varsayılan portlar:
-
-- Backend: `5000`
-- Frontend: `5173`
-
-Portu kullanan süreci kapatın veya ilgili ortam değişkeni/Vite argümanı ile farklı port seçin.
-
-## Teknik dokümantasyon
-
-| Doküman                                                                    | İçerik                             |
-| -------------------------------------------------------------------------- | ---------------------------------- |
-| [QUICK_START.md](QUICK_START.md)                                           | Kısa kurulum özeti                 |
-| [REFACTOR_RAPORU.md](REFACTOR_RAPORU.md)                                   | Refactor sonuçları ve ölçümler     |
-| [docs/BASELINE.md](docs/BASELINE.md)                                       | Başlangıç kalite ve yapı envanteri |
-| [docs/REFACTOR_PLAYBOOK.md](docs/REFACTOR_PLAYBOOK.md)                     | Tekrarlanabilir refactor yaklaşımı |
-| [docs/refactor/api-contract.md](docs/refactor/api-contract.md)             | API sözleşmesi                     |
-| [docs/refactor/env-security-audit.md](docs/refactor/env-security-audit.md) | Ortam ve secret güvenliği denetimi |
-| [docs/refactor/security-backlog.md](docs/refactor/security-backlog.md)     | Güvenlik iyileştirme listesi       |
-| [frontend/src/hooks/README.md](frontend/src/hooks/README.md)               | Frontend hook rehberi              |
-| [backend/src/scripts/README.md](backend/src/scripts/README.md)             | Bakım ve script kullanım kuralları |
-
-## Yol haritası
-
-- [ ] OpenAPI/Swagger API dokümantasyonu
-- [ ] Vitest, React Testing Library ve Supertest test altyapısı
-- [ ] Role özel endpoint yetki politikasının merkezileştirilmesi
-- [ ] Helmet ve rate limiting
-- [ ] Versiyonlu migration runner
-- [ ] Docker Compose ile tekrarlanabilir yerel ortam
-- [ ] PostgreSQL yedekleme/geri yükleme runbook'u
-- [ ] Gözlemlenebilirlik: merkezi log, metrik ve hata izleme
-- [ ] PWA ve çevrimdışı saha deneyimi
-- [ ] Türkçe/İngilizce i18n desteği
-
-## Katkı
-
-1. Repoyu fork edin.
-2. Açıklayıcı isimli bir branch oluşturun.
-3. Küçük ve odaklı commit'ler hazırlayın.
-4. Type-check, lint, format ve build kontrollerini çalıştırın.
-5. Davranış değişikliği varsa ilgili dokümantasyonu güncelleyin.
-6. Pull request içinde değişikliği, doğrulama adımlarını ve olası migration etkisini açıklayın.
+Frontend; rol bazlı çalışma alanlarını, veri tablolarını, formları ve çıktı araçlarını sunar. Backend; kimlik doğrulama, iş kuralları, veri erişimi ve gerçek zamanlı olayların merkezidir. PostgreSQL operasyon verisini kalıcı olarak saklarken Socket.IO açık oturumların değişiklikleri sayfa yenilemeden görmesini sağlar.
+
+## Mühendislik yaklaşımı
+
+| Alan                   | Uygulanan yaklaşım                                                                  |
+| ---------------------- | ----------------------------------------------------------------------------------- |
+| Gerçek zamanlı veri    | Servis ve atölye değişikliklerinin Socket.IO olaylarıyla açık oturumlara iletilmesi |
+| Büyük veri kümeleri    | Sunucu taraflı sayfalama, kolon filtreleri ve kademeli tablo gösterimi              |
+| Arama deneyimi         | Yoğun filtre girişlerinde debounce kullanımı                                        |
+| Veritabanı performansı | Durum, tarih, telefon, teknisyen ve sıralama alanlarında hedefli indeksler          |
+| Bağlantı sürekliliği   | PostgreSQL bağlantı havuzu ve geçici sorgu hataları için sınırlı yeniden deneme     |
+| Frontend performansı   | Ağır ekranlarda `React.lazy`, `Suspense` ve parçalı yükleme                         |
+| Kod güvenilirliği      | Strict TypeScript, ESLint, Prettier ve otomatik kalite kontrolleri                  |
+| Doküman üretimi        | PDF, Excel ve özelleştirilebilir yazdırma şablonları                                |
+
+## Teknoloji haritası
+
+| Katman                  | Teknolojiler                                        |
+| ----------------------- | --------------------------------------------------- |
+| Web arayüzü             | React 18, TypeScript, Vite, Material UI             |
+| İstemci veri akışı      | React Context, custom hooks, Axios                  |
+| Sunucu                  | Node.js, Express, TypeScript                        |
+| Veritabanı              | PostgreSQL, `pg` bağlantı havuzu                    |
+| Gerçek zamanlı iletişim | Socket.IO                                           |
+| Kimlik doğrulama        | JWT, bcrypt                                         |
+| Raporlama               | pdf-lib, jsPDF, jspdf-autotable, xlsx               |
+| Arayüz yardımcıları     | react-window, @hello-pangea/dnd                     |
+| Kalite altyapısı        | GitHub Actions, ESLint, Prettier, TypeScript strict |
+
+## Güvenlik ve veri yaklaşımı
+
+- Parolalar tek yönlü bcrypt özeti olarak saklanır.
+- Korunan istekler JWT tabanlı kimlik doğrulamasından geçer.
+- Rol bilgisi hem kullanıcı deneyimini hem de erişilebilir operasyonları belirler.
+- Veritabanı sorgularında parametreli SQL kullanılır.
+- İzin verilen istemci kaynakları CORS katmanında sınırlandırılır.
+- Hassas ortam dosyaları ve üretim çıktıları kaynak kod deposunda tutulmaz.
+- README görsellerinde yalnızca sentetik, yerel demo verileri yer alır.
+
+## Projenin öne çıkan yönleri
+
+- Servis, atölye ve saha iş akışlarını tek ürün altında birleştiren uçtan uca kapsam
+- Masaüstü yoğun veri tabloları ile mobil saha deneyiminin aynı sistemde sunulması
+- Operasyon ekipleri için anlık sayaçlar, renk kodları ve gerçek zamanlı güncellemeler
+- Yönetim kararlarını destekleyen kullanıcı aktivitesi, müşteri geçmişi ve çıktı araçları
+- Veri hacmi büyüdükçe kullanılabilirliği koruyan sayfalama, indeks ve lazy-loading yaklaşımı
+- Gerçek iş akışlarına göre şekillendirilmiş Türkçe arayüz ve doküman çıktıları
 
 ## Lisans
 
 Bu proje [MIT Lisansı](LICENSE) ile lisanslanmıştır.
 
-Copyright © 2024–2026 [Salih Saydam](https://github.com/salih12s)
-
 ---
 
 <div align="center">
-  <strong>ProjeCRM</strong><br>
-  Teknik servis operasyonlarını daha görünür, hızlı ve yönetilebilir hale getirmek için geliştirildi.
+
+**ProjeCRM — teknik servis operasyonunun müşteri kabulünden saha kaydına kadar tek merkezden yönetimi**
+
 </div>

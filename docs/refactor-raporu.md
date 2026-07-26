@@ -1,4 +1,4 @@
-# 🔧 Frontend Refactor / Optimizasyon Detaylı Raporu
+# Frontend refactor ve optimizasyon raporu
 
 **Tarih:** 2025  
 **Branch:** `refactor/phase-0-baseline`  
