@@ -42,11 +42,26 @@ export default defineConfig({
         // cache invalidation'ı kendi başına gerçekleşir.
         manualChunks: (id) => {
           if (!id.includes('node_modules')) return undefined;
-          if (id.includes('react-dom') || id.includes('react-router') || id.match(/[\\/]react[\\/]/)) {
-            return 'vendor-react';
-          }
-          if (id.includes('@mui') || id.includes('@emotion')) {
-            return 'vendor-mui';
+          // react + mui + emotion TEK chunk.
+          //
+          // Bunlar eskiden 'vendor-react' ve 'vendor-mui' diye ayrılıyordu ve
+          // aralarında döngüsel bağımlılık oluşuyordu: react-router,
+          // vendor-mui'ye düşen ortak bir interop yardımcısını import ediyor,
+          // vendor-mui de react'i import ediyordu. Tarayıcı chunk'lardan birini
+          // önce çalıştırınca diğerinin binding'i henüz tanımlı olmuyor ve
+          // "Uncaught ReferenceError: Cannot access 'X' before initialization"
+          // ile beyaz ekran geliyordu.
+          //
+          // Ayırmanın zaten bir faydası yoktu: ikisi de ilk paint'te mutlaka
+          // indiriliyor. Birleştirmek döngüyü yapısal olarak imkânsız kılıyor.
+          if (
+            id.includes('@mui') ||
+            id.includes('@emotion') ||
+            id.includes('react-dom') ||
+            id.includes('react-router') ||
+            /node_modules[\\/]react[\\/]/.test(id)
+          ) {
+            return 'vendor-core';
           }
           if (id.includes('pdf-lib') || id.includes('jspdf') || id.includes('fontkit')) {
             return 'vendor-pdf';
