@@ -37,6 +37,8 @@ import { useAuth } from '../../context/AuthContext';
 import SahaKayitDialog from './SahaKayitDialog';
 import PhotoLoadingOverlay from './PhotoLoadingOverlay';
 import ImageGalleryDialog from './ImageGalleryDialog';
+import { SahaPhoto, parseSahaPhotos } from '../../utils/sahaPhoto';
+import { buildKayitFallbackName } from './sahaPhotoName';
 
 const PAGE_SIZE = 50;
 
@@ -45,7 +47,7 @@ const SahaPanel: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [openDialog, setOpenDialog] = useState(false);
   const [editingKayit, setEditingKayit] = useState<SahaKayit | null>(null);
-  const [dialogInitialPhotos, setDialogInitialPhotos] = useState<string[]>([]);
+  const [dialogInitialPhotos, setDialogInitialPhotos] = useState<SahaPhoto[]>([]);
   const [searchText, setSearchText] = useState('');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
@@ -59,9 +61,10 @@ const SahaPanel: React.FC = () => {
   const [totalStats, setTotalStats] = useState<{ toplam: number; bugun: number }>({ toplam: 0, bugun: 0 });
 
   // Fotoğraf galeri state
-  const [selectedImages, setSelectedImages] = useState<string[]>([]);
+  const [selectedPhotos, setSelectedPhotos] = useState<SahaPhoto[]>([]);
+  const [selectedFallbackName, setSelectedFallbackName] = useState('fotograf');
   const [photoLoading, setPhotoLoading] = useState(false);
-  const [photoCache, setPhotoCache] = useState<Record<number, string[]>>({});
+  const [photoCache, setPhotoCache] = useState<Record<number, SahaPhoto[]>>({});
 
   const { showSnackbar } = useSnackbar();
   const { user } = useAuth();
@@ -123,15 +126,7 @@ const SahaPanel: React.FC = () => {
       } else if (kayit.has_photos) {
         try {
           const fotoData = await sahaService.getKayitPhotos(kayit.id);
-          let fotolar: string[] = [];
-          if (fotoData) {
-            try {
-              const parsed = JSON.parse(fotoData);
-              fotolar = Array.isArray(parsed) ? parsed : [fotoData];
-            } catch {
-              fotolar = [fotoData];
-            }
-          }
+          const fotolar = parseSahaPhotos(fotoData);
           setPhotoCache(prev => ({ ...prev, [kayit.id]: fotolar }));
           setDialogInitialPhotos(fotolar);
         } catch {
@@ -160,7 +155,7 @@ const SahaPanel: React.FC = () => {
     loadKayitlar(currentPage);
   }, [loadKayitlar, currentPage]);
 
-  const handlePhotosCached = useCallback((id: number, photos: string[]) => {
+  const handlePhotosCached = useCallback((id: number, photos: SahaPhoto[]) => {
     setPhotoCache(prev => ({ ...prev, [id]: photos }));
   }, []);
 
@@ -357,24 +352,17 @@ const SahaPanel: React.FC = () => {
             const handleViewPhotos = async (e: React.MouseEvent) => {
               e.stopPropagation();
               if (!hasPhotos && !fotoPreview) return;
+              setSelectedFallbackName(buildKayitFallbackName(kayit));
               if (photoCache[kayit.id]) {
-                setSelectedImages(photoCache[kayit.id]);
+                setSelectedPhotos(photoCache[kayit.id]);
                 return;
               }
               try {
                 setPhotoLoading(true);
                 const fotoData = await sahaService.getKayitPhotos(kayit.id);
-                let fotolar: string[] = [];
-                if (fotoData) {
-                  try {
-                    const parsed = JSON.parse(fotoData);
-                    fotolar = Array.isArray(parsed) ? parsed : [fotoData];
-                  } catch {
-                    fotolar = [fotoData];
-                  }
-                }
+                const fotolar = parseSahaPhotos(fotoData);
                 setPhotoCache(prev => ({ ...prev, [kayit.id]: fotolar }));
-                setSelectedImages(fotolar);
+                setSelectedPhotos(fotolar);
               } catch {
                 showSnackbar('Fotoğraflar yüklenirken hata oluştu!', 'error');
               } finally {
@@ -518,7 +506,11 @@ const SahaPanel: React.FC = () => {
       />
 
       <PhotoLoadingOverlay open={photoLoading} />
-      <ImageGalleryDialog images={selectedImages} onClose={() => setSelectedImages([])} />
+      <ImageGalleryDialog
+        photos={selectedPhotos}
+        fallbackName={selectedFallbackName}
+        onClose={() => setSelectedPhotos([])}
+      />
     </Box>
   );
 };

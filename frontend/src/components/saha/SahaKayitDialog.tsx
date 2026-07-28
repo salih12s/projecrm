@@ -15,14 +15,15 @@ import { Close, PhotoCamera } from '@mui/icons-material';
 import { sahaService } from '../../services/saha.service';
 import { SahaKayit, SahaKayitCreateDto } from '../../types';
 import { useSnackbar } from '../../context/SnackbarContext';
+import { SahaPhoto, serializeSahaPhotos } from '../../utils/sahaPhoto';
 
 interface Props {
   open: boolean;
   editingKayit: SahaKayit | null;
-  initialPhotos: string[];
+  initialPhotos: SahaPhoto[];
   onClose: () => void;
   onSaved: () => void;
-  onPhotosCached: (id: number, photos: string[]) => void;
+  onPhotosCached: (id: number, photos: SahaPhoto[]) => void;
 }
 
 // Fotoğrafı sıkıştır (yüksek kalite koruyarak boyutu azalt)
@@ -78,7 +79,7 @@ const SahaKayitDialog: React.FC<Props> = ({ open, editingKayit, initialPhotos, o
   const [formIsim, setFormIsim] = useState('');
   const [formSoyisim, setFormSoyisim] = useState('');
   const [formNotlar, setFormNotlar] = useState('');
-  const [formFotolar, setFormFotolar] = useState<string[]>([]);
+  const [formFotolar, setFormFotolar] = useState<SahaPhoto[]>([]);
   const [formSubmitting, setFormSubmitting] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -109,16 +110,20 @@ const SahaKayitDialog: React.FC<Props> = ({ open, editingKayit, initialPhotos, o
       showSnackbar(`Maksimum ${maxPhotos} fotoğraf yükleyebilirsiniz!`, 'warning');
       return;
     }
-    const newPhotos: string[] = [];
+    const newPhotos: SahaPhoto[] = [];
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
       if (file.size > 10 * 1024 * 1024) {
         showSnackbar(`${file.name} dosyası 10MB'dan büyük, atlandı!`, 'warning');
         continue;
       }
+      // Orijinal dosya adını sakla — indirirken aynı isimle gelmesi için.
+      // (Kamera ile çekilen fotoğraflarda tarayıcı genelde "image.jpg" gibi
+      // jenerik bir ad verir; o durumda indirme adı kayıttan üretilir.)
+      const originalName = file.name || undefined;
       try {
         const compressedData = await compressImage(file, 2400, 0.92);
-        newPhotos.push(compressedData);
+        newPhotos.push({ data: compressedData, name: originalName });
       } catch {
         try {
           const reader = new FileReader();
@@ -127,7 +132,7 @@ const SahaKayitDialog: React.FC<Props> = ({ open, editingKayit, initialPhotos, o
             reader.onerror = reject;
             reader.readAsDataURL(file);
           });
-          newPhotos.push(base64);
+          newPhotos.push({ data: base64, name: originalName });
         } catch {
           showSnackbar(`${file.name} yüklenemedi!`, 'warning');
         }
@@ -156,7 +161,7 @@ const SahaKayitDialog: React.FC<Props> = ({ open, editingKayit, initialPhotos, o
         isim: formIsim.trim(),
         soyisim: formSoyisim.trim(),
         notlar: formNotlar.trim() || undefined,
-        foto_data: formFotolar.length > 0 ? JSON.stringify(formFotolar) : undefined,
+        foto_data: formFotolar.length > 0 ? serializeSahaPhotos(formFotolar) : undefined,
       };
       if (editingKayit) {
         await sahaService.updateKayit(editingKayit.id, data);
@@ -195,8 +200,9 @@ const SahaKayitDialog: React.FC<Props> = ({ open, editingKayit, initialPhotos, o
                   {formFotolar.map((foto, index) => (
                     <Box key={index} sx={{ position: 'relative', display: 'inline-block' }}>
                       <img
-                        src={foto}
-                        alt={`Preview ${index + 1}`}
+                        src={foto.data}
+                        alt={foto.name || `Preview ${index + 1}`}
+                        title={foto.name}
                         style={{ width: 80, height: 80, borderRadius: 8, objectFit: 'cover', border: '1px solid #ddd' }}
                       />
                       <IconButton

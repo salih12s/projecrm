@@ -7,21 +7,69 @@ import { SOCKET_EVENTS } from '../constants/socketEvents';
 
 const router = express.Router();
 
+// === STATS CACHE ===
+// /stats sorgusu 7 adet COUNT(*) FILTER içerir; index kullanamaz ve tabloyu
+// baştan sona tarar. Her socket olayında BÜTÜN bağlı istemciler bu endpoint'i
+// çağırdığı için tek bir tıklama N adet full-table aggregate'e dönüşüyordu.
+// Kısa ömürlü cache + yazma sonrası invalidation ile bu tamamen ortadan kalkar.
+interface StatsCacheEntry {
+  data: any;
+  timestamp: number;
+}
+let statsCache: StatsCacheEntry | undefined;
+let statsInFlight: Promise<any> | null = null;
+// Sorgu uçarken bir yazma gelirse, dönen (bayatlamış) sonucun cache'e
+// yazılmasını engellemek için sürüm sayacı.
+let statsGeneration = 0;
+const STATS_CACHE_TTL = 15000; // 15 sn
+
+function invalidateStatsCache(): void {
+  statsCache = undefined;
+  statsGeneration++;
+}
+
+async function computeStats(): Promise<any> {
+  const result = await query(`
+    SELECT
+      COUNT(*) as total,
+      COUNT(*) FILTER (WHERE is_durumu = 'acik') as acik,
+      COUNT(*) FILTER (WHERE is_durumu = 'parca_bekliyor') as parca_bekliyor,
+      COUNT(*) FILTER (WHERE is_durumu = 'tamamlandi') as tamamlandi,
+      COUNT(*) FILTER (WHERE is_durumu = 'iptal') as iptal,
+      COUNT(*) FILTER (WHERE full_tarih >= CURRENT_DATE AND full_tarih < CURRENT_DATE + INTERVAL '1 day') as bugun,
+      COUNT(*) FILTER (WHERE (yazdirildi IS NULL OR yazdirildi = false)) as yazdirilmamis
+    FROM islemler
+  `);
+  return result.rows[0];
+}
+// === END STATS CACHE ===
+
 // İstatistikler endpoint - hafif, sadece sayılar döner
 router.get('/stats', authMiddleware, async (_req: Request, res: Response): Promise<void> => {
   try {
-    const result = await query(`
-      SELECT 
-        COUNT(*) as total,
-        COUNT(*) FILTER (WHERE is_durumu = 'acik') as acik,
-        COUNT(*) FILTER (WHERE is_durumu = 'parca_bekliyor') as parca_bekliyor,
-        COUNT(*) FILTER (WHERE is_durumu = 'tamamlandi') as tamamlandi,
-        COUNT(*) FILTER (WHERE is_durumu = 'iptal') as iptal,
-        COUNT(*) FILTER (WHERE full_tarih >= CURRENT_DATE AND full_tarih < CURRENT_DATE + INTERVAL '1 day') as bugun,
-        COUNT(*) FILTER (WHERE (yazdirildi IS NULL OR yazdirildi = false)) as yazdirilmamis
-      FROM islemler
-    `);
-    res.json(result.rows[0]);
+    if (statsCache && Date.now() - statsCache.timestamp < STATS_CACHE_TTL) {
+      res.json(statsCache.data);
+      return;
+    }
+
+    // Aynı anda gelen isteklerin hepsi tek sorguyu paylaşsın (thundering herd)
+    if (!statsInFlight) {
+      const generationAtStart = statsGeneration;
+      statsInFlight = computeStats()
+        .then((data) => {
+          // Sorgu sürerken yazma olduysa sonucu cache'leme; bir sonraki
+          // istek taze sorgu atsın.
+          if (generationAtStart === statsGeneration) {
+            statsCache = { data, timestamp: Date.now() };
+          }
+          return data;
+        })
+        .finally(() => {
+          statsInFlight = null;
+        });
+    }
+
+    res.json(await statsInFlight);
   } catch (error) {
     logger.error('İstatistik hatası:', error);
     res.status(500).json({ message: 'Sunucu hatası' });
@@ -313,6 +361,8 @@ router.post('/', authMiddleware, async (req: Request, res: Response): Promise<vo
       0
     );
 
+    invalidateStatsCache();
+
     // Socket.IO ile tüm kullanıcılara bildir
     const io = req.app.get('io');
     io.emit(SOCKET_EVENTS.YENI_ISLEM, result.rows[0]);
@@ -324,72 +374,72 @@ router.post('/', authMiddleware, async (req: Request, res: Response): Promise<vo
   }
 });
 
+// Güncellenebilir alanlar ve her biri için normalizasyon kuralı.
+// (VARCHAR(20) kolonlar truncate edilir, telefonlar sadece rakama indirgenir.)
+const onlyDigits20 = (v: any) => (v == null ? v : String(v).replace(/\D/g, '').slice(0, 20));
+const max20 = (v: any) => (v == null ? v : String(v).slice(0, 20));
+
+const UPDATABLE_ISLEM_FIELDS: Record<string, (v: any) => any> = {
+  teknisyen_ismi: (v) => v,
+  yapilan_islem: (v) => v,
+  tutar: (v) => v,
+  ad_soyad: (v) => v,
+  ilce: (v) => v,
+  mahalle: (v) => v,
+  cadde: (v) => v,
+  sokak: (v) => v,
+  kapi_no: max20,
+  apartman_site: (v) => v,
+  blok_no: max20,
+  daire_no: max20,
+  sabit_tel: onlyDigits20,
+  cep_tel: onlyDigits20,
+  yedek_tel: onlyDigits20,
+  urun: (v) => v,
+  marka: (v) => v,
+  sikayet: (v) => v,
+  is_durumu: (v) => max20(v ?? 'acik'),
+  yazdirildi: (v) => v,
+};
+
 // İşlem güncelle
+// ⚡ Eskiden: önce SELECT * (1 round-trip) + ardından 20 kolonun tamamını yazan
+// UPDATE. Artık tek sorguda, sadece gönderilen alanlar güncelleniyor.
 router.put('/:id', authMiddleware, async (req: Request, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
-    const updates: any = req.body;
+    const updates: Record<string, any> = req.body || {};
 
-    // Önce mevcut işlemi al
-    const existing = await query(
-      'SELECT * FROM islemler WHERE id = $1',
-      [id]
+    const setClauses: string[] = [];
+    const values: any[] = [];
+    let paramIndex = 1;
+
+    for (const [field, normalize] of Object.entries(UPDATABLE_ISLEM_FIELDS)) {
+      if (updates[field] === undefined) continue;
+      setClauses.push(`${field} = $${paramIndex++}`);
+      values.push(normalize(updates[field]));
+    }
+
+    if (setClauses.length === 0) {
+      res.status(400).json({ message: 'Güncellenecek alan belirtilmedi' });
+      return;
+    }
+
+    setClauses.push('updated_at = CURRENT_TIMESTAMP');
+    values.push(id);
+
+    const result = await query(
+      `UPDATE islemler SET ${setClauses.join(', ')} WHERE id = $${paramIndex} RETURNING *`,
+      values,
+      0
     );
 
-    if (existing.rows.length === 0) {
+    if (result.rows.length === 0) {
       res.status(404).json({ message: 'İşlem bulunamadı' });
       return;
     }
 
-    // Sadece gönderilen alanları güncelle
-    const currentData = existing.rows[0];
-    const updatedData = { ...currentData, ...updates };
-
-    // VARCHAR(20) alanları truncate et
-    const truncatedKapiNo = (updatedData.kapi_no || '').slice(0, 20);
-    const truncatedBlokNo = (updatedData.blok_no || '').slice(0, 20);
-    const truncatedDaireNo = (updatedData.daire_no || '').slice(0, 20);
-    const truncatedSabitTel = (updatedData.sabit_tel || '').replace(/\D/g, '').slice(0, 20);
-    const truncatedCepTel = (updatedData.cep_tel || '').replace(/\D/g, '').slice(0, 20);
-    const truncatedYedekTel = (updatedData.yedek_tel || '').replace(/\D/g, '').slice(0, 20);
-    const truncatedIsDurumu = (updatedData.is_durumu || 'acik').slice(0, 20);
-
-    const result = await query(
-      `UPDATE islemler SET
-        teknisyen_ismi = $1,
-        yapilan_islem = $2,
-        tutar = $3,
-        ad_soyad = $4,
-        ilce = $5,
-        mahalle = $6,
-        cadde = $7,
-        sokak = $8,
-        kapi_no = $9,
-        apartman_site = $10,
-        blok_no = $11,
-        daire_no = $12,
-        sabit_tel = $13,
-        cep_tel = $14,
-        yedek_tel = $15,
-        urun = $16,
-        marka = $17,
-        sikayet = $18,
-        is_durumu = $19,
-        yazdirildi = $20,
-        updated_at = CURRENT_TIMESTAMP
-      WHERE id = $21
-      RETURNING *`,
-      [
-        updatedData.teknisyen_ismi, updatedData.yapilan_islem, updatedData.tutar, 
-        updatedData.ad_soyad, updatedData.ilce, updatedData.mahalle,
-        updatedData.cadde, updatedData.sokak, truncatedKapiNo, 
-        updatedData.apartman_site, truncatedBlokNo, truncatedDaireNo,
-        truncatedSabitTel, truncatedCepTel, truncatedYedekTel, updatedData.urun, 
-        updatedData.marka, updatedData.sikayet, truncatedIsDurumu, 
-        updatedData.yazdirildi, id
-      ],
-      0
-    );
+    invalidateStatsCache();
 
     // Socket.IO ile tüm kullanıcılara bildir
     const io = req.app.get('io');
@@ -398,6 +448,37 @@ router.put('/:id', authMiddleware, async (req: Request, res: Response): Promise<
     res.json(result.rows[0]);
   } catch (error) {
     logger.error('İşlem güncelleme hatası:', error);
+    res.status(500).json({ message: 'Sunucu hatası' });
+  }
+});
+
+// ⚡ Yazdırıldı bayrağını çevir - tek kolonluk, en hafif yol.
+// Tabloda yazıcı simgesine basınca tüm satırı PUT etmek yerine bu kullanılır.
+router.patch('/:id/yazdirildi', authMiddleware, async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const { yazdirildi } = req.body;
+
+    const result = await query(
+      `UPDATE islemler SET yazdirildi = $1, updated_at = CURRENT_TIMESTAMP
+       WHERE id = $2 RETURNING *`,
+      [Boolean(yazdirildi), id],
+      0
+    );
+
+    if (result.rows.length === 0) {
+      res.status(404).json({ message: 'İşlem bulunamadı' });
+      return;
+    }
+
+    invalidateStatsCache();
+
+    const io = req.app.get('io');
+    io.emit(SOCKET_EVENTS.ISLEM_GUNCELLENDI, result.rows[0]);
+
+    res.json(result.rows[0]);
+  } catch (error) {
+    logger.error('Yazdırıldı güncelleme hatası:', error);
     res.status(500).json({ message: 'Sunucu hatası' });
   }
 });
@@ -417,6 +498,8 @@ router.delete('/:id', authMiddleware, async (req: Request, res: Response): Promi
       res.status(404).json({ message: 'İşlem bulunamadı' });
       return;
     }
+
+    invalidateStatsCache();
 
     // Socket.IO ile tüm kullanıcılara bildir
     const io = req.app.get('io');
@@ -449,6 +532,8 @@ router.patch('/:id/durum', authMiddleware, async (req: Request, res: Response): 
       res.status(404).json({ message: 'İşlem bulunamadı' });
       return;
     }
+
+    invalidateStatsCache();
 
     // Socket.IO ile tüm kullanıcılara bildir
     const io = req.app.get('io');

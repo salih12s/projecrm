@@ -7,6 +7,23 @@ export default defineConfig({
   base: './',
   server: {
     port: 5173,
+    // Dev'de API tabanı `/api` (bkz. services/api.ts fallback'i). Proxy olmadan
+    // bu istekler Vite dev sunucusuna gidip SPA fallback'i olarak index.html
+    // döndürüyor; axios HTML alınca `response.data.sort` patlıyordu.
+    // Proxy ile dev, backend ve frontend'in aynı origin'de olduğu production
+    // davranışıyla eşleşir — .env.development'a URL yazmaya gerek kalmaz.
+    proxy: {
+      '/api': {
+        target: 'http://localhost:5000',
+        changeOrigin: true,
+      },
+      // Socket.IO handshake'i de aynı origin üzerinden geçebilsin.
+      '/socket.io': {
+        target: 'http://localhost:5000',
+        ws: true,
+        changeOrigin: true,
+      },
+    },
   },
   build: {
     // Her build'de eski asset'leri temizle (Phase 1 hijyen düzeltmesi).

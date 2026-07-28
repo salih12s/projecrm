@@ -40,6 +40,8 @@ import { useSnackbar } from '../../context/SnackbarContext';
 import { sahaService } from '../../services/saha.service';
 import { SahaKayit, SahaElemani } from '../../types';
 import ImagePreviewDialog from './ImagePreviewDialog';
+import { SahaPhoto, parseSahaPhotos } from '../../utils/sahaPhoto';
+import { buildKayitFallbackName } from './sahaPhotoName';
 import PhotoLoadingOverlay from './PhotoLoadingOverlay';
 
 // Lazy-loading thumbnail: yalnızca viewport'a girdiğinde ilk fotoğrafı backend'den çeker.
@@ -138,9 +140,10 @@ const SahaKayitlari: React.FC = () => {
   const [selectedSahaElemani, setSelectedSahaElemani] = useState<number | ''>('');
   const [showFilters, setShowFilters] = useState(true);
   const [viewMode, setViewMode] = useState<'cards' | 'table'>('cards');
-  const [selectedImages, setSelectedImages] = useState<string[]>([]);
+  const [selectedPhotos, setSelectedPhotos] = useState<SahaPhoto[]>([]);
+  const [selectedFallbackName, setSelectedFallbackName] = useState('fotograf');
   const [photoLoading, setPhotoLoading] = useState(false);
-  const [photoCache, setPhotoCache] = useState<Record<number, string[]>>({});
+  const [photoCache, setPhotoCache] = useState<Record<number, SahaPhoto[]>>({});
   const [thumbnailCache, setThumbnailCache] = useState<Record<number, string | null>>({});
   const [currentPage, setCurrentPage] = useState(1);
   const [totalRecords, setTotalRecords] = useState(0);
@@ -178,27 +181,22 @@ const SahaKayitlari: React.FC = () => {
 
   // Fotoğrafları lazy load ile aç
   const handleOpenPhotos = async (kayitId: number) => {
+    const kayit = kayitlar.find(k => k.id === kayitId);
+    setSelectedFallbackName(buildKayitFallbackName(kayit));
+
     // Cache'de varsa direkt aç
     if (photoCache[kayitId]) {
-      setSelectedImages(photoCache[kayitId]);
+      setSelectedPhotos(photoCache[kayitId]);
       return;
     }
 
     try {
       setPhotoLoading(true);
       const fotoData = await sahaService.getKayitPhotos(kayitId);
-      let fotolar: string[] = [];
-      if (fotoData) {
-        try {
-          const parsed = JSON.parse(fotoData);
-          fotolar = Array.isArray(parsed) ? parsed : [fotoData];
-        } catch {
-          fotolar = [fotoData];
-        }
-      }
+      const fotolar = parseSahaPhotos(fotoData);
       // Cache'e kaydet
       setPhotoCache(prev => ({ ...prev, [kayitId]: fotolar }));
-      setSelectedImages(fotolar);
+      setSelectedPhotos(fotolar);
     } catch (error) {
       console.error('Fotoğraflar yüklenirken hata:', error);
       showSnackbar('Fotoğraflar yüklenirken hata oluştu!', 'error');
@@ -664,8 +662,9 @@ const SahaKayitlari: React.FC = () => {
 
       {/* Image Preview Dialog */}
       <ImagePreviewDialog
-        images={selectedImages}
-        onClose={() => setSelectedImages([])}
+        photos={selectedPhotos}
+        fallbackName={selectedFallbackName}
+        onClose={() => setSelectedPhotos([])}
       />
     </Box>
   );

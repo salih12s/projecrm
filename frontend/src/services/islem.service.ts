@@ -39,6 +39,13 @@ export const islemService = {
     await api.delete(`/islemler/${id}`);
   },
 
+  // ⚡ Sadece "yazdirildi" bayrağını çevirir. Tüm satırı PUT etmek yerine
+  // tek kolonluk PATCH — sunucuda ön SELECT yok, 20 kolon yazımı yok.
+  toggleYazdirildi: async (id: number, yazdirildi: boolean): Promise<Islem> => {
+    const response = await api.patch(`/islemler/${id}/yazdirildi`, { yazdirildi });
+    return response.data;
+  },
+
   updateDurum: async (id: number, is_durumu: 'acik' | 'tamamlandi'): Promise<Islem> => {
     const response = await api.patch(`/islemler/${id}/durum`, { is_durumu });
     return response.data;

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback, memo, startTransition } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, memo, startTransition, lazy, Suspense } from 'react';
 import {
   Table,
   TableBody,
@@ -19,13 +19,16 @@ import IslemTableLoadingState from './table/IslemTableLoadingState';
 import CustomerHistoryDialog from './table/CustomerHistoryDialog';
 import KaralisteConfirmDialog from './table/KaralisteConfirmDialog';
 import IslemMobileCard from './table/IslemMobileCard';
+import IslemTableRow from './table/IslemTableRow';
 import { createIslemColumnConfigs, ColumnConfig } from './table/islemColumnConfigs';
+import { normalizeTr } from './table/islemTableUtils';
 import {
   DragIndicator,
 } from '@mui/icons-material';
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
 import { Islem } from '../../types';
-import PrintEditor from '../settings/PrintEditor';
+// ⚡ PrintEditor sadece yazdırma dialogu açılınca gerekiyor; ana bundle'dan çıkar.
+const PrintEditor = lazy(() => import('../settings/PrintEditor'));
 import { islemService } from '../../services/islem.service';
 import { karalisteService } from '../../services/karaliste.service';
 import { STORAGE_KEYS } from '../../constants/storageKeys';
@@ -74,6 +77,9 @@ const IslemTable: React.FC<IslemTableProps> = ({
   // ⚡ Performance: Render limiti - büyük verilerde kasma önlenir
   const DISPLAY_CHUNK = 150;
   const [displayLimit, setDisplayLimit] = useState(DISPLAY_CHUNK);
+
+  // ⚡ Yazdırıldı simgesi için optimistic değerler: { islemId: yeniDeger }
+  const [yazdirildiOverrides, setYazdirildiOverrides] = useState<Record<number, boolean>>({});
   
   const [historyFilters, setHistoryFilters] = useState({
     sira: '',
@@ -116,61 +122,70 @@ const IslemTable: React.FC<IslemTableProps> = ({
     durum: '',
   });
 
-  // ⚡ Pre-computed lowercase search index - islemler değişince bir kez hesaplanır
+  // ⚡ Hiçbir filtre yokken arama indeksini HİÇ kurma.
+  // Eskiden `islemler` her değiştiğinde (her socket olayında!) 11.000 × 20
+  // alan için `toLocaleLowerCase('tr-TR')` çalışıyordu ≈ 550 ms donma.
+  const hasAnyFilter = useMemo(() => {
+    const f = filters;
+    return Boolean(
+      f.sira || f.tarih || f.ad_soyad || f.ilce || f.mahalle ||
+      f.cadde || f.sokak || f.kapi_no || f.apartman_site || f.blok_no ||
+      f.daire_no || f.cep_tel || f.urun || f.marka || f.sikayet ||
+      f.yapilan_islem || f.teknisyen || f.tutar || f.durum
+    );
+  }, [filters]);
+
+  // ⚡ Pre-computed lowercase search index - sadece filtre varken hesaplanır
   const searchIndex = useMemo(() => {
+    if (!hasAnyFilter) return null;
     return islemler.map(item => ({
       id: item.id,
       idStr: item.id.toString(),
       tarih: item.full_tarih ? new Date(item.full_tarih).toLocaleDateString('tr-TR') : '',
-      ad_soyad: (item.ad_soyad || '').toLocaleLowerCase('tr-TR'),
-      ilce: (item.ilce || '').toLocaleLowerCase('tr-TR'),
-      mahalle: (item.mahalle || '').toLocaleLowerCase('tr-TR'),
-      cadde: (item.cadde || '').toLocaleLowerCase('tr-TR'),
-      sokak: (item.sokak || '').toLocaleLowerCase('tr-TR'),
-      kapi_no: (item.kapi_no || '').toLocaleLowerCase('tr-TR'),
-      apartman_site: (item.apartman_site || '').toLocaleLowerCase('tr-TR'),
-      blok_no: (item.blok_no || '').toLocaleLowerCase('tr-TR'),
-      daire_no: (item.daire_no || '').toLocaleLowerCase('tr-TR'),
+      ad_soyad: normalizeTr(item.ad_soyad),
+      ilce: normalizeTr(item.ilce),
+      mahalle: normalizeTr(item.mahalle),
+      cadde: normalizeTr(item.cadde),
+      sokak: normalizeTr(item.sokak),
+      kapi_no: normalizeTr(item.kapi_no),
+      apartman_site: normalizeTr(item.apartman_site),
+      blok_no: normalizeTr(item.blok_no),
+      daire_no: normalizeTr(item.daire_no),
       cep_tel: (item.cep_tel || '').replace(/\D/g, ''),
       yedek_tel: (item.yedek_tel || '').replace(/\D/g, ''),
-      urun: (item.urun || '').toLocaleLowerCase('tr-TR'),
-      marka: (item.marka || '').toLocaleLowerCase('tr-TR'),
-      sikayet: (item.sikayet || '').toLocaleLowerCase('tr-TR'),
-      yapilan_islem: (item.yapilan_islem || '').toLocaleLowerCase('tr-TR'),
-      teknisyen: (item.teknisyen_ismi || '').toLocaleLowerCase('tr-TR'),
+      urun: normalizeTr(item.urun),
+      marka: normalizeTr(item.marka),
+      sikayet: normalizeTr(item.sikayet),
+      yapilan_islem: normalizeTr(item.yapilan_islem),
+      teknisyen: normalizeTr(item.teknisyen_ismi),
       tutar: item.tutar?.toString() || '',
       durum: item.is_durumu === 'tamamlandi' ? 'tamamlandı' :
              item.is_durumu === 'parca_bekliyor' ? 'parça bekliyor' :
              item.is_durumu === 'iptal' ? 'iptal' : 'açık',
     }));
-  }, [islemler]);
+  }, [islemler, hasAnyFilter]);
 
   // ⚡ Optimized filtering - pre-computed index ile tek geçişte filtreler
   const filteredIslemler = useMemo(() => {
     const f = filters;
-    const hasAnyFilter = f.sira || f.tarih || f.ad_soyad || f.ilce || f.mahalle ||
-      f.cadde || f.sokak || f.kapi_no || f.apartman_site || f.blok_no ||
-      f.daire_no || f.cep_tel || f.urun || f.marka || f.sikayet ||
-      f.yapilan_islem || f.teknisyen || f.tutar || f.durum;
-
-    if (!hasAnyFilter) return islemler;
+    if (!hasAnyFilter || !searchIndex) return islemler;
 
     // Filtre değerlerini bir kez lowercase'e çevir
     const fLower = {
-      ad_soyad: f.ad_soyad ? f.ad_soyad.toLocaleLowerCase('tr-TR') : '',
-      ilce: f.ilce ? f.ilce.toLocaleLowerCase('tr-TR') : '',
-      mahalle: f.mahalle ? f.mahalle.toLocaleLowerCase('tr-TR') : '',
-      cadde: f.cadde ? f.cadde.toLocaleLowerCase('tr-TR') : '',
-      sokak: f.sokak ? f.sokak.toLocaleLowerCase('tr-TR') : '',
-      kapi_no: f.kapi_no ? f.kapi_no.toLocaleLowerCase('tr-TR') : '',
-      apartman_site: f.apartman_site ? f.apartman_site.toLocaleLowerCase('tr-TR') : '',
-      blok_no: f.blok_no ? f.blok_no.toLocaleLowerCase('tr-TR') : '',
-      daire_no: f.daire_no ? f.daire_no.toLocaleLowerCase('tr-TR') : '',
-      urun: f.urun ? f.urun.toLocaleLowerCase('tr-TR') : '',
-      marka: f.marka ? f.marka.toLocaleLowerCase('tr-TR') : '',
-      sikayet: f.sikayet ? f.sikayet.toLocaleLowerCase('tr-TR') : '',
-      yapilan_islem: f.yapilan_islem ? f.yapilan_islem.toLocaleLowerCase('tr-TR') : '',
-      teknisyen: f.teknisyen ? f.teknisyen.toLocaleLowerCase('tr-TR') : '',
+      ad_soyad: normalizeTr(f.ad_soyad),
+      ilce: normalizeTr(f.ilce),
+      mahalle: normalizeTr(f.mahalle),
+      cadde: normalizeTr(f.cadde),
+      sokak: normalizeTr(f.sokak),
+      kapi_no: normalizeTr(f.kapi_no),
+      apartman_site: normalizeTr(f.apartman_site),
+      blok_no: normalizeTr(f.blok_no),
+      daire_no: normalizeTr(f.daire_no),
+      urun: normalizeTr(f.urun),
+      marka: normalizeTr(f.marka),
+      sikayet: normalizeTr(f.sikayet),
+      yapilan_islem: normalizeTr(f.yapilan_islem),
+      teknisyen: normalizeTr(f.teknisyen),
       durum: f.durum ? f.durum.toLowerCase() : '',
     };
     const cleanPhone = f.cep_tel ? f.cep_tel.replace(/\D/g, '') : '';
@@ -203,7 +218,7 @@ const IslemTable: React.FC<IslemTableProps> = ({
       result.push(islemler[i]);
     }
     return result;
-  }, [islemler, filters, searchIndex]);
+  }, [islemler, filters, searchIndex, hasAnyFilter]);
 
   // Filtrelenmiş liste değiştiğinde parent'a bildir ve displayLimit sıfırla
   // ⚡ startTransition: parent güncellemesi düşük öncelikli yapılır, input donmaz
@@ -247,17 +262,55 @@ const IslemTable: React.FC<IslemTableProps> = ({
     setSelectedIslemForPrint(null);
   }, []);
 
-  // Yazdırıldı durumunu toggle et
+  // ⚡ Yazdırıldı durumunu toggle et — OPTIMISTIC.
+  // Eskiden: tüm satır PUT ediliyor, cevap değil socket olayı bekleniyordu;
+  // simge ancak sunucu turu + tablonun tamamen yeniden render'ı bittikten
+  // sonra (~2 sn) değişiyordu. Artık simge anında değişir, ağ isteği arkada
+  // gider, hata olursa geri alınır.
   const handleToggleYazdirildi = useCallback(async (islem: Islem, event: React.MouseEvent) => {
     event.stopPropagation(); // Satır tıklamasını engelle
+    const newYazdirildi = !islem.yazdirildi;
+
+    setYazdirildiOverrides((prev) => ({ ...prev, [islem.id]: newYazdirildi }));
+
     try {
-      const newYazdirildi = !islem.yazdirildi;
-      await islemService.update(islem.id, { ...islem, yazdirildi: newYazdirildi });
-      // Socket.IO otomatik güncelleyecek, manuel güncellemeye gerek yok
+      await islemService.toggleYazdirildi(islem.id, newYazdirildi);
+      // Gerçek kayıt socket üzerinden gelecek; override'ı bırakıyoruz ki
+      // socket gecikirse simge geri zıplamasın. Prop'taki değer yakaladığında
+      // aşağıdaki effect override'ı temizler.
     } catch (error) {
       console.error('Yazdırıldı durumu güncellenirken hata:', error);
+      // Başarısızsa optimistic değeri geri al
+      setYazdirildiOverrides((prev) => {
+        const next = { ...prev };
+        delete next[islem.id];
+        return next;
+      });
     }
   }, []);
+
+  // Sunucudan gelen değer optimistic değeri yakaladığında override'ı düşür —
+  // aksi halde başka bir kullanıcının aynı satırda yaptığı değişikliği
+  // maskelerdik. Türetilmiş değer olarak hesaplanıyor (effect + setState
+  // yerine) ki fazladan render turu olmasın.
+  const activeYazdirildiOverrides = useMemo(() => {
+    if (Object.keys(yazdirildiOverrides).length === 0) return yazdirildiOverrides;
+
+    const serverValueById = new Map(islemler.map((i) => [i.id, Boolean(i.yazdirildi)]));
+    const next: Record<number, boolean> = {};
+    let dropped = false;
+
+    for (const [idStr, value] of Object.entries(yazdirildiOverrides)) {
+      const id = Number(idStr);
+      if (serverValueById.get(id) === value) {
+        dropped = true; // sunucu yakaladı, override'a gerek yok
+        continue;
+      }
+      next[id] = value;
+    }
+
+    return dropped ? next : yazdirildiOverrides;
+  }, [yazdirildiOverrides, islemler]);
 
   // Müşteri Geçmişi fonksiyonları
   const handleOpenCustomerHistory = useCallback(async (customerName: string) => {
@@ -554,11 +607,13 @@ const IslemTable: React.FC<IslemTableProps> = ({
 
         {/* Print Editor Dialog */}
         {selectedIslemForPrint && (
-          <PrintEditor
-            open={printEditorOpen}
-            onClose={handlePrintClose}
-            islem={selectedIslemForPrint}
-          />
+          <Suspense fallback={null}>
+            <PrintEditor
+              open={printEditorOpen}
+              onClose={handlePrintClose}
+              islem={selectedIslemForPrint}
+            />
+          </Suspense>
         )}
       </>
     );
@@ -730,52 +785,16 @@ const IslemTable: React.FC<IslemTableProps> = ({
         </TableHead>
         {/* ⚡ OPTIMIZED RENDERING: Performans için satır limiti */}
         <TableBody>
-          {visibleIslemler.map((islem) => {
-            const siraNo = islem.id;
-            
-            return (
-            <TableRow 
-              key={islem.id} 
-              hover
-              sx={{
-                '&:hover': {
-                  backgroundColor: 'rgba(13, 50, 130, 0.04)',
-                }
-              }}
-            >
-              <TableCell sx={{ 
-                fontWeight: 500, 
-                fontSize: '0.65rem', 
-                py: 0.1, 
-                px: 0.2, 
-                textAlign: 'center',
-                width: columnWidths.sira,
-                minWidth: columnWidths.sira,
-                maxWidth: columnWidths.sira,
-                borderRight: '1px solid rgba(224, 224, 224, 0.5)',
-              }}>
-                {siraNo}
-              </TableCell>
-              {columnOrder.map((columnId) => {
-                const column = columnConfigs[columnId];
-                const cell = column.render(islem);
-                const width = columnWidths[columnId];
-                
-                // Width'i cell'e ekle
-                return React.cloneElement(cell as React.ReactElement, {
-                  key: columnId,
-                  sx: {
-                    ...(cell as React.ReactElement).props.sx,
-                    width,
-                    minWidth: width,
-                    maxWidth: width,
-                    borderRight: '1px solid rgba(224, 224, 224, 0.5)',
-                  }
-                });
-              })}
-            </TableRow>
-          );
-          })}
+          {visibleIslemler.map((islem) => (
+            <IslemTableRow
+              key={islem.id}
+              islem={islem}
+              columnOrder={columnOrder}
+              columnConfigs={columnConfigs}
+              columnWidths={columnWidths}
+              yazdirildiOverride={activeYazdirildiOverrides[islem.id]}
+            />
+          ))}
         </TableBody>
       </Table>
     </TableContainer>
@@ -818,11 +837,13 @@ const IslemTable: React.FC<IslemTableProps> = ({
 
     {/* Yazdırma Düzenleyici */}
     {selectedIslemForPrint && (
-      <PrintEditor
-        open={printEditorOpen}
-        onClose={handleClosePrintEditor}
-        islem={selectedIslemForPrint}
-      />
+      <Suspense fallback={null}>
+        <PrintEditor
+          open={printEditorOpen}
+          onClose={handleClosePrintEditor}
+          islem={selectedIslemForPrint}
+        />
+      </Suspense>
     )}
     </>
   );

@@ -14,14 +14,18 @@ import {
   Fullscreen,
   FullscreenExit,
   Close,
+  Download,
 } from '@mui/icons-material';
+import { SahaPhoto, buildPhotoFileName, downloadPhoto } from '../../utils/sahaPhoto';
 
 interface Props {
-  images: string[];
+  photos: SahaPhoto[];
+  /** Orijinal adı olmayan (eski) fotoğraflar için indirme adı tabanı. */
+  fallbackName?: string;
   onClose: () => void;
 }
 
-const ImagePreviewDialog: React.FC<Props> = ({ images, onClose }) => {
+const ImagePreviewDialog: React.FC<Props> = ({ photos, fallbackName = 'fotograf', onClose }) => {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [zoomLevel, setZoomLevel] = useState(1);
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -33,15 +37,37 @@ const ImagePreviewDialog: React.FC<Props> = ({ images, onClose }) => {
   const [lastTouchCenter, setLastTouchCenter] = useState<{ x: number; y: number } | null>(null);
   const imageContainerRef = useRef<HTMLDivElement>(null);
 
+  // Sürükleme gerçekten oldu mu? Fare bırakıldığında tarayıcı `mouseup`'tan
+  // SONRA bir `click` daha ateşler; o sırada `isPanning` çoktan false olduğu
+  // için zoom toggle'ı çalışıp görüntüyü sıfırlıyordu ("kaydırınca kendini
+  // atıyor"). State yerine ref kullanılıyor: click handler'ının kapanışında
+  // bayat kalmaz.
+  const didPanRef = useRef(false);
+  const pointerDownRef = useRef<{ x: number; y: number } | null>(null);
+  const PAN_THRESHOLD_PX = 4;
+
+  const markPointerDown = (x: number, y: number) => {
+    didPanRef.current = false;
+    pointerDownRef.current = { x, y };
+  };
+
+  const markPointerMove = (x: number, y: number) => {
+    const start = pointerDownRef.current;
+    if (!start) return;
+    if (Math.hypot(x - start.x, y - start.y) > PAN_THRESHOLD_PX) {
+      didPanRef.current = true;
+    }
+  };
+
   // Yeni resim seti açıldığında durumları sıfırla
   useEffect(() => {
-    if (images.length > 0) {
+    if (photos.length > 0) {
       setCurrentImageIndex(0);
       setZoomLevel(1);
       setPanPosition({ x: 0, y: 0 });
       setTransformOrigin({ x: 50, y: 50 });
     }
-  }, [images]);
+  }, [photos]);
 
   const handleClose = () => {
     setZoomLevel(1);
@@ -54,9 +80,18 @@ const ImagePreviewDialog: React.FC<Props> = ({ images, onClose }) => {
   const isCompact = isFullscreen || (typeof window !== 'undefined' && window.innerWidth < 600);
   const compactColor = isCompact ? 'white' : 'inherit';
 
+  const currentPhoto = photos[currentImageIndex];
+  const currentFileName = currentPhoto
+    ? buildPhotoFileName(currentPhoto, fallbackName, currentImageIndex, photos.length)
+    : '';
+
+  const handleDownload = () => {
+    if (currentPhoto) downloadPhoto(currentPhoto, currentFileName);
+  };
+
   return (
     <Dialog
-      open={images.length > 0}
+      open={photos.length > 0}
       onClose={handleClose}
       maxWidth={isFullscreen ? false : 'lg'}
       fullWidth={!isFullscreen}
@@ -75,7 +110,7 @@ const ImagePreviewDialog: React.FC<Props> = ({ images, onClose }) => {
         }}
       >
         <Typography variant="body1" sx={{ fontSize: { xs: '0.85rem', sm: '1rem' } }}>
-          Fotoğraf {images.length > 1 ? `(${currentImageIndex + 1}/${images.length})` : ''}
+          Fotoğraf {photos.length > 1 ? `(${currentImageIndex + 1}/${photos.length})` : ''}
         </Typography>
         <Box sx={{ display: 'flex', gap: { xs: 0, sm: 0.5 } }}>
           <IconButton
@@ -103,6 +138,15 @@ const ImagePreviewDialog: React.FC<Props> = ({ images, onClose }) => {
           </IconButton>
           <IconButton
             size="small"
+            onClick={handleDownload}
+            disabled={!currentPhoto}
+            title={currentFileName ? `İndir: ${currentFileName}` : 'İndir'}
+            sx={{ color: compactColor }}
+          >
+            <Download fontSize="small" />
+          </IconButton>
+          <IconButton
+            size="small"
             onClick={() => setIsFullscreen((prev) => !prev)}
             title={isFullscreen ? 'Normal Mod' : 'Tam Ekran'}
             sx={{ color: compactColor, display: { xs: 'none', sm: 'inline-flex' } }}
@@ -123,7 +167,7 @@ const ImagePreviewDialog: React.FC<Props> = ({ images, onClose }) => {
           p: { xs: 0.5, sm: 1 },
         }}
       >
-        {images.length > 0 && (
+        {photos.length > 0 && (
           <Box sx={{ textAlign: 'center', width: '100%' }}>
             <Box
               ref={imageContainerRef}
@@ -161,6 +205,7 @@ const ImagePreviewDialog: React.FC<Props> = ({ images, onClose }) => {
               }}
               // Mouse events (desktop)
               onMouseDown={(e) => {
+                markPointerDown(e.clientX, e.clientY);
                 if (zoomLevel > 1) {
                   setIsPanning(true);
                   setStartPan({ x: e.clientX - panPosition.x, y: e.clientY - panPosition.y });
@@ -168,6 +213,7 @@ const ImagePreviewDialog: React.FC<Props> = ({ images, onClose }) => {
               }}
               onMouseMove={(e) => {
                 if (isPanning && zoomLevel > 1) {
+                  markPointerMove(e.clientX, e.clientY);
                   setPanPosition({
                     x: e.clientX - startPan.x,
                     y: e.clientY - startPan.y,
@@ -177,19 +223,23 @@ const ImagePreviewDialog: React.FC<Props> = ({ images, onClose }) => {
               onMouseUp={() => setIsPanning(false)}
               onMouseLeave={() => setIsPanning(false)}
               onClick={(e) => {
-                if (!isPanning) {
-                  const rect = e.currentTarget.getBoundingClientRect();
-                  const x = ((e.clientX - rect.left) / rect.width) * 100;
-                  const y = ((e.clientY - rect.top) / rect.height) * 100;
+                // Sürükleme yapıldıysa bu click zoom'u değiştirmemeli.
+                if (didPanRef.current) {
+                  didPanRef.current = false;
+                  return;
+                }
 
-                  if (zoomLevel === 1) {
-                    setTransformOrigin({ x, y });
-                    setZoomLevel(2);
-                  } else if (zoomLevel >= 2) {
-                    setZoomLevel(1);
-                    setPanPosition({ x: 0, y: 0 });
-                    setTransformOrigin({ x: 50, y: 50 });
-                  }
+                const rect = e.currentTarget.getBoundingClientRect();
+                const x = ((e.clientX - rect.left) / rect.width) * 100;
+                const y = ((e.clientY - rect.top) / rect.height) * 100;
+
+                if (zoomLevel === 1) {
+                  setTransformOrigin({ x, y });
+                  setZoomLevel(2);
+                } else if (zoomLevel >= 2) {
+                  setZoomLevel(1);
+                  setPanPosition({ x: 0, y: 0 });
+                  setTransformOrigin({ x: 50, y: 50 });
                 }
               }}
               // Touch events (mobile pinch-to-zoom + pan)
@@ -203,9 +253,12 @@ const ImagePreviewDialog: React.FC<Props> = ({ images, onClose }) => {
                     x: (e.touches[0].clientX + e.touches[1].clientX) / 2,
                     y: (e.touches[0].clientY + e.touches[1].clientY) / 2,
                   });
-                } else if (e.touches.length === 1 && zoomLevel > 1) {
-                  setIsPanning(true);
-                  setStartPan({ x: e.touches[0].clientX - panPosition.x, y: e.touches[0].clientY - panPosition.y });
+                } else if (e.touches.length === 1) {
+                  markPointerDown(e.touches[0].clientX, e.touches[0].clientY);
+                  if (zoomLevel > 1) {
+                    setIsPanning(true);
+                    setStartPan({ x: e.touches[0].clientX - panPosition.x, y: e.touches[0].clientY - panPosition.y });
+                  }
                 }
               }}
               onTouchMove={(e) => {
@@ -237,6 +290,7 @@ const ImagePreviewDialog: React.FC<Props> = ({ images, onClose }) => {
                     setLastTouchCenter({ x: cx, y: cy });
                   }
                 } else if (e.touches.length === 1 && isPanning && zoomLevel > 1) {
+                  markPointerMove(e.touches[0].clientX, e.touches[0].clientY);
                   setPanPosition({
                     x: e.touches[0].clientX - startPan.x,
                     y: e.touches[0].clientY - startPan.y,
@@ -254,7 +308,7 @@ const ImagePreviewDialog: React.FC<Props> = ({ images, onClose }) => {
               }}
             >
               <img
-                src={images[currentImageIndex]}
+                src={photos[currentImageIndex]?.data}
                 alt="Preview"
                 draggable={false}
                 style={{
@@ -264,14 +318,17 @@ const ImagePreviewDialog: React.FC<Props> = ({ images, onClose }) => {
                   maxWidth: '100%',
                   maxHeight: isCompact ? 'calc(100vh - 180px)' : '70vh',
                   objectFit: 'contain',
-                  pointerEvents: 'none',
+                  // pointerEvents:'none' kaldırıldı: tarayıcının sağ tık ->
+                  // "Resmi farklı kaydet" menüsü ancak görsel olay hedefi
+                  // olabildiğinde çıkıyor. Olaylar zaten kapsayıcıya
+                  // baloncuklandığı için pan/zoom etkilenmiyor.
                   imageRendering: zoomLevel > 1 ? ('high-quality' as any) : 'auto',
                   WebkitBackfaceVisibility: 'hidden',
                   filter: zoomLevel > 1.5 ? 'contrast(1.02) saturate(1.02)' : 'none',
                 }}
               />
             </Box>
-            {images.length > 1 && (
+            {photos.length > 1 && (
               <Box sx={{ display: 'flex', justifyContent: 'center', gap: { xs: 1, sm: 2 }, mt: 1.5 }}>
                 <Button
                   variant="outlined"
@@ -281,7 +338,7 @@ const ImagePreviewDialog: React.FC<Props> = ({ images, onClose }) => {
                     borderColor: isCompact ? 'rgba(255,255,255,0.5)' : 'inherit',
                   }}
                   onClick={() => {
-                    setCurrentImageIndex((prev) => (prev - 1 + images.length) % images.length);
+                    setCurrentImageIndex((prev) => (prev - 1 + photos.length) % photos.length);
                     setZoomLevel(1);
                     setPanPosition({ x: 0, y: 0 });
                     setTransformOrigin({ x: 50, y: 50 });
@@ -297,7 +354,7 @@ const ImagePreviewDialog: React.FC<Props> = ({ images, onClose }) => {
                     borderColor: isCompact ? 'rgba(255,255,255,0.5)' : 'inherit',
                   }}
                   onClick={() => {
-                    setCurrentImageIndex((prev) => (prev + 1) % images.length);
+                    setCurrentImageIndex((prev) => (prev + 1) % photos.length);
                     setZoomLevel(1);
                     setPanPosition({ x: 0, y: 0 });
                     setTransformOrigin({ x: 50, y: 50 });
@@ -308,9 +365,9 @@ const ImagePreviewDialog: React.FC<Props> = ({ images, onClose }) => {
               </Box>
             )}
             {/* Thumbnails */}
-            {images.length > 1 && (
+            {photos.length > 1 && (
               <Box sx={{ display: 'flex', gap: 1, justifyContent: 'center', mt: 1.5, flexWrap: 'wrap', pb: 1 }}>
-                {images.map((img, idx) => (
+                {photos.map((photo, idx) => (
                   <Box
                     key={idx}
                     onClick={() => {
@@ -330,8 +387,8 @@ const ImagePreviewDialog: React.FC<Props> = ({ images, onClose }) => {
                     }}
                   >
                     <img
-                      src={img}
-                      alt={`Thumb ${idx + 1}`}
+                      src={photo.data}
+                      alt={photo.name || `Thumb ${idx + 1}`}
                       style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                     />
                   </Box>

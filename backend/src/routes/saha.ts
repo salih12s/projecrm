@@ -367,11 +367,20 @@ router.get('/kayit-thumbnail/:id', authenticateToken, async (req: Request, res: 
       return;
     }
 
-    // foto_data bir JSON string olarak saklanıyor: ["data:image/...", ...]
-    // Yalnızca ilk fotoğrafı döndür (bandwidth tasarrufu için)
+    // foto_data JSON string olarak saklanıyor. İki biçim desteklenir:
+    //   ESKİ: ["data:image/...", ...]
+    //   YENİ: [{ name: "IMG_2034.jpg", data: "data:image/..." }, ...]
+    // Yalnızca ilk fotoğrafın data URL'ini döndür (bandwidth tasarrufu için)
     try {
       const parsed = JSON.parse(record.rows[0].foto_data);
-      const firstPhoto = Array.isArray(parsed) && parsed.length > 0 ? parsed[0] : null;
+      const first = Array.isArray(parsed) && parsed.length > 0 ? parsed[0] : null;
+      const firstPhoto =
+        typeof first === 'string'
+          ? first
+          : first && typeof first === 'object' && typeof first.data === 'string'
+            ? first.data
+            : null;
+
       if (!firstPhoto) {
         res.status(404).json({ message: 'Fotoğraf bulunamadı' });
         return;

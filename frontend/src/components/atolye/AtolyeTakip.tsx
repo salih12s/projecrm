@@ -116,9 +116,13 @@ const AtolyeTakip: React.FC = () => {
     }
   }, [isBayi, bayiIsim, showSnackbar]);
 
+  // ⚡ Tek yükleme noktası. Eskiden bu effect ile aşağıdaki mount effect'i
+  // birlikte çalışıp ~3000 kayıtlık `?all=true` isteğini her açılışta İKİ KEZ
+  // gönderiyordu.
   useEffect(() => {
     fetchAtolyeList();
     fetchStatusCounts();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isBayi, bayiIsim]);
 
   // Socket.IO gerçek zamanlı güncellemeler ortak hook ile.
@@ -286,12 +290,6 @@ const AtolyeTakip: React.FC = () => {
     setPage(0);
   }, []);
 
-  // Sadece ilk yüklemede veriyi çek
-  useEffect(() => {
-    fetchAtolyeList();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
   // Filtre değiştiğinde sayfayı 0'a sıfırla
   useEffect(() => {
     if (hasActiveFilters) {
@@ -332,13 +330,22 @@ const AtolyeTakip: React.FC = () => {
     }
   }, [fetchAtolyeList]);
 
-  // Her durum için kayıt sayısını hesapla
-  const getStatusCount = useCallback((status: string) => {
-    if (status === 'all') {
-      return atolyeList.length;
+  // ⚡ Her durum için kayıt sayısı - tek geçişte.
+  // Eskiden filtre çubuğundaki her buton için ayrı `filter()` çalışıyordu:
+  // 7 buton × 3000 kayıt = her render'da 21.000 karşılaştırma.
+  const statusCountMap = useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const item of atolyeList) {
+      const key = item.teslim_durumu || '';
+      counts[key] = (counts[key] || 0) + 1;
     }
-    return atolyeList.filter((item) => item.teslim_durumu === status).length;
+    return counts;
   }, [atolyeList]);
+
+  const getStatusCount = useCallback(
+    (status: string) => (status === 'all' ? atolyeList.length : statusCountMap[status] || 0),
+    [atolyeList.length, statusCountMap]
+  );
 
   return (
     <Box sx={{ mt: 2 }}>

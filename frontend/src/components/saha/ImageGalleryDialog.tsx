@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -8,14 +8,17 @@ import {
   Box,
   Button,
 } from '@mui/material';
-import { ZoomIn, ZoomOut, Close } from '@mui/icons-material';
+import { ZoomIn, ZoomOut, Close, Download } from '@mui/icons-material';
+import { SahaPhoto, buildPhotoFileName, downloadPhoto } from '../../utils/sahaPhoto';
 
 interface Props {
-  images: string[];
+  photos: SahaPhoto[];
+  /** Orijinal adı olmayan (eski) fotoğraflar için indirme adı tabanı. */
+  fallbackName?: string;
   onClose: () => void;
 }
 
-const ImageGalleryDialog: React.FC<Props> = ({ images, onClose }) => {
+const ImageGalleryDialog: React.FC<Props> = ({ photos, fallbackName = 'fotograf', onClose }) => {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [galleryZoom, setGalleryZoom] = useState(1);
   const [galleryPan, setGalleryPan] = useState({ x: 0, y: 0 });
@@ -24,13 +27,32 @@ const ImageGalleryDialog: React.FC<Props> = ({ images, onClose }) => {
   const [lastTouchDist, setLastTouchDist] = useState<number | null>(null);
   const [lastTouchCenter, setLastTouchCenter] = useState<{ x: number; y: number } | null>(null);
 
+  // Sürükleme gerçekten oldu mu? `mouseup` sonrası tarayıcının ateşlediği
+  // `click`, o an `galleryPanning` false olduğu için zoom'u sıfırlıyordu.
+  const didPanRef = useRef(false);
+  const pointerDownRef = useRef<{ x: number; y: number } | null>(null);
+  const PAN_THRESHOLD_PX = 4;
+
+  const markPointerDown = (x: number, y: number) => {
+    didPanRef.current = false;
+    pointerDownRef.current = { x, y };
+  };
+
+  const markPointerMove = (x: number, y: number) => {
+    const start = pointerDownRef.current;
+    if (!start) return;
+    if (Math.hypot(x - start.x, y - start.y) > PAN_THRESHOLD_PX) {
+      didPanRef.current = true;
+    }
+  };
+
   useEffect(() => {
-    if (images.length > 0) {
+    if (photos.length > 0) {
       setCurrentImageIndex(0);
       setGalleryZoom(1);
       setGalleryPan({ x: 0, y: 0 });
     }
-  }, [images]);
+  }, [photos]);
 
   const handleClose = () => {
     setGalleryZoom(1);
@@ -38,12 +60,21 @@ const ImageGalleryDialog: React.FC<Props> = ({ images, onClose }) => {
     onClose();
   };
 
+  const currentPhoto = photos[currentImageIndex];
+  const currentFileName = currentPhoto
+    ? buildPhotoFileName(currentPhoto, fallbackName, currentImageIndex, photos.length)
+    : '';
+
+  const handleDownload = () => {
+    if (currentPhoto) downloadPhoto(currentPhoto, currentFileName);
+  };
+
   const isMobile = typeof window !== 'undefined' && window.innerWidth < 600;
   const compactColor = isMobile ? 'white' : 'inherit';
 
   return (
     <Dialog
-      open={images.length > 0}
+      open={photos.length > 0}
       onClose={handleClose}
       maxWidth="lg"
       fullWidth
@@ -60,7 +91,7 @@ const ImageGalleryDialog: React.FC<Props> = ({ images, onClose }) => {
         }}
       >
         <Typography variant="body1" sx={{ fontSize: { xs: '0.85rem', sm: '1rem' } }}>
-          Fotoğraflar {images.length > 1 ? `(${currentImageIndex + 1}/${images.length})` : ''}
+          Fotoğraflar {photos.length > 1 ? `(${currentImageIndex + 1}/${photos.length})` : ''}
         </Typography>
         <Box sx={{ display: 'flex', gap: 0, alignItems: 'center' }}>
           <IconButton
@@ -82,13 +113,22 @@ const ImageGalleryDialog: React.FC<Props> = ({ images, onClose }) => {
           >
             <ZoomIn fontSize="small" />
           </IconButton>
+          <IconButton
+            size="small"
+            onClick={handleDownload}
+            disabled={!currentPhoto}
+            title={currentFileName ? `İndir: ${currentFileName}` : 'İndir'}
+            sx={{ color: compactColor }}
+          >
+            <Download fontSize="small" />
+          </IconButton>
           <IconButton size="small" onClick={handleClose} sx={{ color: compactColor }}>
             <Close fontSize="small" />
           </IconButton>
         </Box>
       </DialogTitle>
       <DialogContent sx={{ overflow: 'hidden', p: { xs: 0.5, sm: 1 } }}>
-        {images.length > 0 && (
+        {photos.length > 0 && (
           <Box sx={{ textAlign: 'center' }}>
             <Box
               sx={{
@@ -115,16 +155,20 @@ const ImageGalleryDialog: React.FC<Props> = ({ images, onClose }) => {
                 }
               }}
               onClick={() => {
-                if (!galleryPanning) {
-                  if (galleryZoom === 1) {
-                    setGalleryZoom(2);
-                  } else {
-                    setGalleryZoom(1);
-                    setGalleryPan({ x: 0, y: 0 });
-                  }
+                // Sürükleme yapıldıysa bu click zoom'u değiştirmemeli.
+                if (didPanRef.current) {
+                  didPanRef.current = false;
+                  return;
+                }
+                if (galleryZoom === 1) {
+                  setGalleryZoom(2);
+                } else {
+                  setGalleryZoom(1);
+                  setGalleryPan({ x: 0, y: 0 });
                 }
               }}
               onMouseDown={(e) => {
+                markPointerDown(e.clientX, e.clientY);
                 if (galleryZoom > 1) {
                   setGalleryPanning(true);
                   setGalleryPanStart({ x: e.clientX - galleryPan.x, y: e.clientY - galleryPan.y });
@@ -132,6 +176,7 @@ const ImageGalleryDialog: React.FC<Props> = ({ images, onClose }) => {
               }}
               onMouseMove={(e) => {
                 if (galleryPanning && galleryZoom > 1) {
+                  markPointerMove(e.clientX, e.clientY);
                   setGalleryPan({ x: e.clientX - galleryPanStart.x, y: e.clientY - galleryPanStart.y });
                 }
               }}
@@ -147,9 +192,12 @@ const ImageGalleryDialog: React.FC<Props> = ({ images, onClose }) => {
                     x: (e.touches[0].clientX + e.touches[1].clientX) / 2,
                     y: (e.touches[0].clientY + e.touches[1].clientY) / 2,
                   });
-                } else if (e.touches.length === 1 && galleryZoom > 1) {
-                  setGalleryPanning(true);
-                  setGalleryPanStart({ x: e.touches[0].clientX - galleryPan.x, y: e.touches[0].clientY - galleryPan.y });
+                } else if (e.touches.length === 1) {
+                  markPointerDown(e.touches[0].clientX, e.touches[0].clientY);
+                  if (galleryZoom > 1) {
+                    setGalleryPanning(true);
+                    setGalleryPanStart({ x: e.touches[0].clientX - galleryPan.x, y: e.touches[0].clientY - galleryPan.y });
+                  }
                 }
               }}
               onTouchMove={(e) => {
@@ -175,6 +223,7 @@ const ImageGalleryDialog: React.FC<Props> = ({ images, onClose }) => {
                     setLastTouchCenter({ x: cx, y: cy });
                   }
                 } else if (e.touches.length === 1 && galleryPanning && galleryZoom > 1) {
+                  markPointerMove(e.touches[0].clientX, e.touches[0].clientY);
                   setGalleryPan({ x: e.touches[0].clientX - galleryPanStart.x, y: e.touches[0].clientY - galleryPanStart.y });
                 }
               }}
@@ -187,7 +236,7 @@ const ImageGalleryDialog: React.FC<Props> = ({ images, onClose }) => {
               }}
             >
               <img
-                src={images[currentImageIndex]}
+                src={photos[currentImageIndex]?.data}
                 alt="Preview"
                 draggable={false}
                 style={{
@@ -196,13 +245,14 @@ const ImageGalleryDialog: React.FC<Props> = ({ images, onClose }) => {
                   maxWidth: '100%',
                   maxHeight: isMobile ? 'calc(100vh - 180px)' : '70vh',
                   objectFit: 'contain',
-                  pointerEvents: 'none',
+                  // pointerEvents:'none' kaldırıldı: sağ tık -> "Resmi farklı
+                  // kaydet" ancak görsel olay hedefi olabildiğinde çıkıyor.
                   imageRendering: 'auto',
                   WebkitBackfaceVisibility: 'hidden',
                 }}
               />
             </Box>
-            {images.length > 1 && (
+            {photos.length > 1 && (
               <Box sx={{ display: 'flex', justifyContent: 'center', gap: { xs: 1, sm: 2 }, mt: 1.5 }}>
                 <Button
                   variant="outlined"
@@ -213,7 +263,7 @@ const ImageGalleryDialog: React.FC<Props> = ({ images, onClose }) => {
                   }}
                   onClick={(e) => {
                     e.stopPropagation();
-                    setCurrentImageIndex((prev) => (prev - 1 + images.length) % images.length);
+                    setCurrentImageIndex((prev) => (prev - 1 + photos.length) % photos.length);
                     setGalleryZoom(1);
                     setGalleryPan({ x: 0, y: 0 });
                   }}
@@ -229,7 +279,7 @@ const ImageGalleryDialog: React.FC<Props> = ({ images, onClose }) => {
                   }}
                   onClick={(e) => {
                     e.stopPropagation();
-                    setCurrentImageIndex((prev) => (prev + 1) % images.length);
+                    setCurrentImageIndex((prev) => (prev + 1) % photos.length);
                     setGalleryZoom(1);
                     setGalleryPan({ x: 0, y: 0 });
                   }}
@@ -239,9 +289,9 @@ const ImageGalleryDialog: React.FC<Props> = ({ images, onClose }) => {
               </Box>
             )}
             {/* Thumbnails */}
-            {images.length > 1 && (
+            {photos.length > 1 && (
               <Box sx={{ display: 'flex', gap: 1, justifyContent: 'center', mt: 1.5, flexWrap: 'wrap', pb: 1 }}>
-                {images.map((img, idx) => (
+                {photos.map((photo, idx) => (
                   <Box
                     key={idx}
                     onClick={(e) => {
@@ -261,8 +311,8 @@ const ImageGalleryDialog: React.FC<Props> = ({ images, onClose }) => {
                     }}
                   >
                     <img
-                      src={img}
-                      alt={`Thumb ${idx + 1}`}
+                      src={photo.data}
+                      alt={photo.name || `Thumb ${idx + 1}`}
                       style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                     />
                   </Box>

@@ -24,7 +24,6 @@ const AtolyeTakip = lazy(() => import('../atolye/AtolyeTakip.tsx'));
 const AdminPanel = lazy(() => import('../admin/AdminPanel.tsx'));
 const SahaPanel = lazy(() => import('../saha/SahaPanel.tsx'));
 const SahaKayitlari = lazy(() => import('../saha/SahaKayitlari.tsx'));
-import { exportToExcel } from '../../utils/excel.ts';
 import Loading from '../common/Loading';
 import ErrorMessage from '../common/ErrorMessage';
 import { useSnackbar } from '../../context/SnackbarContext';
@@ -87,6 +86,7 @@ const Dashboard: React.FC = () => {
   const [serverStats, setServerStats] = useState<any>(null);
   const columnFiltersRef = useRef<Record<string, string>>({});
   const columnFilterTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const statsTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isFirstColumnFilterRef = useRef(true);
   const adminFiltersActiveRef = useRef(false);
   // Stale closure'lardan korunmak için aktif filtre değerlerini ref olarak tut
@@ -104,28 +104,28 @@ const Dashboard: React.FC = () => {
     onYeniIslem: (islem) => {
       if (islem && islem.id) {
         setIslemler((prev) => [islem, ...prev]);
-        loadStats();
+        scheduleStatsRefresh();
         showSnackbar('Yeni işlem eklendi!', 'info');
       }
     },
     onIslemGuncellendi: (updatedIslem) => {
       if (updatedIslem && updatedIslem.id) {
         setIslemler((prev) => prev.map((islem) => (islem.id === updatedIslem.id ? updatedIslem : islem)));
-        loadStats();
+        scheduleStatsRefresh();
         showSnackbar('İşlem güncellendi!', 'info');
       }
     },
     onIslemSilindi: (id) => {
       if (id) {
         setIslemler((prev) => prev.filter((islem) => islem.id !== id));
-        loadStats();
+        scheduleStatsRefresh();
         showSnackbar('İşlem silindi!', 'info');
       }
     },
     onIslemDurumDegisti: (updatedIslem) => {
       if (updatedIslem && updatedIslem.id) {
         setIslemler((prev) => prev.map((islem) => (islem.id === updatedIslem.id ? updatedIslem : islem)));
-        loadStats();
+        scheduleStatsRefresh();
         showSnackbar('İş durumu güncellendi!', 'success');
       }
     },
@@ -216,6 +216,24 @@ const Dashboard: React.FC = () => {
     }
   };
 
+  // ⚡ Socket olayları peş peşe gelebiliyor (toplu güncelleme, çok kullanıcı).
+  // Her olayda /stats çağırmak sunucuda tam tablo taraması demek; 1 sn'lik
+  // pencerede tek çağrıya indiriyoruz.
+  const scheduleStatsRefresh = useCallback(() => {
+    if (statsTimerRef.current) return;
+    statsTimerRef.current = setTimeout(() => {
+      statsTimerRef.current = null;
+      loadStats();
+    }, 1000);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (statsTimerRef.current) clearTimeout(statsTimerRef.current);
+      if (columnFilterTimerRef.current) clearTimeout(columnFilterTimerRef.current);
+    };
+  }, []);
+
   const handleLoadMore = () => {
     if (!loadingMore && hasMore) loadIslemler(currentPage + 1, true);
   };
@@ -253,20 +271,24 @@ const Dashboard: React.FC = () => {
     navigate('/login');
   };
 
-  const handleOpenDialog = (islem?: Islem) => {
+  // ⚡ Aşağıdaki dört handler IslemTable'a prop olarak iniyor ve orada
+  // `columnConfigs` useMemo'sunun bağımlılığı. useCallback OLMADAN her
+  // Dashboard render'ında kimlikleri değişiyor, bu da kolon konfigürasyonunu
+  // ve dolayısıyla TÜM satırların memo'sunu geçersiz kılıyordu.
+  const handleOpenDialog = useCallback((islem?: Islem) => {
     setSelectedIslem(islem || null);
     setCloneFromRecord(null);
     setOpenDialog(true);
     setShouldRestoreForm(false);
-  };
+  }, []);
 
   // Çift tıklama ile klonlama
-  const handleCloneRecord = (islem: Islem) => {
+  const handleCloneRecord = useCallback((islem: Islem) => {
     setCloneFromRecord(islem);
     setSelectedIslem(null);
     setOpenDialog(true);
     setShouldRestoreForm(false);
-  };
+  }, []);
 
   const handleCloseDialog = () => {
     setOpenDialog(false);
@@ -319,11 +341,11 @@ const Dashboard: React.FC = () => {
     if (shouldRestoreForm) clearOnHoldData();
   };
 
-  const handleToggleDurum = async (islem: Islem) => {
+  const handleToggleDurum = useCallback((islem: Islem) => {
     setSelectedIslem(islem);
     setOpenTamamlaModal(true);
     setOpenDialog(true);
-  };
+  }, []);
 
   const handleConfirmTamamla = async () => {
     if (!confirmDialog.islem) return;
@@ -337,7 +359,7 @@ const Dashboard: React.FC = () => {
     }
   };
 
-  const handleDelete = async (islem: Islem) => {
+  const handleDelete = useCallback(async (islem: Islem) => {
     if (!window.confirm(`"${islem.ad_soyad}" müşterisine ait işlemi silmek istediğinize emin misiniz?`)) return;
     try {
       await islemService.delete(islem.id);
@@ -346,12 +368,14 @@ const Dashboard: React.FC = () => {
       console.error('İşlem silinirken hata:', error);
       showSnackbar('İşlem silinirken hata oluştu!', 'error');
     }
-  };
+  }, [showSnackbar]);
 
   const handleCancelTamamla = () => setConfirmDialog({ open: false, islem: null });
 
-  const handleExport = () => {
+  // ⚡ xlsx (~400 kB) sadece "Excel İndir"e basılınca indirilir; ana bundle'da yer almaz.
+  const handleExport = async () => {
     const listToExport = tableFilteredIslemler.length > 0 ? tableFilteredIslemler : filteredIslemler;
+    const { exportToExcel } = await import('../../utils/excel.ts');
     exportToExcel(listToExport);
     showSnackbar(`${listToExport.length} kayıt Excel'e aktarıldı!`, 'success');
   };
