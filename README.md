@@ -1,8 +1,8 @@
 <div align="center">
 
-# ProjeCRM
+# Technical Service & Field Operations Platform
 
-### Teknik servis, atölye ve saha operasyonlarını tek merkezde buluşturan CRM platformu
+### Teknik servis, atölye ve saha operasyonlarını tek merkezde buluşturan operasyon platformu
 
 Müşteri kabulünden servis kaydına, atölye sürecinden saha ekiplerine ve yönetsel raporlamaya kadar tüm operasyonu gerçek zamanlı, rol tabanlı ve izlenebilir bir yapıda yönetir.
 
@@ -22,7 +22,7 @@ Müşteri kabulünden servis kaydına, atölye sürecinden saha ekiplerine ve y�
 <!-- english-overview:start -->
 ## English Overview
 
-ProjeCRM is a full-stack operations platform for technical service, workshop, dealer, and field teams. It centralizes customer and device intake, status-based service tracking, workshop workflows, mobile photo records, customer history, real-time updates, and PDF/Excel output.
+Technical Service & Field Operations Platform is a full-stack operations platform for technical service, workshop, dealer, and field teams. It centralizes customer and device intake, status-based service tracking, workshop workflows, mobile photo records, customer history, real-time updates, and PDF/Excel output.
 
 ### My Contribution
 
@@ -39,7 +39,7 @@ I designed and implemented the product across the React/TypeScript frontend, Nod
 
 ## Proje özeti
 
-ProjeCRM, teknik servis işletmelerinde farklı tablolar, mesajlaşma kanalları ve fiziksel formlar arasında dağılan iş akışını tek uygulamada toplamak için geliştirildi. Sistem; müşteri ve cihaz bilgilerinin kaydedilmesini, servis sürecinin durum bazlı izlenmesini, atölye ve saha ekiplerinin koordine edilmesini ve operasyon verisinin raporlanmasını sağlar.
+Technical Service & Field Operations Platform, teknik servis işletmelerinde farklı tablolar, mesajlaşma kanalları ve fiziksel formlar arasında dağılan iş akışını tek uygulamada toplamak için geliştirildi. Sistem; müşteri ve cihaz bilgilerinin kaydedilmesini, servis sürecinin durum bazlı izlenmesini, atölye ve saha ekiplerinin koordine edilmesini ve operasyon verisinin raporlanmasını sağlar.
 
 Uygulamanın odaklandığı temel iş problemleri:
 
@@ -57,43 +57,43 @@ Uygulamanın odaklandığı temel iş problemleri:
 
 ### Servis operasyon panosu
 
-![ProjeCRM servis operasyon panosu](docs/screenshots/service-dashboard.png)
+![Technical Service & Field Operations Platform servis operasyon panosu](docs/screenshots/service-dashboard.png)
 
 Ana operasyon ekranı; durum sayaçlarını, tarih ve tanım filtrelerini, kolon bazlı aramayı, kayıt listesini ve işlem araçlarını aynı görünümde bir araya getirir. Ekipler açık işleri, parça bekleyen kayıtları ve tamamlanan operasyonları tek bakışta takip edebilir.
 
 ### Yeni servis kaydı
 
-![ProjeCRM yapılandırılmış yeni servis kaydı formu](docs/screenshots/service-create-form.png)
+![Technical Service & Field Operations Platform yapılandırılmış yeni servis kaydı formu](docs/screenshots/service-create-form.png)
 
 Yeni işlem akışında müşteri, adres, iletişim, cihaz, marka ve şikâyet bilgileri tek formda yönetilir. Telefon sorgusuyla başlayan akış, mevcut müşteri kontrolünü ve yeni kaydın gerekli alanlarını aynı süreçte ele alır.
 
 ### Servis işlem detayı
 
-![ProjeCRM servis işlem detayı ve durum yönetimi](docs/screenshots/service-record-detail.png)
+![Technical Service & Field Operations Platform servis işlem detayı ve durum yönetimi](docs/screenshots/service-record-detail.png)
 
 Mevcut kayıtlar aynı ayrıntı düzeyinde görüntülenebilir; teknisyen, yapılan işlem, ücret ve operasyon durumu güncellenebilir. Böylece müşteri kabulünde oluşan kayıt, iş tamamlanana kadar bağlamını kaybetmeden ilerler.
 
 ### Müşteri geçmişi
 
-![ProjeCRM müşteri geçmişi ekranı](docs/screenshots/customer-history.png)
+![Technical Service & Field Operations Platform müşteri geçmişi ekranı](docs/screenshots/customer-history.png)
 
 Müşteri geçmişi görünümü, aynı kişiye ait önceki servis kayıtlarını kronolojik olarak bir araya getirir. Ürün, marka, şikâyet, yapılan işlem, tutar ve güncel durum bilgileri karşılaştırılabilir; sonuçlar PDF çıktısına dönüştürülebilir.
 
 ### Atölye operasyonu
 
-![ProjeCRM atölye takip ekranı](docs/screenshots/workshop-tracking.png)
+![Technical Service & Field Operations Platform atölye takip ekranı](docs/screenshots/workshop-tracking.png)
 
 Atölyeye alınan cihazlar; bayi, müşteri, marka, model, seri numarası, ücret, işlem ve teslim durumu üzerinden takip edilir. Renk kodlu durumlar ve özet sayaçları, bekleyen ve tamamlanan işlerin hızla ayrıştırılmasını sağlar.
 
 ### Atölye kayıt detayı
 
-![ProjeCRM atölye kayıt detayı](docs/screenshots/workshop-record-detail.png)
+![Technical Service & Field Operations Platform atölye kayıt detayı](docs/screenshots/workshop-record-detail.png)
 
 Kayıt detayında cihazın kabul bilgileri, teknik notları, işlem sonucu, mali verileri ve teslim süreci birlikte yönetilir. Böylece cihazın atölyedeki yaşam döngüsü tek kayıt üzerinden izlenebilir.
 
 ### Tanımlar ve operasyon sözlüğü
 
-![ProjeCRM tanımlar ekranı](docs/screenshots/definitions.png)
+![Technical Service & Field Operations Platform tanımlar ekranı](docs/screenshots/definitions.png)
 
 Teknisyen, ürün, marka, bayi, montaj türü ve aksesuar gibi tekrar kullanılan operasyon verileri merkezi tanım ekranlarından yönetilir. Bu yaklaşım veri girişini hızlandırırken kayıtlar arasındaki isim ve kategori tutarlılığını korur.
 
@@ -102,10 +102,10 @@ Teknisyen, ürün, marka, bayi, montaj türü ve aksesuar gibi tekrar kullanıla
 <table>
   <tr>
     <td width="50%">
-      <img src="docs/screenshots/field-records.png" alt="ProjeCRM fotoğraflı saha kayıtları">
+      <img src="docs/screenshots/field-records.png" alt="Technical Service & Field Operations Platform fotoğraflı saha kayıtları">
     </td>
     <td width="50%">
-      <img src="docs/screenshots/admin-management.png" alt="ProjeCRM kullanıcı yönetimi">
+      <img src="docs/screenshots/admin-management.png" alt="Technical Service & Field Operations Platform kullanıcı yönetimi">
     </td>
   </tr>
   <tr>
@@ -118,7 +118,7 @@ Saha personeli yaptığı çalışmaları birden fazla fotoğraf ve açıklamayl
 
 ### Rol bazlı giriş deneyimi
 
-![ProjeCRM rol bazlı giriş ekranı](docs/screenshots/login-overview.png)
+![Technical Service & Field Operations Platform rol bazlı giriş ekranı](docs/screenshots/login-overview.png)
 
 Yönetici, standart kullanıcı, bayi ve saha personeli için ayrı giriş akışları bulunur. Oturum açıldıktan sonra navigasyon ve erişilebilir modüller kullanıcının rolüne göre otomatik biçimlenir.
 
@@ -248,6 +248,6 @@ Bu proje [MIT Lisansı](LICENSE) ile lisanslanmıştır.
 
 <div align="center">
 
-**ProjeCRM — teknik servis operasyonunun müşteri kabulünden saha kaydına kadar tek merkezden yönetimi**
+**Technical Service & Field Operations Platform — teknik servis operasyonunun müşteri kabulünden saha kaydına kadar tek merkezden yönetimi**
 
 </div>
