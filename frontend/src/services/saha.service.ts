@@ -85,9 +85,40 @@ export const sahaService = {
     return response.data.foto_preview;
   },
 
+  // R2 bağlantı durumu (pilot/operasyon ekranı için)
+  getR2Status: async (): Promise<{ configured: boolean; bucket: string | null }> => {
+    const response = await api.get('/saha/r2/status');
+    return response.data;
+  },
+
+  // Geçiş döneminde tek fotoğrafı R2'ye gönderir. Legacy foto_data korunur.
+  uploadR2Pilot: async (data: {
+    saha_kaydi_id: number;
+    data_url: string;
+    original_name?: string;
+    sort_order?: number;
+  }): Promise<{ object_key: string; url: string }> => {
+    const response = await api.post('/saha/r2/pilot-upload', data, { timeout: 60000 });
+    return response.data;
+  },
+
+  // R2 metadata'sından süreli signed URL'leri getirir.
+  getR2Photos: async (id: number): Promise<Array<{
+    object_key: string;
+    original_name: string | null;
+    mime_type: string;
+    size_bytes: number;
+    sort_order: number;
+    url: string;
+  }>> => {
+    const response = await api.get(`/saha/r2/photos/${id}`, { timeout: 30000 });
+    return response.data.photos;
+  },
+
   // Saha elemanının kayıtlarını getir (admin)
   getUserKayitlar: async (username: string): Promise<SahaKayit[]> => {
     const response = await api.get(`/saha/user-kayitlar/${username}`);
     return response.data;
   },
 };
+
