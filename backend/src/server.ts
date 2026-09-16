@@ -25,6 +25,7 @@ import locationsRoutes from './routes/locations';
 import printerSettingsRoutes from './routes/printerSettings';
 import sahaRoutes from './routes/saha';
 import karalisteRoutes from './routes/karaliste';
+import r2PhotosRoutes from './routes/r2Photos';
 import { errorHandler } from './middleware/errorHandler';
 
 dotenv.config();
@@ -104,6 +105,7 @@ app.use('/api/locations/ilceler', locationsRoutes);
 app.use('/api/printer-settings', printerSettingsRoutes);
 app.use('/api/saha', sahaRoutes);
 app.use('/api/karaliste', karalisteRoutes);
+app.use('/api/saha/r2', r2PhotosRoutes);
 
 // Global error handler — asyncHandler ile sarılmış route'lardan gelen
 // yakalanmamış promise rejection'larını yakalar. Tüm route mount'larından
@@ -184,3 +186,4 @@ async function startServer() {
 startServer();
 
 export { app, io };
+
